@@ -422,16 +422,27 @@ def hareket_iptal(hareket_id, kullanici_id: int, neden: str = None) -> FinansCar
 #   SORGULAR                     #
 # ============================== #
 def hareketler(cari_id, iptal_goster: bool = False, sayfa: int = 1, adet: int = 100):
-    """Defter görünümü. "Hesabıma yaz" ikilisinin kasasız 'odeme' bacağı gizlenir; eşi 'mahsup' satırı tek satır
-    olarak görünür (ikisinin bakiye etkisi sıfır, bakiye sütunu 'mahsup' satırında doğru kalır)."""
+    """Defter görünümü. "Hesabıma yaz" ikilisi (kasasız 'odeme' − ve 'mahsup' +, bakiye etkisi sıfır) gizlenir;
+    haftanın hak ediş satırı tek satır olarak kalır, notu hesaba_yazilanlar() ile eklenir."""
     from sqlalchemy import and_, not_
     q = FinansCariHareket.query.filter_by(cari_id=int(cari_id)).filter(not_(and_(
-        FinansCariHareket.tur == 'odeme', FinansCariHareket.islem_id.is_(None),
+        FinansCariHareket.tur.in_(('odeme', 'mahsup')), FinansCariHareket.islem_id.is_(None),
         FinansCariHareket.hakedis_id.isnot(None))))
     if not iptal_goster:
         q = q.filter_by(iptal=False)
     q = q.order_by(FinansCariHareket.tarih.desc(), FinansCariHareket.id.desc())
     return q.paginate(page=max(1, sayfa), per_page=adet, error_out=False)
+
+
+def hesaba_yazilanlar(cari_id) -> dict:
+    """{hakedis_id: {'tutar': hesaba yazılan toplam, 'iptal_id': geri alınacak son 'mahsup' satırı}} — iptaller hariç."""
+    sonuc: dict = {}
+    for m in (FinansCariHareket.query.filter_by(cari_id=int(cari_id), tur='mahsup', iptal=False)
+              .filter(FinansCariHareket.hakedis_id.isnot(None)).order_by(FinansCariHareket.id).all()):
+        d = sonuc.setdefault(m.hakedis_id, {'tutar': Decimal('0.00'), 'iptal_id': None})
+        d['tutar'] += Decimal(str(m.tutar))
+        d['iptal_id'] = m.id
+    return sonuc
 
 
 def cari_ozet() -> dict:

@@ -93,7 +93,8 @@ def cari_detay(cari_id):
                            hareket_etiket=cs.HAREKET_ETIKET, bugun=_bugun_ist(),
                            calisan_haklari=hakedis_satirlari(cari_id=cari_id) if cari.tur in ('calisan', 'sahsi') else [],
                            calisan_borc_kalan=cs.calisan_borc_kalan(cari_id) if cari.tur == 'calisan' else 0,
-                           sahsi_borc=cs.sahsi_kasa_borcu(cari_id) if cari.tur == 'sahsi' else 0)
+                           sahsi_borc=cs.sahsi_kasa_borcu(cari_id) if cari.tur == 'sahsi' else 0,
+                           hesaba_yazilan=cs.hesaba_yazilanlar(cari_id) if cari.tur == 'sahsi' else {})
 
 
 def _kalemler_from_form():

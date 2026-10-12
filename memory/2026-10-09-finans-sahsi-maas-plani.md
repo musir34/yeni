@@ -57,3 +57,7 @@ ilk ödeme günü, 15.000 sabit → Ekle. Yayın: `git pull && systemctl restart
   "Hesabıma yaz" ikilisinin kasasız `odeme` bacağını (tur=odeme, islem_id NULL, hakedis_id dolu) listelemez;
   `mahsup` satırı tutarı açıklamada "· X ₺ · kasadan para çıkmadı" olarak gösterir, tutar sütunu boş, bakiye sütunu doğru.
   Hesaplama/iptal değişmedi (iptal yine ikiliyi birlikte geri alır). Test +1; finans 111 OK.
+- 2026-10-12 (sonra 2): Kullanıcı "neden 2 ayrı satır, tek satır olsun" — hak ediş (09.10) + "Maaş hesaba yazıldı" (12.10).
+  Şimdi ikilinin İKİ bacağı da defterden gizli (tur odeme|mahsup, islem_id NULL, hakedis_id dolu); haftanın hak ediş
+  satırına "Hesaba yazıldı · X ₺ · kasadan para çıkmadı" notu + geri al ✕ (son mahsup satırını iptal eder → ikili iptal).
+  cs.hesaba_yazilanlar(cari_id) → {hakedis_id: {tutar, iptal_id}}. Sayfa render testi eklendi; finans 112 OK.

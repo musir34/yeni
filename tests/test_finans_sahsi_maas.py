@@ -176,12 +176,44 @@ class SahsiMaasTest(unittest.TestCase):
         k = self.plan(self.musir.id)
         self.mahsup(k, '15000')
         turler = [h.tur for h in cs.hareketler(self.musir.id).items]
-        self.assertEqual(sorted(turler), ['hakedis', 'mahsup'])            # eşleşen 'odeme' satırı gizli
-        self.assertEqual(cs.hareketler(self.musir.id).total, 2)
+        self.assertEqual(turler, ['hakedis'])                               # ikili gizli, hak ediş satırı kalır
+        hak = FinansCariHareket.query.filter_by(tur='hakedis').one()
+        yazilan = cs.hesaba_yazilanlar(self.musir.id)
+        self.assertEqual(yazilan[hak.hakedis_id]['tutar'], Decimal('15000'))
+        mahsup = FinansCariHareket.query.filter_by(tur='mahsup').one()
+        self.assertEqual(yazilan[hak.hakedis_id]['iptal_id'], mahsup.id)    # geri al düğmesi ikiliyi iptal eder
+        cs.hareket_iptal(yazilan[hak.hakedis_id]['iptal_id'], 1)
+        self.assertEqual(cs.hesaba_yazilanlar(self.musir.id), {})
         # Kasadan gerçekten ödenen maaş satırı gizlenmez.
         ws.hakedis_ve_odeme(k.id, '2026-01-09', '15000', '1000', 'elde', datetime(2026, 1, 9, 12),
                             '', 1, str(uuid.uuid4()), '15000')
         self.assertIn('odeme', [h.tur for h in cs.hareketler(self.musir.id).items])
+
+    def test_hesap_sayfasi_hesaba_yazmayi_hak_edis_satirinda_tek_satir_basar(self):
+        from pathlib import Path
+        from jinja2 import ChoiceLoader, DictLoader, FileSystemLoader, StrictUndefined
+        from finans import finans_bp
+        self.app.config.update(SECRET_KEY='isolated-test', TESTING=True)
+        self.app.register_blueprint(finans_bp)
+        self.app.add_url_rule('/', endpoint='home.home', view_func=lambda: 'home')
+        self.app.jinja_loader = ChoiceLoader([
+            DictLoader({'base.html': '{% block content %}{% endblock %}{% block scripts %}{% endblock %}'}),
+            FileSystemLoader(str(Path(__file__).resolve().parents[1] / 'templates'))])
+        self.app.jinja_env.undefined = StrictUndefined
+        self.app.jinja_env.filters['tl_format'] = lambda v: str(v)
+        self.app.jinja_env.globals['sayfa_erisebilir'] = lambda *a, **k: True
+        self.app.jinja_env.filters['ist'] = lambda v, fmt='%d.%m.%Y %H:%M': v.strftime(fmt)
+        k = self.plan(self.musir.id)
+        self.mahsup(k, '15000')
+        mahsup_id = FinansCariHareket.query.filter_by(tur='mahsup').one().id
+        client = self.app.test_client()
+        with client.session_transaction() as session:
+            session.update(user_id=1, role='admin', session_version=1, totp_verified=True)
+        html = client.get(f'/finans/cari/{self.musir.id}').get_data(as_text=True)
+        defter = html[html.index('Hesap defteri'):]
+        self.assertEqual(defter.count('Hesaba yazıldı</span>'), 1)
+        self.assertNotIn('Maaş hesaba yazıldı', defter)                     # ikili ayrı satır olarak basılmaz
+        self.assertIn(f'/finans/cari/hareket/{mahsup_id}/iptal', defter)     # geri al düğmesi hak ediş satırında
 
     def test_mahsup_cift_tiklama_tekrar_yazmaz(self):
         cs.odeme_yap(self.musir.id, 'elde', Decimal('4000'), T, 'ev', 1, tur='borc_alma')

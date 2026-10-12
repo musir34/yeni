@@ -57,12 +57,15 @@
     <table class="table table-sm table-hover fn-table mb-0">
       <thead><tr><th>Tarih</th><th>Hareket</th><th>Açıklama / Döküm</th><th class="fn-num">{{ ('Ödediğim / Hak ediş' if calisan_haklari else 'Ödediğim') if cari.tur == 'sahsi' else 'Borç ↑' }}</th><th class="fn-num">{{ 'Aldığım' if cari.tur == 'sahsi' else 'Borç ↓' }}</th><th class="fn-num">Bakiye</th><th></th></tr></thead>
       <tbody>
+      {% set yazildi = namespace(gosterilen=[]) %}
       {% for h in sayfalama.items %}
+        {% set yaz = hesaba_yazilan.get(h.hakedis_id) if h.tur == 'hakedis' and not h.iptal and h.hakedis_id not in yazildi.gosterilen else none %}
+        {% if yaz %}{% set yazildi.gosterilen = yazildi.gosterilen + [h.hakedis_id] %}{% endif %}
         <tr class="{{ 'fn-iptal' if h.iptal }}">
           <td class="text-nowrap">{{ h.tarih | ist('%d.%m.%Y') }}</td>
           <td><span class="badge {{ 'bg-danger' if (h.yon > 0) != (cari.tur == 'sahsi') else 'bg-success' }}">{{ hareket_etiket.get(h.tur, h.tur) }}</span>
             {% if h.islem %}<div class="fn-mini">{{ h.islem.hesap.ad }}{% if h.kur %} · {{ h.islem.tutar | tl_format }} ₺ (kur {{ h.kur }}){% endif %}</div>{% endif %}</td>
-          <td>{{ h.aciklama or '' }}{% if h.tur == 'mahsup' %} <span class="fn-mini">· {{ h.tutar | tl_format }} ₺ · kasadan para çıkmadı</span>{% endif %}
+          <td>{{ h.aciklama or '' }}{% if yaz %}<div class="fn-mini"><span class="badge bg-success">Hesaba yazıldı</span> {{ yaz.tutar | tl_format }} ₺ · kasadan para çıkmadı</div>{% endif %}
             {% if h.kalemler %}
             <details class="fn-mini"><summary>{{ h.kalemler | length }} kalem</summary>
               <table class="table table-sm table-borderless mb-0 fn-mini"><tbody>
@@ -72,14 +75,19 @@
             {% endif %}
             {% if h.iptal %}<div class="fn-mini">İptal: {{ h.iptal_tarihi | ist }} {{ h.iptal_kullanici.username if h.iptal_kullanici else '' }}</div>{% endif %}
           </td>
-          <td class="fn-num {{ 'fn-pos' if cari.tur == 'sahsi' else 'fn-neg' }}">{% if h.yon > 0 and h.tur != 'mahsup' %}{{ h.tutar | tl_format }}{% endif %}</td>
+          <td class="fn-num {{ 'fn-pos' if cari.tur == 'sahsi' else 'fn-neg' }}">{% if h.yon > 0 %}{{ h.tutar | tl_format }}{% endif %}</td>
           <td class="fn-num {{ 'fn-neg' if cari.tur == 'sahsi' else 'fn-pos' }}">{% if h.yon < 0 %}{{ h.tutar | tl_format }}{% endif %}</td>
           <td class="fn-num">{{ h.yeni_bakiye | tl_format }}</td>
           <td class="fn-actions text-end">
-            {% if not h.iptal and (not h.hakedis_id or h.islem_id or h.tur in ('odeme', 'mahsup')) %}
+            {% if not h.iptal and (not h.hakedis_id or h.islem_id) %}
             <form method="POST" action="{{ url_for('finans.cari_hareket_iptal', hareket_id=h.id) }}" class="d-inline fn-cari-iptal">
               <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
               <button type="submit" class="btn btn-sm btn-outline-danger" title="İptal">✕</button>
+            </form>
+            {% elif yaz %}
+            <form method="POST" action="{{ url_for('finans.cari_hareket_iptal', hareket_id=yaz.iptal_id) }}" class="d-inline fn-cari-iptal">
+              <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+              <button type="submit" class="btn btn-sm btn-outline-danger" title="Hesaba yazmayı geri al (hafta yeniden bekler)">✕</button>
             </form>
             {% endif %}
           </td>
