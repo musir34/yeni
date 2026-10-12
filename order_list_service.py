@@ -5,6 +5,7 @@ from sqlalchemy import literal, desc, or_, func, nullslast, false
 from sqlalchemy.orm import aliased
 import json
 import os
+import re
 from cache_config import cache, CACHE_TIMES
 import logging
 import math
@@ -54,14 +55,16 @@ def api_toggle_order_pull():
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
 
-def generate_qr_code(shipping_barcode):
+def generate_qr_code(data):
     """
-    Kargo barkodu için QR kod oluşturur ve statik klasöre kaydeder.
+    Kargo etiketi için QR kod oluşturur ve statik klasöre kaydeder.
+    QR içeriği sipariş numarasıdır (barkod ile aynı değil — barkod ayrıca basılır).
     """
-    if not shipping_barcode:
-        logger.warning("❌ [generate_qr_code] Barkod değeri boş!")
+    if not data:
+        logger.warning("❌ [generate_qr_code] QR verisi boş!")
         return None
     try:
+        data = str(data).strip()
         qr_dir = os.path.join('static', 'qr_codes')
         os.makedirs(qr_dir, exist_ok=True)
         qr = qrcode.QRCode(
@@ -70,12 +73,15 @@ def generate_qr_code(shipping_barcode):
             box_size=16,
             border=1,
         )
-        qr.add_data(shipping_barcode)
+        qr.add_data(data)
         qr.make(fit=True)
-        qr_path = os.path.join(qr_dir, f"qr_{shipping_barcode}.png")
+        # Sipariş no "#1001" gibi dosya adına uygun olmayan karakter içerebilir
+        safe_name = re.sub(r'[^A-Za-z0-9_-]+', '_', data) or 'qr'
+        qr_file = f"qr_{safe_name}.png"
+        qr_path = os.path.join(qr_dir, qr_file)
         qr.make_image(fill_color="black", back_color="white").save(qr_path)
         logger.info(f"✅ QR kod başarıyla kaydedildi: {qr_path}")
-        return f"qr_codes/qr_{shipping_barcode}.png"
+        return f"qr_codes/{qr_file}"
     except Exception as e:
         logger.error(f"🔥 [generate_qr_code] QR kod oluşturma hatası: {e}")
         return None
@@ -740,8 +746,8 @@ def order_label():
 
         # Barkod dosya YOK: inline (base64) veri
         barcode_data_uri = generate_barcode_data_uri(shipping_barcode) if shipping_barcode else None
-        # QR kaydetmeye devam (istersen bunu da inline'a çevirebiliriz)
-        qr_code_path = generate_qr_code(shipping_barcode) if shipping_barcode else None
+        # QR: sipariş numarası (barkod zaten solda basılıyor, QR'da da aynısı olmasın)
+        qr_code_path = generate_qr_code(order_number) if order_number else None
 
         return render_template(
             'order_label.html',
