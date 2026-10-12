@@ -384,7 +384,8 @@
     <!-- Hızlı İşlemler -->
     <div class="card-soft p-2 quick-links mt-3" style="background:rgba(255,255,255,.85);backdrop-filter:blur(8px);">
       <div class="d-flex flex-wrap justify-content-center">
-        <a class="btn btn-primary m-1" href="{{ url_for('order_list_all') }}"><i class="fas fa-list"></i> Siparişler</a>
+        <a class="btn btn-primary m-1" href="{{ url_for('order_list_all') }}"><i class="fas fa-list"></i> Sipariş Listesi</a>
+        <a class="btn btn-primary m-1" href="{{ url_for('uretim.index') }}"><i class="fas fa-industry"></i> Üretim Siparişleri</a>
         <a class="btn btn-primary m-1" href="{{ url_for('shopify.orders_dashboard') }}"><i class="fab fa-shopify"></i> Shopify Siparişleri</a>
         <a class="btn btn-success m-1" href="{{ url_for('get_products.product_list') }}"><i class="fas fa-tags"></i> Ürün Listesi</a>
         <a class="btn btn-info m-1" href="{{ url_for('degisim_talep') }}"><i class="fas fa-exchange-alt"></i> Değişim Listesi</a>
