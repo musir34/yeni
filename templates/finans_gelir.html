@@ -52,7 +52,7 @@
               <td>{{ i.kategori.ad if i.kategori else '—' }}</td>
               <td>{{ i.aciklama or '' }}</td>
               <td class="fn-num fn-pos">{{ i.tutar | tl_format }} ₺</td>
-              <td class="fn-actions text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick="fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})">✕</button></td>
+              <td class="fn-actions text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick='fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})'>✕</button></td>
             </tr>
           {% else %}
             <tr><td colspan="5" class="text-muted p-3">Bu ay gelir kaydı yok.</td></tr>

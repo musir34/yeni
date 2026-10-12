@@ -45,7 +45,7 @@ HAREKET_ETIKET = {'alim': 'Mal Girişi', 'odeme': 'Ödeme', 'satis': 'Satış', 
                  'hakedis': 'Hak ediş', 'hakedis_azaltma': 'Hak ediş düzeltmesi',
                  'borc_alma': 'Kasadan borç aldım', 'borc_odeme': 'Borç geri ödemesi',
                  'calisan_borc': 'Cebinden verdi', 'calisan_borc_odeme': 'Geri ödeme',
-                 'mahsup': 'Maaştan mahsup'}
+                 'mahsup': 'Maaş hesaba yazıldı'}
 SAHSI_BORC_TURLERI = ('borc_alma', 'borc_odeme', 'mahsup')
 CALISAN_BORC_TURLERI = ('calisan_borc', 'calisan_borc_odeme')
 PARA_BIRIMLERI = ('TRY', 'USD')
@@ -107,7 +107,8 @@ def calisan_borc_kalan(cari_id) -> Decimal:
 
 
 def sahsi_kasa_borcu(cari_id) -> Decimal:
-    """Şahsi hesabın kasaya borcu: kasadan alınan − geri ödenen − maaştan mahsup (iptaller hariç, en az 0)."""
+    """Şahsi hesabın kasaya borcu: kasadan alınan − geri ödenen − hesaba yazılan maaş (iptaller hariç, en az 0).
+    Hesaba yazılan maaş borçtan fazlaysa artan alacak olarak durur; sonraki kasadan alımlar ondan düşer."""
     from sqlalchemy import func
     toplam = (db.session.query(func.coalesce(func.sum(FinansCariHareket.yon * FinansCariHareket.tutar), 0))
               .filter(FinansCariHareket.cari_id == int(cari_id), FinansCariHareket.iptal.is_(False),

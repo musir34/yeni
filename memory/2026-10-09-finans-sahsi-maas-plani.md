@@ -44,3 +44,12 @@ ilk ödeme günü, 15.000 sabit → Ekle. Yayın: `git pull && systemctl restart
 - Küçükler: mahsup çiftinin iki satırı iptalde id sırasıyla önce kilitlenir (eşzamanlı iptalde kilitlenme yok);
   "Borcumu Ödedim" düğmesi artık gerçek kasa borcuna (sahsi_kasa_borcu > 0) göre görünür; yorum satırı düzeltildi.
 - +2 test; finans testleri 107 OK.
+
+## 2026-10-12 — "Kasa borcundan düş" → "Hesabıma yaz"
+- Kullanıcı haftalığını almadı, seçeneği kullandı: "Kasa borcundan en çok 0.00 ₺ düşülebilir" hatası (borcu yoktu).
+  İstek: "hesabıma eklesin". Seçenek anlamı genişletildi: maaş nakit alınmadan hesaba yazılır, hafta kapanır.
+- Borç sınırı kaldırıldı (tek sınır haftanın kalanı); önce kasa borcunu kapatır, artanı alacak olarak kalır,
+  sonraki kasadan alımlar (borc_alma) bu alacaktan düşer. sahsi_kasa_borcu en az 0 olduğu için tutarlı.
+- Mahsup edilmiş borc_alma iptal engeli kaldırıldı: yeni anlamda borç iptali yalnız alacağı büyütür, tutarsızlık yok.
+- Etiketler: seçenek "Hesabıma yaz (kasadan para çıkmaz)", defter "Maaş hesaba yazıldı", açıklama "… maaşı hesaba yazıldı".
+- Testler güncellendi (borçsuz hesaba yazma + sonraki alım, kalan sınırı, borç iptali serbest); finans 110 OK.

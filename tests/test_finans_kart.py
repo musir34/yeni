@@ -175,6 +175,7 @@ class KartKayitTest(unittest.TestCase):
             FileSystemLoader(str(Path(__file__).resolve().parents[1] / 'templates'))])
         self.app.jinja_env.undefined = StrictUndefined
         self.app.jinja_env.filters['tl_format'] = lambda v: f'{v:.2f}'
+        self.app.jinja_env.globals['sayfa_erisebilir'] = lambda *a, **k: True   # menü yetkisi (app.py'de kayıtlı)
         self.app.jinja_env.filters['ist'] = lambda v, fmt: v.strftime(fmt)
         client = self.app.test_client()
         with client.session_transaction() as session:

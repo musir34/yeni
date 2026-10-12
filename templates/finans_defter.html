@@ -46,7 +46,7 @@
                     data-gider-adi="{{ i.gider_adi_id or '' }}" data-tutar="{{ '%.2f' | format(i.tutar) }}" data-hesap="{{ i.hesap.kod }}"
                     data-tarih="{{ i.tarih | ist('%Y-%m-%dT%H:%M') }}">✎</button>
             {% endif %}
-            <button type="button" class="btn btn-sm btn-outline-danger" title="İptal" onclick="fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})">✕</button>
+            <button type="button" class="btn btn-sm btn-outline-danger" title="İptal" onclick='fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})'>✕</button>
             {% endif %}
           </td>
         </tr>

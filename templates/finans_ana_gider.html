@@ -28,7 +28,7 @@
             {% if d.calisan %}
               {% include '_finans_calisan_buton.html' %}
             {% elif o %}
-              <button type="button" class="btn btn-sm btn-outline-danger" onclick="fnIptal({{ o.id }}, {{ (o.aciklama or '') | tojson }})" title="Ödemeyi iptal et">✕ İptal</button>
+              <button type="button" class="btn btn-sm btn-outline-danger" onclick='fnIptal({{ o.id }}, {{ (o.aciklama or '') | tojson }})' title="Ödemeyi iptal et">✕ İptal</button>
             {% else %}
               <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#fnOdeModal"
                       data-kalem-id="{{ k.id }}" data-kalem-ad="{{ k.ad }}" data-donem="{{ d.donem }}" data-donem-etiket="{{ d.etiket }}"

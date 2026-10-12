@@ -110,13 +110,28 @@ class SahsiMaasTest(unittest.TestCase):
         self.assertEqual(self.musir.bakiye, Decimal('0'))
         self.tutarli()
 
-    def test_mahsup_kasa_borcunu_ve_kalani_asamaz(self):
-        cs.odeme_yap(self.musir.id, 'elde', Decimal('4000'), T, 'ev', 1, tur='borc_alma')
+    def test_hesaba_yaz_borc_yokken_maas_alacak_olarak_kalir(self):
+        k = self.plan(self.musir.id)
+        elde = fs.hesap_getir('elde').bakiye
+        h, islem = self.mahsup(k, '15000')
+        self.assertIsNone(islem)
+        self.assertEqual(fs.hesap_getir('elde').bakiye, elde)               # kasadan para çıkmadı
+        self.assertFalse(ws.durum_satiri(k, '2026-01-02', h)['bekleyen'])   # hafta kapandı
+        db.session.refresh(self.musir)
+        self.assertEqual(self.musir.bakiye, Decimal('15000'))               # maaş hesapta alacak
+        # Sonra kasadan alınan para bu alacaktan düşer; kasaya borç oluşmaz.
+        cs.odeme_yap(self.musir.id, 'elde', Decimal('3000'), T, 'ev', 1, tur='borc_alma')
+        db.session.refresh(self.musir)
+        self.assertEqual(self.musir.bakiye, Decimal('12000'))
+        self.assertEqual(cs.sahsi_kasa_borcu(self.musir.id), Decimal('0'))
+        self.tutarli()
+
+    def test_hesaba_yaz_haftanin_kalanini_asamaz(self):
         k = self.plan(self.musir.id)
         with self.assertRaises(FinansHata):
-            self.mahsup(k, '4000.01')
+            self.mahsup(k, '15000.01')
         db.session.rollback()
-        self.assertEqual(cs.sahsi_kasa_borcu(self.musir.id), Decimal('4000'))
+        self.assertEqual(FinansCariHareket.query.filter_by(tur='mahsup').count(), 0)
 
     def test_mahsup_yalniz_sahsi_hesapta(self):
         k = fs.kalem_ekle('Ahmet haftalığı', None, '5000', 'elde', '2026-01', '', '', 1,
@@ -141,20 +156,14 @@ class SahsiMaasTest(unittest.TestCase):
             if tur == 'odeme':
                 h, _ = self.mahsup(k, '3000')
 
-    def test_mahsup_edilmis_kasa_borcu_iptal_edilemez(self):
+    def test_hesaba_yazildiktan_sonra_kasa_borcu_iptal_edilebilir(self):
         borc = cs.odeme_yap(self.musir.id, 'elde', Decimal('4000'), T, 'ev', 1, tur='borc_alma')
         k = self.plan(self.musir.id)
         self.mahsup(k, '4000')
-        with self.assertRaises(FinansHata):
-            cs.hareket_iptal(borc.id, 1)
-        with self.assertRaises(FinansHata):
-            fs.islem_iptal(borc.islem_id, 1)
-        self.assertEqual(cs.sahsi_kasa_borcu(self.musir.id), Decimal('0'))
-        # Önce mahsup iptal edilince asıl borç da iptal edilebilir.
-        cs.hareket_iptal(FinansCariHareket.query.filter_by(tur='mahsup').one().id, 1)
-        cs.hareket_iptal(borc.id, 1)
+        cs.hareket_iptal(borc.id, 1)                     # hatalı borç kaydı silinince fark alacağa döner
         db.session.refresh(self.musir)
         self.assertEqual(self.musir.bakiye, Decimal('15000'))
+        self.assertEqual(cs.sahsi_kasa_borcu(self.musir.id), Decimal('0'))
         self.tutarli()
 
     def test_mahsupsuz_kasa_borcu_eskisi_gibi_iptal_edilir(self):

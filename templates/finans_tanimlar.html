@@ -20,7 +20,7 @@
             <span>{{ k.ad }}{% if not k.aktif %} <span class="badge bg-secondary">pasif</span>{% endif %}</span>
             <span>
               {% if tur == 'kucuk_gider' %}<button type="button" class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="collapse" data-bs-target="#fnGa_{{ k.id }}" title="Gider adları">▾</button>{% endif %}
-              <button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="fnKatSil({{ k.id }}, {{ k.ad | tojson }})">✕</button>
+              <button type="button" class="btn btn-sm btn-outline-danger py-0" onclick='fnKatSil({{ k.id }}, {{ k.ad | tojson }})'>✕</button>
             </span>
           </div>
           {% if tur == 'kucuk_gider' %}
@@ -29,7 +29,7 @@
               {% for g in gider_adlari.get(k.id, []) %}
               <li class="d-flex justify-content-between align-items-center py-1 {{ 'text-muted' if not g.aktif }}" id="fnGa_item_{{ g.id }}">
                 <span>{{ g.ad }}{% if g.varsayilan_tutar is not none %} <span class="text-muted">({{ g.varsayilan_tutar | tl_format }} ₺)</span>{% endif %}{% if not g.aktif %} <span class="badge bg-secondary">pasif</span>{% endif %}</span>
-                <button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="fnGaSil({{ g.id }}, {{ g.ad | tojson }})">✕</button>
+                <button type="button" class="btn btn-sm btn-outline-danger py-0" onclick='fnGaSil({{ g.id }}, {{ g.ad | tojson }})'>✕</button>
               </li>
               {% endfor %}
             </ul>

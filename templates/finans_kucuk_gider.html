@@ -95,7 +95,7 @@
               <td>{{ i.kategori.ad if i.kategori else '—' }}{% if i.gider_adi %} <span class="fn-mini">/ {{ i.gider_adi.ad }}</span>{% endif %}</td>
               <td>{{ i.aciklama or '' }}</td>
               <td class="fn-num fn-neg">{{ i.tutar | tl_format }} ₺</td>
-              <td class="fn-actions text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick="fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})">✕</button></td>
+              <td class="fn-actions text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick='fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})'>✕</button></td>
             </tr>
           {% else %}
             <tr><td colspan="6" class="text-muted p-3">Bu ay günlük harcama kaydı yok.</td></tr>

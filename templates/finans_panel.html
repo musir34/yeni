@@ -134,7 +134,7 @@
           <td>{{ i.aciklama or '' }}{% if i.kategori %} <span class="fn-mini">· {{ i.kategori.ad }}</span>{% endif %}</td>
           <td class="fn-num {{ 'fn-pos' if i.yon > 0 else 'fn-neg' }}">{{ '+' if i.yon > 0 else '−' }}{{ i.tutar | tl_format }}</td>
           <td class="fn-num">{{ i.yeni_bakiye | tl_format }}</td>
-          <td class="fn-actions text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick="fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})" title="İptal">✕</button></td>
+          <td class="fn-actions text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick='fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})' title="İptal">✕</button></td>
         </tr>
       {% else %}
         <tr><td colspan="7" class="text-muted p-3">Henüz işlem yok. Gelir ekleyerek başlayın.</td></tr>

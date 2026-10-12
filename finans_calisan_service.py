@@ -25,7 +25,7 @@ def _tutar(raw):
 
 
 MAAS_CARI_TURLERI = ('calisan', 'sahsi')   # şahsi: sahibin kendi hesabı; maaş kasa borcuyla mahsuplaşır
-MAHSUP_HESABI = 'mahsup'   # şahsi hesapta maaşın kasa borcundan düşülmesi; kasadan para çıkmaz
+MAHSUP_HESABI = 'mahsup'   # şahsi hesapta maaş nakit alınmadan hesaba yazılır; kasadan para çıkmaz
 
 
 def maas_carileri():
@@ -197,15 +197,13 @@ def hakedis_ve_odeme(kalem_id, donem, hak_tutar, odeme_tutar, hesap_kodu, tarih,
         if not cari.aktif:
             raise fs.FinansHata('Çalışanın cari hesabı kapalı.')
         if mahsup:
+            # Hesaba yazılan maaş önce kasa borcunu kapatır, artanı alacak olarak kalır (sınır: haftanın kalanı).
             if cari.tur != 'sahsi':
-                raise fs.FinansHata('Kasa borcundan düşme yalnız şahsi hesapta kullanılır.')
-            borc = cs.sahsi_kasa_borcu(cari.id)
-            if odeme > borc:
-                raise fs.FinansHata(f'Kasa borcundan en çok {borc:.2f} ₺ düşülebilir.')
+                raise fs.FinansHata('Hesaba yazma yalnız şahsi hesapta kullanılır.')
         _hak_yaz(h, cari, hak, kullanici_id)
         islem = None
         if mahsup:
-            aciklama = (aciklama or '').strip() or f'{k.ad} — {fs.donem_etiket(donem)} kasa borcundan mahsup'
+            aciklama = (aciklama or '').strip() or f'{k.ad} — {fs.donem_etiket(donem)} maaşı hesaba yazıldı'
             cs._cari_hareket(cari, 'odeme', odeme, tarih, aciklama, kullanici_id,
                              hakedis_id=h.id, odeme_anahtari=token)
             cs._cari_hareket(cari, 'mahsup', odeme, tarih, aciklama, kullanici_id, hakedis_id=h.id)
