@@ -32,3 +32,10 @@ görünür (liste bilgi amaçlı, hazırlamaya düşme kuralı siparis_hazirla'd
 ("aynı şekilde" emri) — istenirse `_is_shopify` bayrağı hazır.
 
 **Deploy:** `git pull && systemctl restart gullupanel.service` (şema değişikliği yok).
+
+## 2026-10-12 ek — Kaynak filtresi (Hepsi / Trendyol / Shopify)
+Komutan emri: "sipariş listesinde shopify / trendyol / her ikisi seçeneği olsun, kolayca filtreleyebileyim."
+- `?kaynak=hepsi|trendyol|shopify` (whitelist `KAYNAK_OPTIONS`, varsayılan hepsi; URL'de yalnız varsayılan dışıysa taşınır).
+- `trendyol` → Shopify kartları eklenmez; `shopify` → DB sorgusu `false()` ile boşaltılır, yalnız site kartları (tek sayfa).
+- Şablon: araç çubuğunda üçlü düğme grubu (`applyKaynak`), durum sekmeleri / sayfalama / geciken rozeti / arama formu
+  kaynak parametresini korur. Her iki liste fonksiyonunda (tümü + durum sekmeleri) geçerli.

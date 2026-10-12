@@ -157,6 +157,9 @@ def get_union_all_orders():
 SORT_OPTIONS = ('date_desc', 'deadline_asc', 'deadline_desc')
 DEFAULT_SORT = 'date_desc'
 PER_PAGE_OPTIONS = (50, 100, 200)
+# Kaynak filtresi: hepsi (Trendyol DB + Shopify API), trendyol (yalnız DB), shopify (yalnız site kartları)
+KAYNAK_OPTIONS = ('hepsi', 'trendyol', 'shopify')
+DEFAULT_KAYNAK = 'hepsi'
 DEFAULT_PER_PAGE = 50
 
 
@@ -164,6 +167,12 @@ def _get_sort_key():
     """Query param'dan güvenli sıralama anahtarı döndürür (whitelist)."""
     sort_key = request.args.get('sort', DEFAULT_SORT)
     return sort_key if sort_key in SORT_OPTIONS else DEFAULT_SORT
+
+
+def _get_kaynak():
+    """Query param'dan güvenli kaynak filtresi (whitelist)."""
+    kaynak = request.args.get('kaynak', DEFAULT_KAYNAK)
+    return kaynak if kaynak in KAYNAK_OPTIONS else DEFAULT_KAYNAK
 
 
 def _get_per_page():
@@ -374,6 +383,7 @@ def get_order_list():
         per_page = _get_per_page()
         search_query = request.args.get('search', None)
         sort_key = _get_sort_key()
+        kaynak = _get_kaynak()
         show_overdue = sort_key == 'deadline_asc' and request.args.get('show_overdue') == '1'
         overdue_orders = _get_overdue_orders()
         overdue_numbers = _overdue_order_numbers(overdue_orders)
@@ -381,6 +391,8 @@ def get_order_list():
         sub = union_query.subquery()
         AllOrders = aliased(sub)
         q = db.session.query(AllOrders)
+        if kaynak == 'shopify':
+            q = q.filter(false())        # yalnız site kartları: DB (Trendyol) satırı gelmez
 
         # Geciken = SADECE Yeni/Hazırlanıyor/İşleme Alındı statülerinde teslim
         # süresi geçmiş sipariş. (Teslim Edildi/Kargoda/İptal asla geciken sayılmaz.)
@@ -447,7 +459,7 @@ def get_order_list():
         # 🛍️ Shopify (site) siparişleri DB'de değil, canlı API'de → ilk sayfaya kart olarak
         # katılır ve aynı sıralama kuralıyla Trendyol kartlarına karışır. Teslim tarihi
         # olmadığı için "geciken" görünümüne girmez.
-        if page == 1 and not show_overdue:
+        if page == 1 and not show_overdue and kaynak != 'trendyol':
             shopify_orders = shopify_kartlari(aranan=search_query)
             orders = kartlari_sirala(orders + shopify_orders, sort_key)
             total_orders_count += len(shopify_orders)
@@ -458,7 +470,7 @@ def get_order_list():
         return render_template(
             'order_list.html', orders=orders, page=page, total_pages=total_pages,
             total_orders_count=total_orders_count, search_query=search_query,
-            sort_key=sort_key, overdue_orders=overdue_orders,
+            sort_key=sort_key, overdue_orders=overdue_orders, kaynak=kaynak,
             active_list='all', per_page=per_page, per_page_options=PER_PAGE_OPTIONS,
             show_overdue=show_overdue,
             archived_matches=_archived_search_matches(search_query),
@@ -529,6 +541,7 @@ def get_filtered_orders(status):
         per_page = _get_per_page()
         search_query = request.args.get('search', None)
         sort_key = _get_sort_key()
+        kaynak = _get_kaynak()
         overdue_orders = _get_overdue_orders()
         overdue_numbers = _overdue_order_numbers(overdue_orders)
         status_map = {
@@ -554,6 +567,8 @@ def get_filtered_orders(status):
 
 
         orders_query = model_cls.query
+        if kaynak == 'shopify':
+            orders_query = orders_query.filter(false())   # yalnız site kartları
         # Arama varken geciken gizleme UYGULANMAZ → aranan geciken sipariş no'su bulunur.
         hide_overdue_in_status = sort_key != 'deadline_asc' and not search_query
         if hide_overdue_in_status and overdue_numbers and model_cls in (OrderCreated, OrderHazirlaniyor, OrderPicking):
@@ -606,7 +621,7 @@ def get_filtered_orders(status):
         orders = _merge_order_rows(raw_orders, lambda _r: status_code)
 
         # 🛍️ Shopify siparişleri: etiketi bu sekmenin durumuna denk gelenler ilk sayfaya katılır
-        if page == 1:
+        if page == 1 and kaynak != 'trendyol':
             shopify_orders = shopify_kartlari(durum=status_code, aranan=search_query)
             orders = kartlari_sirala(orders + shopify_orders, sort_key)
             total_orders_count += len(shopify_orders)
@@ -617,7 +632,7 @@ def get_filtered_orders(status):
         return render_template(
             'order_list.html', orders=orders, page=page, total_pages=total_pages,
             total_orders_count=total_orders_count, search_query=search_query,
-            sort_key=sort_key, overdue_orders=overdue_orders,
+            sort_key=sort_key, overdue_orders=overdue_orders, kaynak=kaynak,
             active_list=active_map.get(model_cls), per_page=per_page,
             per_page_options=PER_PAGE_OPTIONS, show_overdue=False,
             archived_matches=_archived_search_matches(search_query),

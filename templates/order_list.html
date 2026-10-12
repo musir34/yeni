@@ -279,11 +279,14 @@
         {% set active_list = active_list|default('all', true) %}
         {% set per_page = per_page|default(50, true) %}
         {% set show_overdue = show_overdue|default(false, true) %}
+        {# Kaynak filtresi: hepsi/trendyol/shopify — URL'de yalnız varsayılan dışıysa taşınır #}
+        {% set kaynak = kaynak|default('hepsi', true) %}
+        {% set kaynak_param = kaynak if kaynak != 'hepsi' else none %}
         {% macro filter_button(endpoint, label, button_classes, key) -%}
-            <a href="{{ url_for(endpoint, search=request.args.get('search', ''), sort=sort_key, per_page=per_page) }}" class="btn {{ button_classes }} {% if active_list == key %}active-filter{% endif %}">{{ label }}</a>
+            <a href="{{ url_for(endpoint, search=request.args.get('search', ''), sort=sort_key, per_page=per_page, kaynak=kaynak_param) }}" class="btn {{ button_classes }} {% if active_list == key %}active-filter{% endif %}">{{ label }}</a>
         {%- endmacro %}
         {% macro page_url(page_no) -%}
-            {{ url_for(request.endpoint, page=page_no, search=request.args.get('search', ''), sort=sort_key, per_page=per_page, show_overdue=(1 if show_overdue else none)) }}
+            {{ url_for(request.endpoint, page=page_no, search=request.args.get('search', ''), sort=sort_key, per_page=per_page, show_overdue=(1 if show_overdue else none), kaynak=kaynak_param) }}
         {%- endmacro %}
         <div class="page-header d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
@@ -291,7 +294,7 @@
                 <h2 class="mb-0">Sipariş Takip</h2>
             </div>
             {% if overdue_orders %}
-            <a class="overdue-pill" href="{{ url_for('order_list_service.order_list_all', sort='deadline_asc', show_overdue=1, search=request.args.get('search', ''), per_page=per_page) }}" title="Geciken siparişleri teslim süresine göre göster">
+            <a class="overdue-pill" href="{{ url_for('order_list_service.order_list_all', sort='deadline_asc', show_overdue=1, search=request.args.get('search', ''), per_page=per_page, kaynak=kaynak_param) }}" title="Geciken siparişleri teslim süresine göre göster">
                 <i class="fas fa-exclamation-triangle"></i> Geciken: {{ overdue_orders|length }}
             </a>
             {% endif %}
@@ -326,6 +329,12 @@
                 <form method="POST" action="{{ url_for('order_service.fetch_trendyol_orders_route') }}">
                     <button type="submit" class="btn btn-primary"><i class="fas fa-sync-alt"></i> Siparişleri Güncelle</button>
                 </form>
+                {# Kaynak filtresi: tek tıkla Trendyol / Shopify / hepsi #}
+                <div class="btn-group kaynak-filtre" role="group" aria-label="Sipariş kaynağı">
+                    <button type="button" class="btn btn-sm {% if kaynak == 'hepsi' %}btn-dark{% else %}btn-outline-dark{% endif %}" onclick="applyKaynak('hepsi')">Hepsi</button>
+                    <button type="button" class="btn btn-sm {% if kaynak == 'trendyol' %}btn-dark{% else %}btn-outline-dark{% endif %}" onclick="applyKaynak('trendyol')" title="Yalnız Trendyol siparişleri"><i class="fas fa-store me-1" style="color:#f27a1a"></i>Trendyol</button>
+                    <button type="button" class="btn btn-sm {% if kaynak == 'shopify' %}btn-dark{% else %}btn-outline-dark{% endif %}" onclick="applyKaynak('shopify')" title="Yalnız Shopify (site) siparişleri"><i class="fab fa-shopify me-1" style="color:#96bf48"></i>Shopify</button>
+                </div>
                 <select class="form-select w-auto" aria-label="Sıralama" onchange="applySort(this.value)">
                     <option value="date_desc" {% if sort_key == 'date_desc' or not sort_key %}selected{% endif %}>Sipariş Tarihi (Yeni → Eski)</option>
                     <option value="deadline_asc" {% if sort_key == 'deadline_asc' %}selected{% endif %}>Teslimata Kalan Süre (Az → Çok)</option>
@@ -339,6 +348,7 @@
                 <form id="orderSearchForm" class="order-search-form" method="GET" action="{{ url_for(request.endpoint) }}">
                     <input type="hidden" name="sort" value="{{ sort_key }}">
                     <input type="hidden" name="per_page" value="{{ per_page }}">
+                    {% if kaynak_param %}<input type="hidden" name="kaynak" value="{{ kaynak_param }}">{% endif %}
                     {% if show_overdue %}<input type="hidden" name="show_overdue" value="1">{% endif %}
                     <div class="input-group order-search-group">
                         <input type="text" class="form-control" name="search" placeholder="Sipariş No veya Müşteri Adı" value="{{ request.args.get('search', '') }}">
@@ -882,6 +892,14 @@
         function applyPerPage(value) {
             const params = new URLSearchParams(window.location.search);
             params.set('per_page', value);
+            params.delete('page');
+            window.location.search = params.toString();
+        }
+
+        // ── Kaynak ── Trendyol / Shopify / hepsi; diğer filtreler korunur, ilk sayfaya dönülür
+        function applyKaynak(value) {
+            const params = new URLSearchParams(window.location.search);
+            if (value === 'hepsi') params.delete('kaynak'); else params.set('kaynak', value);
             params.delete('page');
             window.location.search = params.toString();
         }
