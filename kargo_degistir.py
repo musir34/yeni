@@ -72,8 +72,11 @@ _AD_ANAHTAR = {
 AKTIF_TABLOLAR = (OrderCreated, OrderHazirlaniyor, OrderPicking)
 MAKS_TOPLU = 50
 # Değişiklik sonrası yeni takip numarası için yeniden çekme: deneme sayısı ve aralık (sn)
-YENIDEN_CEKME_DENEME = 3
-YENIDEN_CEKME_BEKLEME_SN = 2.0
+# Tek istek gunicorn/proxy zaman aşımına (tipik 30 sn) sığmalı: istemci siparişleri
+# TEK TEK gönderir; burada da bekleme kısa tutulur.
+YENIDEN_CEKME_DENEME = 2
+YENIDEN_CEKME_BEKLEME_SN = 1.5
+TRENDYOL_TIMEOUT = (5, 12)  # (bağlantı, okuma) sn
 
 # ── Mini kargo rozeti ─────────────────────────────────────────────────────────
 # Kargo takip numarasının ÖN EKİ firmayı söyler (kod değişince rozet de değişir):
@@ -165,7 +168,7 @@ def trendyol_kargo_degistir(package_id: str, kargo_kodu: str) -> tuple[bool, str
     """Tek paket için Trendyol'a PUT atar. (başarı, mesaj) döner — istisna fırlatmaz."""
     url = f"{TRENDYOL_ORDER_BASE}/shipment-packages/{package_id}/cargo-providers"
     try:
-        r = requests.put(url, headers=_headers(), json={"cargoProvider": kargo_kodu}, timeout=30)
+        r = requests.put(url, headers=_headers(), json={"cargoProvider": kargo_kodu}, timeout=TRENDYOL_TIMEOUT)
     except requests.RequestException as e:
         logger.error("[KARGO] %s PUT bağlantı hatası: %s", package_id, e)
         return False, "Trendyol'a ulaşılamadı."
@@ -192,7 +195,7 @@ def trendyol_paket_cek(order_number: str, package_id: str) -> dict | None:
     """Değişiklik sonrası paketi yeniden çeker — yeni kargo adı + takip numarası için."""
     url = f"{TRENDYOL_ORDER_BASE}/v2/orders"  # order_service ile aynı uç nokta
     try:
-        r = requests.get(url, headers=_headers(), params={"orderNumber": order_number}, timeout=30)
+        r = requests.get(url, headers=_headers(), params={"orderNumber": order_number}, timeout=TRENDYOL_TIMEOUT)
         if r.status_code != 200:
             logger.warning("[KARGO] %s yeniden çekme HTTP %s", order_number, r.status_code)
             return None
@@ -323,6 +326,72 @@ def siparis_kargo_degistir(order_number: str, kargo_kodu: str) -> dict:
     return sonuc
 
 
+def siparis_kargo_yenile(order_number: str) -> dict:
+    """Siparişi Trendyol'dan yeniden çekip kargo adı + takip numarasını yerel kayda yazar.
+    Değişiklikten sonra yeni kargo kodunu almak için istemci bunu sırayla çağırır.
+    guncellendi: takip numarası değişti mi."""
+    sonuc = {"order_number": order_number, "success": False, "guncellendi": False, "message": "",
+             "cargo_provider_name": None, "cargo_tracking_number": None, "firma": None}
+    order_number = (order_number or "").strip()
+    if not order_number or order_number.startswith(("SH-", "DG-")):
+        sonuc["message"] = "Trendyol siparişi değil."
+        return sonuc
+    satirlar = _aktif_satirlar(order_number)
+    if not satirlar:
+        sonuc["message"] = "Sipariş aktif tablolarda bulunamadı."
+        return sonuc
+    ilk = satirlar[0]
+    package_id = (getattr(ilk, "shipment_package_id", None) or getattr(ilk, "package_number", None) or "").strip()
+    paket = trendyol_paket_cek(order_number, package_id)
+    if not paket:
+        sonuc["message"] = "Trendyol'dan okunamadı."
+        return sonuc
+    ad = (paket.get("cargoProviderName") or "").strip()
+    takip = (paket.get("cargoTrackingNumber") or "").strip()
+    eski_takip = (getattr(ilk, "cargo_tracking_number", "") or "").strip()
+    sonuc.update(cargo_provider_name=ad or ilk.cargo_provider_name,
+                 cargo_tracking_number=takip or None, firma=kargo_firma_tespit(takip, ad))
+    if not takip:
+        sonuc.update(success=True, message="Yeni kargo kodu henüz oluşmadı.")
+        return sonuc
+    try:
+        for s in satirlar:
+            if ad:
+                s.cargo_provider_name = ad
+            s.cargo_tracking_number = takip
+            if hasattr(s, "cargo_tracking_link"):
+                s.cargo_tracking_link = paket.get("cargoTrackingLink") or ""
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.error("[KARGO] %s yenileme: yerel kayıt güncellenemedi", order_number, exc_info=True)
+        sonuc["message"] = "Yerel kayıt güncellenemedi."
+        return sonuc
+    sonuc.update(success=True, guncellendi=(takip != eski_takip),
+                 message=("Yeni kargo kodu alındı." if takip != eski_takip else "Kargo kodu değişmedi."))
+    return sonuc
+
+
+def _istekten_siparis_nolari(veri: dict) -> tuple[list[str] | None, str]:
+    """order_numbers ve/veya kayit_ids (UretimSiparis.id) → sıralı, tekil sipariş numaraları.
+    Hata → (None, mesaj)."""
+    order_numbers = [str(n).strip() for n in (veri.get("order_numbers") or []) if str(n).strip()]
+    kayit_ids = veri.get("kayit_ids") or []
+    if kayit_ids:
+        try:
+            ids = [int(i) for i in kayit_ids]
+        except (TypeError, ValueError):
+            return None, "Geçersiz kayıt kimliği."
+        kayitlar = UretimSiparis.query.filter(UretimSiparis.id.in_(ids)).all()
+        order_numbers += [k.order_number for k in kayitlar]
+    order_numbers = list(dict.fromkeys(order_numbers))  # sıra korunarak tekille
+    if not order_numbers:
+        return None, "Sipariş seçilmedi."
+    if len(order_numbers) > MAKS_TOPLU:
+        return None, f"Tek seferde en fazla {MAKS_TOPLU} sipariş işlenebilir."
+    return order_numbers, ""
+
+
 def toplu_kargo_degistir(order_numbers: list[str], kargo_kodu: str) -> dict:
     sonuclar = [siparis_kargo_degistir(no, kargo_kodu) for no in order_numbers]
     basarili = sum(1 for s in sonuclar if s["success"] and not s["skipped"])
@@ -348,21 +417,22 @@ def degistir():
     if kargo_kodu not in KARGO_KOD_AD:
         return jsonify({"success": False, "message": "Geçersiz kargo firması kodu."}), 400
 
-    order_numbers = [str(n).strip() for n in (veri.get("order_numbers") or []) if str(n).strip()]
-    kayit_ids = veri.get("kayit_ids") or []
-    if kayit_ids:
-        try:
-            ids = [int(i) for i in kayit_ids]
-        except (TypeError, ValueError):
-            return jsonify({"success": False, "message": "Geçersiz kayıt kimliği."}), 400
-        kayitlar = UretimSiparis.query.filter(UretimSiparis.id.in_(ids)).all()
-        order_numbers += [k.order_number for k in kayitlar]
-    # Sıra korunarak tekille
-    order_numbers = list(dict.fromkeys(order_numbers))
-    if not order_numbers:
-        return jsonify({"success": False, "message": "Sipariş seçilmedi."}), 400
-    if len(order_numbers) > MAKS_TOPLU:
-        return jsonify({"success": False,
-                        "message": f"Tek seferde en fazla {MAKS_TOPLU} sipariş değiştirilebilir."}), 400
+    order_numbers, hata = _istekten_siparis_nolari(veri)
+    if order_numbers is None:
+        return jsonify({"success": False, "message": hata}), 400
 
     return jsonify(toplu_kargo_degistir(order_numbers, kargo_kodu))
+
+
+@kargo_degistir_bp.route("/api/yenile", methods=["POST"])
+def yenile():
+    """Değişiklik sonrası yeni kargo kodunu almak için siparişi Trendyol'dan yeniden çeker.
+    Gövde: {"order_numbers": [...]} veya {"kayit_ids": [...]} — istemci sırayla tek tek yollar."""
+    veri = request.get_json(silent=True) or {}
+    order_numbers, hata = _istekten_siparis_nolari(veri)
+    if order_numbers is None:
+        return jsonify({"success": False, "message": hata}), 400
+    sonuclar = [siparis_kargo_yenile(no) for no in order_numbers]
+    alinan = sum(1 for s in sonuclar if s["success"] and s["cargo_tracking_number"])
+    return jsonify({"success": all(s["success"] for s in sonuclar), "alinan": alinan,
+                    "sonuclar": sonuclar})

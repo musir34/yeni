@@ -255,6 +255,34 @@ def test_api_toplu_kayit_idleri_ve_siparis_nolari(monkeypatch):
     }
 
 
+def test_yenile_yeni_kodu_yazar_ve_rozeti_dondurur(monkeypatch):
+    _temizle()
+    _siparis(OrderCreated, "109", kargo="DHL eCommerce Marketplace", takip="")  # değişiklik sonrası kod silinmiş
+    _siparis(OrderCreated, "109", kargo="DHL eCommerce Marketplace", takip="")
+    _sahte(monkeypatch, get_paket={"shipmentPackageId": 555, "cargoProviderName": "DHL eCommerce Marketplace",
+                                   "cargoTrackingNumber": "728777", "cargoTrackingLink": "http://t"})
+    with app.app_context():
+        r = kargo_degistir.siparis_kargo_yenile("109")
+        satirlar = OrderCreated.query.filter_by(order_number="109").all()
+        assert all(x.cargo_tracking_number == "728777" and x.cargo_tracking_link == "http://t" for x in satirlar)
+    assert r["success"] and r["guncellendi"] and r["firma"]["kisa"] == "DHL"
+
+    # Henüz kod oluşmadıysa: başarılı ama kod yok, yerel kayıt dokunulmaz
+    _temizle()
+    _siparis(OrderPicking, "110", takip="")
+    _sahte(monkeypatch, get_paket={"shipmentPackageId": 555, "cargoProviderName": "PTT Kargo Marketplace",
+                                   "cargoTrackingNumber": ""})
+    with app.app_context():
+        r = kargo_degistir.siparis_kargo_yenile("110")
+        assert OrderPicking.query.filter_by(order_number="110").first().cargo_tracking_number == ""
+    assert r["success"] and not r["cargo_tracking_number"] and "henüz" in r["message"]
+
+    c = _client()
+    j = c.post("/kargo-firmasi/api/yenile", json={"order_numbers": ["110", "SH-1"]}, headers=FETCH).get_json()
+    assert j["alinan"] == 0 and [x["order_number"] for x in j["sonuclar"]] == ["110", "SH-1"]
+    assert c.post("/kargo-firmasi/api/yenile", json={"order_numbers": ["110"]}).status_code == 403
+
+
 def test_api_guvenlik_ve_dogrulama():
     _temizle()
     c = _client()

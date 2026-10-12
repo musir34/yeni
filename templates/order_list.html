@@ -71,10 +71,6 @@
         .card.kargo-secili { outline: 2px solid var(--color-primary, #b76e79); outline-offset: -2px; }
         .kargo-toplu-wrap { display: inline-flex; align-items: center; gap: .5rem; }
         .kargo-toplu-wrap label { display: inline-flex; align-items: center; gap: .35rem; margin: 0; font-size: .85rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
-        #kargoSonucListe { max-height: 40vh; overflow: auto; font-size: .9rem; }
-        #kargoSonucListe .ks-ok { color: var(--color-success); }
-        #kargoSonucListe .ks-skip { color: #946300; }
-        #kargoSonucListe .ks-err { color: var(--color-danger); }
         .red { color: var(--color-danger); }
         .badge { font-size: 0.8rem; padding: 0.4em 0.7em; }
 
@@ -559,10 +555,6 @@
                             Trendyol yeni kargo kodu üretir; daha önce basılmış etiketler geçersiz olur.
                         </div>
                     </div>
-                    <div id="kargoSonucAlani" class="d-none">
-                        <p class="mb-2" id="kargoSonucOzet"></p>
-                        <div id="kargoSonucListe"></div>
-                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Kapat</button>
@@ -627,6 +619,7 @@
 
 {% block scripts %}
     <script src="{{ url_for('static', filename='js/kargo-rozet.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/kargo-islem.js') }}"></script>
     <script>
         // ─── Kompakt Mod ─────────────────────────────────────────────────────────
         (function(){
@@ -1017,9 +1010,6 @@
                 const nolar = secili();
                 if (!nolar.length) return;
                 document.getElementById('kargoModalSayi').textContent = nolar.length;
-                document.getElementById('kargoFormAlani').classList.remove('d-none');
-                document.getElementById('kargoSonucAlani').classList.add('d-none');
-                onayBtn.classList.remove('d-none');
                 onayBtn.disabled = !firmaSec.value;
                 onayBtn.innerHTML = 'Değiştir';
                 try { await firmalariYukle(); } catch { toastGoster('Kargo firmaları yüklenemedi.', 'danger'); return; }
@@ -1027,53 +1017,126 @@
             });
             firmaSec.addEventListener('change', function(){ onayBtn.disabled = !firmaSec.value; });
 
-            onayBtn.addEventListener('click', async function(){
-                const nolar = secili();
-                const kod = firmaSec.value;
-                if (!nolar.length || !kod) return;
-                onayBtn.disabled = true;
-                onayBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Değiştiriliyor…';
+            const bekle = ms => new Promise(r => setTimeout(r, ms));
+            const rozet = f => (window.kargoRozetHtml && f) ? kargoRozetHtml(f) + ' ' : '';
+            const sonucDurum = x => x.skipped ? 'atlandi' : (x.success ? 'ok' : 'hata');
+            // Değişiklik sonrası: yeni kargo kodunu Trendyol'dan al (tek sipariş, asla fırlatmaz)
+            async function kargoYenile(orderNumber) {
+                try {
+                    const r = await fetch('/kargo-firmasi/api/yenile', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+                        body: JSON.stringify({ order_numbers: [orderNumber] })
+                    });
+                    if (!(r.headers.get('content-type') || '').includes('application/json')) return null;
+                    const j = await r.json();
+                    return (j.sonuclar && j.sonuclar[0]) || null;
+                } catch (e) { return null; }
+            }
+            // 2. tur: yeni kodu gelmeyen siparişler sırayla, birkaç turda yeniden çekilir; sonuç nesneleri yerinde güncellenir.
+            async function kargoKodlariniTopla(sonuclar, panel) {
+                let kalan = sonuclar.filter(x => x.success && !x.skipped && !x.cargo_tracking_number);
+                const TUR = 3, BEKLEME = [3000, 5000, 8000];
+                for (let tur = 0; tur < TUR && kalan.length; tur++) {
+                    panel.adim('Trendyol yeni kargo kodlarını üretiyor, bekleniyor… (tur ' + (tur + 1) + '/' + TUR + ')');
+                    kalan.forEach(x => panel.satir(x.order_number, 'bekliyor', 'Yeni kargo kodu bekleniyor…'));
+                    await bekle(BEKLEME[tur]);
+                    const hala = [];
+                    for (let i = 0; i < kalan.length; i++) {
+                        panel.adim('Yeni kargo kodu alınıyor (tur ' + (tur + 1) + '/' + TUR + ')', i, kalan.length);
+                        panel.satir(kalan[i].order_number, 'calisiyor', 'Trendyol\'dan çekiliyor…');
+                        const y = await kargoYenile(kalan[i].order_number);
+                        if (y && y.success && y.cargo_tracking_number) {
+                            Object.assign(kalan[i], { cargo_tracking_number: y.cargo_tracking_number, firma: y.firma,
+                                cargo_provider_name: y.cargo_provider_name || kalan[i].cargo_provider_name,
+                                message: 'Değiştirildi — yeni kargo kodu alındı: ' + y.cargo_tracking_number });
+                            panel.satir(kalan[i].order_number, 'ok', kalan[i].message, rozet(y.firma));
+                        } else {
+                            panel.satir(kalan[i].order_number, 'bekliyor', 'Yeni kargo kodu henüz oluşmadı');
+                            hala.push(kalan[i]);
+                        }
+                    }
+                    panel.adim('Yeni kargo kodu alınıyor (tur ' + (tur + 1) + '/' + TUR + ')', kalan.length, kalan.length);
+                    kalan = hala;
+                }
+                kalan.forEach(x => panel.satir(x.order_number, 'atlandi', 'Yeni kargo kodu henüz oluşmadı — birazdan Siparişleri Güncelle ile gelir', rozet(x.firma)));
+                return kalan.length;
+            }
+
+            // Tek sipariş için istek: sunucu zaman aşımına takılmamak için siparişler SIRAYLA gönderilir.
+            async function kargoTekDegistir(orderNumber, kod) {
                 try {
                     const r = await fetch('/kargo-firmasi/api/degistir', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
-                        body: JSON.stringify({ kargo_kodu: kod, order_numbers: nolar })
+                        body: JSON.stringify({ kargo_kodu: kod, order_numbers: [orderNumber] })
                     });
+                    const ct = r.headers.get('content-type') || '';
+                    if (!ct.includes('application/json')) {
+                        return { order_number: orderNumber, success: false, skipped: false,
+                                 message: 'Sunucu hatası (HTTP ' + r.status + ') — Trendyol\'da değişmiş olabilir, Siparişleri Güncelle\'ye basın' };
+                    }
                     const j = await r.json();
-                    if (!r.ok && !j.sonuclar) throw new Error(j.message || 'İstek reddedildi');
-                    // Sonuçları modalda göster, kartları yerinde güncelle (sayfa yenilemeden)
-                    document.getElementById('kargoFormAlani').classList.add('d-none');
-                    document.getElementById('kargoSonucAlani').classList.remove('d-none');
-                    document.getElementById('kargoSonucOzet').innerHTML = '<strong>' + escHtml(j.message || '') + '</strong>';
-                    document.getElementById('kargoSonucListe').innerHTML = (j.sonuclar || []).map(x => {
-                        const cls = x.skipped ? 'ks-skip' : (x.success ? 'ks-ok' : 'ks-err');
-                        const ico = x.skipped ? 'fa-minus-circle' : (x.success ? 'fa-check-circle' : 'fa-times-circle');
-                        return `<div class="${cls}"><i class="fas ${ico}"></i> <strong>${escHtml(x.order_number)}</strong> — ${escHtml(x.message)}</div>`;
-                    }).join('');
-                    onayBtn.classList.add('d-none');
-                    (j.sonuclar || []).forEach(x => {
-                        if (!x.success || x.skipped) return;
-                        const cb = kutular().find(c => c.value === x.order_number);
-                        const card = cb?.closest('.card');
-                        if (!card) return;
-                        const prov = card.querySelector('.cargo-provider');
-                        if (prov && x.cargo_provider_name) { prov.textContent = x.cargo_provider_name; prov.classList.remove('orange'); }
-                        const rozetYeri = card.querySelector('.kargo-rozet-yeri');
-                        if (rozetYeri) rozetYeri.innerHTML = window.kargoRozetHtml ? kargoRozetHtml(x.firma) : '';
-                        const bc = card.querySelector('input[name="shipping_barcode"]');
-                        if (bc) bc.value = x.cargo_tracking_number || '';
-                        const cp = card.querySelector('input[name="cargo_provider"]');
-                        if (cp && x.cargo_provider_name) cp.value = x.cargo_provider_name;
-                        cb.checked = false;
-                        card.classList.remove('kargo-secili');
-                    });
-                    sayacGuncelle();
-                    toastGoster(j.message || 'Tamamlandı', j.success ? 'success' : (j.basarili ? 'warning' : 'danger'));
+                    if (j.sonuclar && j.sonuclar.length) return j.sonuclar[0];
+                    return { order_number: orderNumber, success: false, skipped: false, message: j.message || ('HTTP ' + r.status) };
                 } catch (e) {
-                    toastGoster('Kargo firması değiştirilemedi: ' + e.message, 'danger');
-                    onayBtn.disabled = false;
-                    onayBtn.innerHTML = 'Değiştir';
+                    return { order_number: orderNumber, success: false, skipped: false,
+                             message: 'Sunucuya ulaşılamadı (bağlantı koptu / zaman aşımı) — Trendyol\'da değişmiş olabilir, Siparişleri Güncelle\'ye basın' };
                 }
+            }
+
+            // Kartı yerinde güncelle (sayfa yenilemeden): kargo adı, rozet, etiket formundaki kod
+            function kartiGuncelle(x) {
+                const cb = kutular().find(c => c.value === x.order_number);
+                const card = cb?.closest('.card');
+                if (!card) return;
+                const prov = card.querySelector('.cargo-provider');
+                if (prov && x.cargo_provider_name) { prov.textContent = x.cargo_provider_name; prov.classList.remove('orange'); }
+                const rozetYeri = card.querySelector('.kargo-rozet-yeri');
+                if (rozetYeri) rozetYeri.innerHTML = window.kargoRozetHtml ? kargoRozetHtml(x.firma) : '';
+                const bc = card.querySelector('input[name="shipping_barcode"]');
+                if (bc) bc.value = x.cargo_tracking_number || '';
+                const cp = card.querySelector('input[name="cargo_provider"]');
+                if (cp && x.cargo_provider_name) cp.value = x.cargo_provider_name;
+                if (cb) { cb.checked = false; card.classList.remove('kargo-secili'); }
+            }
+
+            onayBtn.addEventListener('click', async function(){
+                const nolar = secili();
+                const kod = firmaSec.value;
+                if (!nolar.length || !kod) return;
+                const ad = firmaSec.options[firmaSec.selectedIndex].textContent;
+                bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                const panel = KargoIslem.ac({
+                    baslik: 'Kargo Firması Değiştiriliyor',
+                    altBaslik: nolar.length + ' sipariş → <strong>' + escHtml(ad) + '</strong>',
+                    satirlar: nolar.map(n => ({ id: n, etiket: n }))
+                });
+                const sonuclar = [];
+                for (let i = 0; i < nolar.length; i++) {
+                    panel.adim('Trendyol\'a gönderiliyor', i, nolar.length);
+                    panel.satir(nolar[i], 'calisiyor', 'Kargo firması değiştiriliyor…');
+                    const x = await kargoTekDegistir(nolar[i], kod);
+                    sonuclar.push(x);
+                    panel.satir(nolar[i], sonucDurum(x), x.message, rozet(x.firma));
+                    if (x.success) kartiGuncelle(x);
+                }
+                panel.adim('Trendyol\'a gönderiliyor', nolar.length, nolar.length);
+                // 2. tur: gidenler sırayla geri çekilir → yeni kargo kodları yerel kayda yazılır
+                const kodsuz = await kargoKodlariniTopla(sonuclar, panel);
+                sonuclar.forEach(x => { if (x.success && !x.skipped) kartiGuncelle(x); });
+                sayacGuncelle();
+                const basarili = sonuclar.filter(x => x.success && !x.skipped).length;
+                const atlanan = sonuclar.filter(x => x.skipped).length;
+                const hatali = sonuclar.filter(x => !x.success && !x.skipped).length;
+                panel.bitir({
+                    ozet: basarili + ' değişti, ' + atlanan + ' atlandı, ' + hatali + ' hata.' +
+                          (kodsuz ? ' ' + kodsuz + ' siparişin yeni kargo kodu henüz oluşmadı.' : ''),
+                    tur: hatali ? (basarili ? 'warning' : 'error') : (kodsuz ? 'warning' : 'success'),
+                    adim: hatali ? 'Bazı siparişler değiştirilemedi' : 'Tamamlandı'
+                });
+                onayBtn.disabled = !firmaSec.value;
+                onayBtn.innerHTML = 'Değiştir';
             });
         })();
 
