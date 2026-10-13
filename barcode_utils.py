@@ -8,9 +8,12 @@ def generate_barcode_data_uri(value: str) -> str:
     # python-barcode görseli bellekte üret
     writer_opts = {
         "write_text": False,      # alt yazıyı biz basacağız
-        "module_width": 0.2,
-        "module_height": 15.0,
-        "quiet_zone": 4.0,
+        "dpi": 508,
+        # 0.25mm @508dpi = tam 5px -> her cubuk esit genislikte.
+        # Eski 0.2mm@300dpi = 2.36px: cubuklar 2/3px karisiyordu, telefon okuyamiyordu.
+        "module_width": 0.25,
+        "module_height": 18.0,
+        "quiet_zone": 4.0,    # = 80px
     }
     bc = get_barcode("code128", value, writer=ImageWriter())
     img = bc.render(writer_opts)                 # PIL.Image
@@ -66,13 +69,16 @@ def generate_barcode_data_uri(value: str, show_text: bool = True) -> str:
     show_text=False ise barkodun altına metin eklenmez."""
     writer_opts = {
         "write_text": False,
-        "module_width": 0.2,
-        "module_height": 15.0,
-        "quiet_zone": 4.0,
+        "dpi": 508,
+        # 0.25mm @508dpi = tam 5px -> her cubuk esit genislikte.
+        # Eski 0.2mm@300dpi = 2.36px: cubuklar 2/3px karisiyordu, telefon okuyamiyordu.
+        "module_width": 0.25,
+        "module_height": 18.0,
+        "quiet_zone": 4.0,    # = 80px
     }
     bc = get_barcode("code128", value, writer=ImageWriter())
     pil_img = bc.render(writer_opts)
-    final_img = _draw_text_below(pil_img, value) if show_text else pil_img
+    final_img = _draw_text_below(pil_img, value, font_size=32, extra_h=56) if show_text else pil_img  # 508dpi'ye gore olcekli
 
     buf = io.BytesIO()
     final_img.save(buf, format="PNG")
@@ -91,13 +97,16 @@ def generate_barcode(value: str,
 
     writer_opts = {
         "write_text": False,    # python-barcode yazıyı çizmesin
-        "module_width": 0.2,
-        "module_height": 15.0,
-        "quiet_zone": 4.0,
+        "dpi": 508,
+        # 0.25mm @508dpi = tam 5px -> her cubuk esit genislikte.
+        # Eski 0.2mm@300dpi = 2.36px: cubuklar 2/3px karisiyordu, telefon okuyamiyordu.
+        "module_width": 0.25,
+        "module_height": 18.0,
+        "quiet_zone": 4.0,    # = 80px
     }
     bc = get_barcode("code128", value, writer=ImageWriter())
     pil_img = bc.render(writer_opts)
-    final_img = _draw_text_below(pil_img, value)
+    final_img = _draw_text_below(pil_img, value, font_size=32, extra_h=56)
 
     fs_path = os.path.join(out_dir, f"{name}.png")
     final_img.save(fs_path, format="PNG")

@@ -745,7 +745,8 @@ def order_label():
             logger.warning("order_label: üretim hazırlayan damgası yazılamadı", exc_info=True)
 
         # Barkod dosya YOK: inline (base64) veri
-        barcode_data_uri = generate_barcode_data_uri(shipping_barcode) if shipping_barcode else None
+        # show_text=False: numara sablonda ayrica basiliyor, gorselin tamami cubuklara kalsin
+        barcode_data_uri = generate_barcode_data_uri(shipping_barcode, show_text=False) if shipping_barcode else None
         # QR: sipariş numarası (barkod zaten solda basılıyor, QR'da da aynısı olmasın)
         qr_code_path = generate_qr_code(order_number) if order_number else None
 
