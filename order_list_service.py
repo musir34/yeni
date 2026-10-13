@@ -10,13 +10,14 @@ from cache_config import cache, CACHE_TIMES
 import logging
 import math
 from datetime import datetime
-from barcode_utils import generate_barcode_data_uri
+from barcode_utils import generate_barcode_data_uri, generate_barcode_svg_data_uri
 
 from models import db, Product, OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered, OrderCancelled, PlatformConfig, Archive
 from overdue_orders import OVERDUE_STATUSES, STATUS_CODE, overdue_orders_query
 from barcode_utils import generate_barcode
 from shopify_siparis_listesi import shopify_kartlari, kartlari_sirala
 import qrcode
+import qrcode.image.svg
 import os
 
 order_list_service_bp = Blueprint('order_list_service', __name__)
@@ -77,9 +78,10 @@ def generate_qr_code(data):
         qr.make(fit=True)
         # Sipariş no "#1001" gibi dosya adına uygun olmayan karakter içerebilir
         safe_name = re.sub(r'[^A-Za-z0-9_-]+', '_', data) or 'qr'
-        qr_file = f"qr_{safe_name}.png"
+        # SVG (vektör): PNG ölçeklenince kenarlar griye dönüyor, termal yazıcı pürüzlü basıyordu
+        qr_file = f"qr_{safe_name}.svg"
         qr_path = os.path.join(qr_dir, qr_file)
-        qr.make_image(fill_color="black", back_color="white").save(qr_path)
+        qr.make_image(image_factory=qrcode.image.svg.SvgPathImage).save(qr_path)
         logger.info(f"✅ QR kod başarıyla kaydedildi: {qr_path}")
         return f"qr_codes/{qr_file}"
     except Exception as e:
@@ -745,8 +747,8 @@ def order_label():
             logger.warning("order_label: üretim hazırlayan damgası yazılamadı", exc_info=True)
 
         # Barkod dosya YOK: inline (base64) veri
-        # show_text=False: numara sablonda ayrica basiliyor, gorselin tamami cubuklara kalsin
-        barcode_data_uri = generate_barcode_data_uri(shipping_barcode, show_text=False) if shipping_barcode else None
+        # SVG (vektor): PNG olceklenince kenarlar gri/puruzlu basiliyordu; numara sablonda ayrica basiliyor
+        barcode_data_uri = generate_barcode_svg_data_uri(shipping_barcode) if shipping_barcode else None
         # QR: sipariş numarası (barkod zaten solda basılıyor, QR'da da aynısı olmasın)
         qr_code_path = generate_qr_code(order_number) if order_number else None
 

@@ -78,6 +78,11 @@
   .clamp-1{ display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
   .clamp-3{ display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
 
+  /* Tarayıcı eklentilerinin (Copilot, Claude vb.) sayfaya enjekte ettiği yüzen öğeleri gizle:
+     etiketin dışında body/html'e eklenen her şey ekranda da baskıda da görünmesin. */
+  body > *:not(.label):not(script){ display:none !important; }
+  html > *:not(head):not(body){ display:none !important; }
+
   @media print {
     .label{ border:0; }
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -145,6 +150,27 @@
   </div>
 
   <script>
+    // Eklentiler sonradan body'ye öğe eklerse (CSS'i aşmak için inline style kullananlar dahil) anında gizle
+    (function () {
+      var label = document.querySelector('.label');
+      function hideForeign(nodes) {
+        for (var i = 0; i < nodes.length; i++) {
+          var n = nodes[i];
+          if (n.nodeType === 1 && n !== label && n.tagName !== 'SCRIPT') {
+            n.style.setProperty('display', 'none', 'important');
+          }
+        }
+      }
+      try {
+        new MutationObserver(function (muts) {
+          muts.forEach(function (m) { hideForeign(m.addedNodes); });
+        }).observe(document.documentElement, { childList: true });
+        new MutationObserver(function (muts) {
+          muts.forEach(function (m) { hideForeign(m.addedNodes); });
+        }).observe(document.body, { childList: true });
+      } catch (e) {}
+    })();
+
     window.onload = function () {
       window.print();
       window.onafterprint = function () { window.close(); };

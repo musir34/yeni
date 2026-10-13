@@ -114,3 +114,37 @@ def generate_barcode(value: str,
     # url_for('static', filename=...) için relatife çevir (çift /static sorununu önler)
     rel = os.path.relpath(fs_path, "static").replace("\\", "/")  # örn: "barcodes/bc_123.png"
     return rel
+
+
+def generate_barcode_svg_data_uri(value: str,
+                                  module_width: float = 0.25,
+                                  module_height: float = 12.0,
+                                  quiet_zone: float = 2.5) -> str:
+    """Code128 barkodu VEKTOR (SVG) olarak data URI dondurur.
+    PNG'den farki: tarayici/yazici hangi boyutta basarsa bassin cubuk kenarlari
+    gri/pürüzlü olmaz, termal yazicida tertemiz cikar. <img src="..."> ile kullanilir.
+    Not: etikette genislik 100% / max-height ile olceklenir; module_height dusuk tutuldu ki
+    barkod yukseklige takilmadan alani tam genislikte doldursun (16 hane -> ~69mm x 23mm).
+    quiet_zone 2.5mm = 10 modul (Code128 minimumu), olceklenince ~4.5mm olur."""
+    bc = get_barcode("code128", value, writer=ImageWriter())
+    pattern = "".join(bc.build())          # '1' = siyah modül, '0' = beyaz
+    total_w = len(pattern) * module_width + 2 * quiet_zone
+    rects = []
+    x = quiet_zone
+    run = 0
+    for ch in pattern + "0":
+        if ch == "1":
+            run += 1
+        elif run:
+            start = x - run * module_width
+            rects.append(f'<rect x="{start:.3f}" y="0" width="{run * module_width:.3f}" height="{module_height:.3f}"/>')
+            run = 0
+        x += module_width
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{total_w:.3f}mm" height="{module_height:.3f}mm" '
+        f'viewBox="0 0 {total_w:.3f} {module_height:.3f}" shape-rendering="crispEdges">'
+        f'<rect width="100%" height="100%" fill="#fff"/>'
+        f'<g fill="#000">{"".join(rects)}</g></svg>'
+    )
+    data = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+    return f"data:image/svg+xml;base64,{data}"
