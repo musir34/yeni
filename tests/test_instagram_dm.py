@@ -26,7 +26,8 @@ os.environ["DISABLE_JOBS"] = "1"
 
 from flask import Flask  # noqa: E402
 
-from models import db, InstagramConversation, InstagramMessage, PlatformConfig  # noqa: E402
+from models import (db, InstagramAttachment, InstagramConversation, InstagramMessage,  # noqa: E402
+                    PlatformConfig)
 from trendyol_qna import instagram_dm  # noqa: E402
 
 SECRET = "test-app-secret"
@@ -41,7 +42,7 @@ db.init_app(app)
 app.register_blueprint(instagram_dm.instagram_bp)
 
 with app.app_context():
-    for _m in (InstagramConversation, InstagramMessage, PlatformConfig):
+    for _m in (InstagramConversation, InstagramMessage, InstagramAttachment, PlatformConfig):
         _m.__table__.create(bind=db.engine, checkfirst=True)
 
 
@@ -56,7 +57,7 @@ def _temiz(monkeypatch):
     cagrilar = []
     monkeypatch.setattr(instagram_dm, "sonrasi_async", lambda ids: cagrilar.append(list(ids)))
     with app.app_context():
-        for m in (InstagramMessage, InstagramConversation, PlatformConfig):
+        for m in (InstagramAttachment, InstagramMessage, InstagramConversation, PlatformConfig):
             db.session.query(m).delete()
         db.session.commit()
         yield cagrilar
@@ -978,3 +979,176 @@ def test_uretim_modundaki_model_kartta_ve_istemde_isaretlenir(trendyol_sorulari)
 
 def test_gercek_uygulama_hala_yuklenmedi():
     assert "app" not in sys.modules
+
+
+# ── Panelden ekler (görsel/dosya) ────────────────────────────────────────────
+
+from io import BytesIO  # noqa: E402
+
+from werkzeug.datastructures import FileStorage  # noqa: E402
+
+
+@pytest.fixture
+def ek_ortami(monkeypatch, tmp_path):
+    """Ekler geçici klasöre yazılır; dış adres tanımlı."""
+    monkeypatch.setattr(instagram_dm, "EK_KOK", tmp_path / "ek")
+    monkeypatch.setenv("PUBLIC_BASE_URL", "https://panel.example.com/")
+    _gonder(_olay("mid-1"))
+    return tmp_path / "ek"
+
+
+def _dosya(ad: str, icerik: bytes = b"x" * 10, mime: str = "image/png") -> FileStorage:
+    return FileStorage(stream=BytesIO(icerik), filename=ad, content_type=mime)
+
+
+def _api_kaydedici(monkeypatch):
+    mesajlar = []
+
+    def sahte_api(method, path, **kw):
+        mesajlar.append(kw["json_body"]["message"])
+        return {"recipient_id": MUSTERI, "message_id": f"mid-cevap-{len(mesajlar)}"}
+
+    monkeypatch.setattr(instagram_dm, "_api", sahte_api)
+    return mesajlar
+
+
+def test_ek_yuklenir_tur_ve_boyut_dogrulanir(ek_ortami):
+    conv = InstagramConversation.query.one()
+    s = instagram_dm.ek_kaydet(conv.id, _dosya("Foto Mavi.PNG"), note="mavi model, 38 numara", username="ayse")
+    assert s["ok"] is True
+    assert s["ek"]["kind"] == "image" and s["ek"]["note"] == "mavi model, 38 numara"
+    assert s["ek"]["url"] == f"/static/uploads/instagram/{conv.id}/" + s["ek"]["url"].rsplit("/", 1)[-1]
+    assert len(list((ek_ortami / str(conv.id)).iterdir())) == 1
+    assert instagram_dm.ek_kaydet(conv.id, _dosya("katalog.pdf", mime="application/pdf"))["ek"]["kind"] == "file"
+    assert "Desteklenmeyen" in instagram_dm.ek_kaydet(conv.id, _dosya("zararli.exe"))["hata"]
+    assert "boş" in instagram_dm.ek_kaydet(conv.id, _dosya("bos.jpg", b""))["hata"]
+    buyuk = _dosya("buyuk.jpg", b"x" * (instagram_dm.GORSEL_AZAMI + 1))
+    assert "büyük" in instagram_dm.ek_kaydet(conv.id, buyuk)["hata"]
+    assert instagram_dm.ek_kaydet(999999, _dosya("a.jpg"))["ok"] is False
+    assert [e.original_name for e in instagram_dm.bekleyen_ekler(conv.id)] == ["Foto_Mavi.PNG", "katalog.pdf"]
+    # Kart sözlüğü bekleyen ekleri taşır (yalnız cevap bekleyen konuşmada)
+    from trendyol_qna.qna_routes import _instagram_mesajlari, _instagram_to_dict
+    kart = _instagram_to_dict(conv, _instagram_mesajlari([conv.id])[conv.id])
+    assert [e["name"] for e in kart["ekler"]] == ["Foto_Mavi.PNG", "katalog.pdf"]
+
+
+def test_ekler_once_ayri_mesaj_sonra_metin_gider(ek_ortami, monkeypatch):
+    conv = InstagramConversation.query.one()
+    gorsel = instagram_dm.ek_kaydet(conv.id, _dosya("foto.jpg"))["ek"]
+    dosya = instagram_dm.ek_kaydet(conv.id, _dosya("katalog.pdf", mime="application/pdf"))["ek"]
+    mesajlar = _api_kaydedici(monkeypatch)
+
+    sonuc = instagram_dm.answer_conversation(conv.id, "Fotoğraf ekte.", username="ayse",
+                                             ek_ids=[gorsel["id"], dosya["id"]])
+    assert sonuc == {"ok": True, "hata": None}
+    # 1) görsel ayrı mesaj (dış HTTPS adres), 2) metin + dosya bağlantısı
+    assert len(mesajlar) == 2
+    assert mesajlar[0]["attachment"]["type"] == "image"
+    assert mesajlar[0]["attachment"]["payload"]["url"] == "https://panel.example.com" + gorsel["url"]
+    assert mesajlar[1]["text"] == f"Fotoğraf ekte.\n\n📎 katalog.pdf: https://panel.example.com{dosya['url']}"
+    assert [e.status for e in InstagramAttachment.query.order_by(InstagramAttachment.id)] == ["sent", "sent"]
+    assert instagram_dm.bekleyen_ekler(conv.id) == []
+    gidenler = InstagramMessage.query.filter_by(direction="out").order_by(InstagramMessage.id).all()
+    assert [(m.attachment_type, m.sent_by) for m in gidenler] == [("image", "ayse"), ("", "ayse")]
+    assert gidenler[0].attachment_url == mesajlar[0]["attachment"]["payload"]["url"]
+    db.session.refresh(conv)
+    assert conv.status == "answered"
+
+
+def test_yalniz_gorsel_metinsiz_gonderilebilir(ek_ortami, monkeypatch):
+    conv = InstagramConversation.query.one()
+    gorsel = instagram_dm.ek_kaydet(conv.id, _dosya("foto.jpg"))["ek"]
+    mesajlar = _api_kaydedici(monkeypatch)
+    assert instagram_dm.answer_conversation(conv.id, "", ek_ids=[gorsel["id"]])["ok"] is True
+    assert len(mesajlar) == 1 and "attachment" in mesajlar[0]
+    db.session.refresh(conv)
+    assert conv.status == "answered"
+    # Ek yokken boş metin yine reddedilir
+    assert instagram_dm.answer_conversation(conv.id, "", ek_ids=[])["ok"] is False
+
+
+def test_ek_reddedilirse_metin_gitmez_ek_bekleyende_kalir(ek_ortami, monkeypatch):
+    conv = InstagramConversation.query.one()
+    gorsel = instagram_dm.ek_kaydet(conv.id, _dosya("foto.jpg"))["ek"]
+    cagri = []
+
+    def reddet(method, path, **kw):
+        cagri.append(kw["json_body"]["message"])
+        raise instagram_dm.InstagramHatasi("Görsel çekilemedi", code=100)
+
+    monkeypatch.setattr(instagram_dm, "_api", reddet)
+    sonuc = instagram_dm.answer_conversation(conv.id, "Merhaba", ek_ids=[gorsel["id"]])
+    assert sonuc["ok"] is False and "foto.jpg" in sonuc["hata"]
+    assert len(cagri) == 1 and "attachment" in cagri[0]
+    assert [e.status for e in instagram_dm.bekleyen_ekler(conv.id)] == ["staged"]
+    assert conv.status == "new"
+
+
+def test_dis_adres_yoksa_ek_gonderimi_instagram_cagrilmadan_reddedilir(ek_ortami, monkeypatch):
+    conv = InstagramConversation.query.one()
+    gorsel = instagram_dm.ek_kaydet(conv.id, _dosya("foto.jpg"))["ek"]
+    monkeypatch.delenv("PUBLIC_BASE_URL")
+    monkeypatch.setattr(instagram_dm, "_api", lambda *a, **k: pytest.fail("çağrılmamalı"))
+    sonuc = instagram_dm.answer_conversation(conv.id, "Merhaba", ek_ids=[gorsel["id"]])
+    assert sonuc["ok"] is False and "PUBLIC_BASE_URL" in sonuc["hata"]
+
+
+def test_baska_konusmanin_ve_gonderilmis_ekler_tekrar_gitmez(ek_ortami, monkeypatch):
+    conv = InstagramConversation.query.one()
+    gorsel = instagram_dm.ek_kaydet(conv.id, _dosya("foto.jpg"))["ek"]
+    mesajlar = _api_kaydedici(monkeypatch)
+    assert instagram_dm.answer_conversation(conv.id, "İlk", ek_ids=[gorsel["id"]])["ok"] is True
+    # Aynı ek ikinci cevapta seçilse de (artık 'sent') yeniden gönderilmez
+    _gonder(_olay("mid-2", text="teşekkürler"))
+    assert instagram_dm.answer_conversation(conv.id, "İkinci", ek_ids=[gorsel["id"], 424242])["ok"] is True
+    assert [("attachment" in m) for m in mesajlar] == [True, False, False]
+    assert instagram_dm.ek_sil(conv.id, gorsel["id"])["ok"] is False      # gönderilmiş ek silinmez
+
+
+def test_ek_silme_dosyayi_ve_kaydi_kaldirir(ek_ortami):
+    conv = InstagramConversation.query.one()
+    ek = instagram_dm.ek_kaydet(conv.id, _dosya("foto.jpg"))["ek"]
+    yol = ek_ortami / str(conv.id) / ek["url"].rsplit("/", 1)[-1]
+    assert yol.exists()
+    assert instagram_dm.ek_not_guncelle(conv.id, ek["id"], "  kırmızı  ")["ek"]["note"] == "kırmızı"
+    assert instagram_dm.ek_sil(conv.id + 1, ek["id"])["ok"] is False      # başka konuşmadan silinemez
+    assert instagram_dm.ek_sil(conv.id, ek["id"]) == {"ok": True}
+    assert not yol.exists() and instagram_dm.bekleyen_ekler(conv.id) == []
+
+
+def test_bekleyen_ekler_ai_istemine_yol_ve_notla_girer(ek_ortami, monkeypatch):
+    from trendyol_qna import qna_ai
+    from trendyol_qna.qna_routes import _instagram_mesajlari
+
+    conv = InstagramConversation.query.one()
+    gorsel = instagram_dm.ek_kaydet(conv.id, _dosya("mavi.jpg"), note="mavi model, 38 numara")["ek"]
+    dosya = instagram_dm.ek_kaydet(conv.id, _dosya("fiyat.pdf", mime="application/pdf"))["ek"]
+    ekler = instagram_dm.bekleyen_ekler(conv.id)
+    prompt = qna_ai._instagram_draft_prompt(conv, _instagram_mesajlari([conv.id])[conv.id],
+                                            mevcut_metin="Merhaba", ekler=ekler)
+    assert "Cevapla BİRLİKTE müşteriye gidecek ekler" in prompt
+    assert "görsel 'mavi.jpg' — kullanıcının notu: mavi model, 38 numara — dosya: " in prompt
+    assert str(ek_ortami / str(conv.id) / gorsel["url"].rsplit("/", 1)[-1]) in prompt
+    assert "dosya 'fiyat.pdf'" in prompt and "Read aracıyla aç" in prompt
+    # Talimat yazılmadıysa ekler için varsayılan düzeltme talimatı girer
+    assert "Ekleri dikkate alarak cevabı güncelle." in prompt and "Mevcut taslak" in prompt
+    # Gönderilmiş ek yazışmada adıyla/notuyla görünür (sadece 'image' değil)
+    mesajlar = _api_kaydedici(monkeypatch)
+    assert instagram_dm.answer_conversation(conv.id, "Ekte.", ek_ids=[gorsel["id"], dosya["id"]])["ok"] is True
+    prompt2 = qna_ai._instagram_draft_prompt(conv, _instagram_mesajlari([conv.id])[conv.id],
+                                             gonderilen_ekler=instagram_dm.gonderilen_ekler(conv.id))
+    assert "Biz:  [ek: görsel 'mavi.jpg' — kullanıcının notu: mavi model, 38 numara" in prompt2
+    assert "Cevapla BİRLİKTE" not in prompt2
+    # Ek yoksa Read aracı açılmaz, varsa açılır
+    komutlar = []
+
+    class _Sonuc:
+        returncode, stdout, stderr = 0, json.dumps({"result": "taslak"}), ""
+
+    monkeypatch.setattr(qna_ai, "_claude_bin", lambda: "claude")
+    monkeypatch.setattr(qna_ai, "_kurallar", lambda: "kurallar")
+    monkeypatch.setattr(qna_ai.subprocess, "run", lambda cmd, **kw: komutlar.append(cmd) or _Sonuc())
+    assert qna_ai._run_claude("p") == "taslak"
+    assert qna_ai._run_claude("p", ek_yollari=["/tmp/x.jpg"]) == "taslak"
+    araclar = [c[c.index("--allowedTools") + 1] for c in komutlar]
+    assert araclar == [qna_ai.ALLOWED_TOOLS, qna_ai.ALLOWED_TOOLS + ",Read"]

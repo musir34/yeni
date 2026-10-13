@@ -188,8 +188,11 @@ def _draft_prompt(row, stok_bilgisi: str, talimat: str | None = None,
     return prompt
 
 
-def _run_claude(prompt: str) -> str | None:
-    """Headless Claude çağır, taslak metnini döndür (hata → None)."""
+def _run_claude(prompt: str, ek_yollari: list[str] | None = None) -> str | None:
+    """Headless Claude çağır, taslak metnini döndür (hata → None).
+
+    ek_yollari: cevapla gidecek ek dosyaları (görsel/pdf). Varsa Read aracı
+    açılır; prompt dosya yollarını verir, model görseli açıp içeriğini görür."""
     claude_bin = _claude_bin()
     if not claude_bin:
         logger.warning("[QNA-AI] claude binary bulunamadı (CLAUDE_BIN ayarlayın)")
@@ -207,7 +210,7 @@ def _run_claude(prompt: str) -> str | None:
         "-p", prompt,
         "--model", CLAUDE_MODEL,
         "--append-system-prompt", _kurallar(),
-        "--allowedTools", ALLOWED_TOOLS,
+        "--allowedTools", ALLOWED_TOOLS + (",Read" if ek_yollari else ""),
         "--output-format", "json",
     ]
     try:
@@ -237,15 +240,19 @@ def _run_claude(prompt: str) -> str | None:
     return text or None
 
 
-def _run_ai(prompt: str) -> str | None:
-    """Seçili motorla (panel ayarı > .env AI_MOTOR) taslak üret (hata → None)."""
+def _run_ai(prompt: str, ek_yollari: list[str] | None = None,
+            gorsel_yollari: list[str] | None = None) -> str | None:
+    """Seçili motorla (panel ayarı > .env AI_MOTOR) taslak üret (hata → None).
+
+    ek_yollari: Claude'un Read ile açacağı tüm ekler; gorsel_yollari: Codex'e
+    -i ile verilen görseller (Codex dosya okuyamaz, yalnız görsel görür)."""
     from ai_asistan.motor_ayar import aktif_motor, codex_model
 
     if aktif_motor("qna") != "codex":
-        return _run_claude(prompt)
+        return _run_claude(prompt, ek_yollari=ek_yollari)
 
     sonuc = _codex_calistir(prompt, _kurallar(), DRAFT_TIMEOUT_SN, cwd=AI_ASISTAN_DIR,
-                            model=codex_model("qna"))
+                            model=codex_model("qna"), images=gorsel_yollari or None)
     if not sonuc["ok"]:
         logger.warning("[QNA-AI] codex hata: %s", sonuc.get("hata"))
         return None
@@ -407,10 +414,26 @@ def generate_shopify_drafts_async(question_ids: list[int], talimat: str | None =
 INSTAGRAM_BAGLAM_MESAJ = 12   # taslak için konuşmanın son kaç mesajı verilir
 
 
+def _ek_satiri(ek, yol: str | None) -> str:
+    """Tek ekin prompt satırı: tür, ad, kullanıcı notu, (varsa) dosya yolu."""
+    tur = {"image": "görsel", "video": "video"}.get(ek.kind, "dosya")
+    satir = f"{tur} '{ek.original_name or ek.filename}'"
+    if ek.note:
+        satir += f" — kullanıcının notu: {ek.note}"
+    if yol:
+        satir += (f" — dosya: {yol} (Read aracıyla aç ve içeriğine bak)" if ek.kind != "video"
+                  else f" — dosya: {yol}")
+    return satir
+
+
 def _instagram_draft_prompt(conv, mesajlar, talimat: str | None = None,
                             mevcut_metin: str | None = None,
-                            urun_bilgisi: str | None = None) -> str:
-    from trendyol_qna.instagram_dm import TEXT_MAX
+                            urun_bilgisi: str | None = None,
+                            ekler=None, gonderilen_ekler=None) -> str:
+    """ekler: cevapla birlikte gidecek bekleyen ekler (InstagramAttachment);
+    gonderilen_ekler: daha önce panelden gönderilmiş ekler (yazışmadaki eklerin
+    ne olduğu buradan anlaşılır)."""
+    from trendyol_qna.instagram_dm import TEXT_MAX, ek_yolu
 
     if urun_bilgisi:
         # Ürünü kullanıcı konuşmaya elle bağladı: canlı site fiyatı/stok/bağlantı hazır
@@ -427,11 +450,33 @@ def _instagram_draft_prompt(conv, mesajlar, talimat: str | None = None,
             "ürünü (model/renk/numara) netleştirmesini iste.\n"
         )
 
+    # Bizim gönderdiğimiz eklerin adı/notu/yolu (yazışmada adres olarak görünür)
+    bizim_ekler = {}
+    for e in gonderilen_ekler or []:
+        yol = ek_yolu(e)
+        bizim_ekler[e.filename] = _ek_satiri(e, str(yol) if yol.exists() else None)
+
     satirlar = []
     for m in mesajlar:
         kim = "Müşteri" if m.direction == "in" else "Biz"
-        ek = f" [ek: {m.attachment_type}]" if m.attachment_type else ""
+        ek = ""
+        if m.attachment_type:
+            ad = (m.attachment_url or "").rsplit("/", 1)[-1]
+            ek = f" [ek: {bizim_ekler.get(ad) or m.attachment_type}]"
         satirlar.append(f"{kim}: {(m.text or '').strip()}{ek}")
+
+    ek_kismi = ""
+    if ekler:
+        ek_satirlari = []
+        for i, e in enumerate(ekler, 1):
+            yol = ek_yolu(e)
+            ek_satirlari.append(f"{i}) " + _ek_satiri(e, str(yol) if yol.exists() else None))
+        ek_kismi = (
+            "\nCevapla BİRLİKTE müşteriye gidecek ekler (panel gönderir, sen göndermezsin; "
+            "görselleri açıp ne olduğunu gör, cevabı eklere göre yaz ve gerekirse "
+            "'ekteki görselde…' / 'ekteki dosyada…' diye atıf yap; dosyaların bağlantısı "
+            "mesaja otomatik eklenir, sen bağlantı yazma):\n" + "\n".join(ek_satirlari) + "\n"
+        )
     prompt = (
         "Bu mesaj Trendyol'dan DEĞİL, Instagram hesabımıza gelen direkt mesajdan (DM); "
         "cevap müşteriye Instagram mesajı olarak gidecek. Trendyol'a özgü ifadeler kullanma, "
@@ -439,13 +484,13 @@ def _instagram_draft_prompt(conv, mesajlar, talimat: str | None = None,
         f"Cevap en fazla {TEXT_MAX} karakter olmalı.\n"
         f"Müşteri: {conv.name or 'bilinmiyor'}"
         f"{' (@' + conv.username + ')' if conv.username else ''}\n"
-        + urun_kismi +
+        + urun_kismi + ek_kismi +
         "\nYazışma (eskiden yeniye):\n" + "\n".join(satirlar) + "\n\n"
     )
-    if talimat:
+    if talimat or (ekler and mevcut_metin):
         prompt += (
             f"Mevcut taslak (panelde görünen hali):\n{mevcut_metin or conv.ai_draft or '(boş)'}\n\n"
-            f"Kullanıcının düzeltme talimatı: {talimat}\n\n"
+            f"Kullanıcının düzeltme talimatı: {talimat or 'Ekleri dikkate alarak cevabı güncelle.'}\n\n"
             "Mevcut taslağı bu talimata göre düzelt; talimatın dokunmadığı kısımları koru. "
             "Kurallara uygun, müşteriye gönderilmeye hazır TEK bir cevap taslağı yaz."
         )
@@ -494,9 +539,18 @@ def generate_instagram_draft(conv_id: int, talimat: str | None = None,
         db.session.rollback()
         logger.exception("[QNA-AI] ürün bilgisi okunamadı (konuşma %s)", conv_id)
         urun_bilgisi = None
+    # Panelden yüklenen ekler: bekleyenler cevapla gidecek (model görür), gönderilenler
+    # yazışmadaki eklerin ne olduğunu anlatır
+    from trendyol_qna.instagram_dm import bekleyen_ekler, ek_yolu, gonderilen_ekler
+    ekler = bekleyen_ekler(conv.id)
+    gonderilen = gonderilen_ekler(conv.id)
+    mevcut_yollar = [str(ek_yolu(e)) for e in ekler + gonderilen if ek_yolu(e).exists()]
+    gorseller = [str(ek_yolu(e)) for e in ekler if e.kind == "image" and ek_yolu(e).exists()]
     taslak = _run_ai(_instagram_draft_prompt(conv, mesajlar, talimat=talimat,
                                              mevcut_metin=mevcut_metin,
-                                             urun_bilgisi=urun_bilgisi))
+                                             urun_bilgisi=urun_bilgisi,
+                                             ekler=ekler, gonderilen_ekler=gonderilen),
+                     ek_yollari=mevcut_yollar or None, gorsel_yollari=gorseller or None)
     if taslak:
         conv.ai_draft = taslak[:TEXT_MAX]
         conv.ai_draft_status = "ready"

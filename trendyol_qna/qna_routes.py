@@ -207,7 +207,8 @@ def _urun_sozlugu(bag) -> dict | None:
 
 def _instagram_to_dict(c: InstagramConversation, mesajlar: list[InstagramMessage], bag=None) -> dict:
     """Instagram konuşmasını kart sözlüğüne çevirir (mesajlar eskiden yeniye; bag: ürün bağı)."""
-    from trendyol_qna.instagram_dm import TEXT_MAX, pencere_acik, pencere_bitisi
+    from trendyol_qna.instagram_dm import (TEXT_MAX, bekleyen_ekler, ek_sozluk, pencere_acik,
+                                           pencere_bitisi)
     bitis = pencere_bitisi(c)
     son_giden = next((m for m in reversed(mesajlar) if m.direction == "out"), None)
     son_gelen = next((m for m in reversed(mesajlar) if m.direction == "in"), None)
@@ -229,6 +230,8 @@ def _instagram_to_dict(c: InstagramConversation, mesajlar: list[InstagramMessage
         "pencere_bitis": bitis.isoformat() if bitis else None,
         "metin_azami": TEXT_MAX,
         "urun": _urun_sozlugu(bag),
+        # cevapla birlikte gidecek ekler (panelden yüklendi, henüz gönderilmedi)
+        "ekler": [ek_sozluk(e) for e in bekleyen_ekler(c.id)] if c.status == "new" else [],
         "mesajlar": [
             {
                 "yon": m.direction,
@@ -533,8 +536,51 @@ def instagram_cevapla():
         return jsonify({"ok": False, "hata": "Geçersiz konuşma ID."}), 400
 
     from trendyol_qna.instagram_dm import answer_conversation
+    ek_ids = payload.get("ek_ids") if isinstance(payload.get("ek_ids"), list) else []
     sonuc = answer_conversation(cid, (payload.get("text") or "").strip(),
-                                username=session.get("username"))
+                                username=session.get("username"), ek_ids=ek_ids)
+    return jsonify(sonuc), (200 if sonuc["ok"] else 422)
+
+
+@qna_bp.route("/api/instagram/ek/<int:cid>", methods=["POST"])
+def instagram_ek_yukle(cid: int):
+    """Konuşmaya ek yükler (multipart 'dosya', birden çok olabilir; 'not' = AI için açıklama).
+
+    Ek 'bekleyen' kalır: cevapla birlikte gider, AI taslağı üretilirken görülür.
+    """
+    if not db.session.get(InstagramConversation, cid):
+        return jsonify({"ok": False, "hata": "Konuşma bulunamadı."}), 404
+    dosyalar = [d for d in request.files.getlist("dosya") if d and d.filename]
+    if not dosyalar:
+        return jsonify({"ok": False, "hata": "Dosya seçilmedi."}), 400
+    from trendyol_qna.instagram_dm import bekleyen_ekler, ek_kaydet, ek_sozluk
+    note = (request.form.get("not") or "").strip()[:500]
+    hatalar = []
+    for d in dosyalar:
+        sonuc = ek_kaydet(cid, d, note=note, username=session.get("username"))
+        if not sonuc["ok"]:
+            hatalar.append(f"{d.filename}: {sonuc['hata']}")
+    return jsonify({
+        "ok": len(hatalar) < len(dosyalar),
+        "hata": "; ".join(hatalar) or None,
+        "ekler": [ek_sozluk(e) for e in bekleyen_ekler(cid)],
+    }), (200 if len(hatalar) < len(dosyalar) else 422)
+
+
+@qna_bp.route("/api/instagram/ek/<int:cid>/<int:eid>/sil", methods=["POST"])
+def instagram_ek_sil(cid: int, eid: int):
+    from trendyol_qna.instagram_dm import bekleyen_ekler, ek_sil, ek_sozluk
+    sonuc = ek_sil(cid, eid)
+    sonuc["ekler"] = [ek_sozluk(e) for e in bekleyen_ekler(cid)]
+    return jsonify(sonuc), (200 if sonuc["ok"] else 422)
+
+
+@qna_bp.route("/api/instagram/ek/<int:cid>/<int:eid>/not", methods=["POST"])
+def instagram_ek_not(cid: int, eid: int):
+    """Ekin 'bu ne' notunu günceller (AI taslağı bu notu okur)."""
+    payload = request.get_json(silent=True) or {}
+    from trendyol_qna.instagram_dm import ek_not_guncelle
+    sonuc = ek_not_guncelle(cid, eid, payload.get("not") or "")
     return jsonify(sonuc), (200 if sonuc["ok"] else 422)
 
 

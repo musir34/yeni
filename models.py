@@ -1660,6 +1660,35 @@ class InstagramMessage(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), index=True)
 
 
+class InstagramAttachment(db.Model):
+    """Panelden Instagram konuşmasına gönderilecek / gönderilmiş ek (görsel, video, dosya).
+
+    Dosya static/uploads/instagram/<conversation_id>/ altında durur; Instagram
+    görseli/videoyu herkese açık HTTPS adresinden çeker (PUBLIC_BASE_URL), dosyalar
+    (pdf vb.) Instagram'da ek olarak desteklenmediği için metne bağlantı olarak girer.
+    status 'staged': cevapla birlikte gidecek (AI taslağı bu ekleri görür ve nota
+    göre yazar), 'sent': gönderildi.
+
+    Tablo oluşturma: trendyol_qna/instagram_dm.py ensure_table_exists (additive).
+    """
+    __tablename__ = 'instagram_attachments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('instagram_conversations.id'),
+                                nullable=False, index=True)
+    kind = db.Column(db.String(10), nullable=False, default='file')   # image | video | file
+    filename = db.Column(db.String(200), nullable=False)               # diskteki ad (uuid.uzantı)
+    original_name = db.Column(db.String(255), default='')
+    mime = db.Column(db.String(100), default='')
+    size = db.Column(db.Integer, default=0)
+    note = db.Column(db.String(500), default='')                       # kullanıcının "bu ne" notu (AI için)
+    status = db.Column(db.String(10), default='staged', index=True)    # staged | sent
+    uploaded_by = db.Column(db.String(120))
+    message_mid = db.Column(db.String(400))                            # gönderilince Instagram mesaj ID'si
+    created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
+    sent_at = db.Column(db.DateTime(timezone=True))
+
+
 class InstagramComment(db.Model):
     """Instagram gönderi yorumu — /soru-cevap ekranında tek kart = tek yorum.
 

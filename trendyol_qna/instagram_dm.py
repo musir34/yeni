@@ -21,6 +21,10 @@ Ayarlar (.env):
                            konuşmaları çekerek mesajları al
   INSTAGRAM_COMMENTS=1     (opsiyonel) gönderi yorumlarını 2 dakikada bir çek;
                            anahtarda instagram_business_manage_comments izni gerekir
+  PUBLIC_BASE_URL          Panelin dışarıdan erişilen HTTPS adresi (ör.
+                           https://panel.ornek.com). Ek (görsel/video) gönderiminde
+                           Instagram dosyayı bu adresten çeker; boşsa isteğin kök
+                           adresi kullanılır.
 """
 import hashlib
 import hmac
@@ -29,13 +33,15 @@ import os
 import threading
 import uuid
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import requests
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, has_request_context, jsonify, request
 from sqlalchemy.exc import IntegrityError
+from werkzeug.utils import secure_filename
 
-from models import (db, InstagramComment, InstagramConversation, InstagramMediaProduct,
-                    InstagramMessage, PlatformConfig)
+from models import (db, InstagramAttachment, InstagramComment, InstagramConversation,
+                    InstagramMediaProduct, InstagramMessage, PlatformConfig)
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +58,18 @@ PENCERE_DISI_ALT_KOD = 2534022       # Meta: 24 saat penceresi dışında gönde
 
 DESTEKLENMEYEN_METIN = "[Desteklenmeyen mesaj türü — Instagram uygulamasından bakın]"
 EK_METIN = "[Ek gönderildi — Instagram uygulamasından bakın]"
+
+# Panelden gönderilen ekler (görsel/video/dosya). Dosyalar static altında durur ki
+# Instagram herkese açık adresten çekebilsin (/static/ kimlik doğrulamadan muaf).
+PROJE_KOK = Path(__file__).resolve().parent.parent
+EK_KOK = PROJE_KOK / "static" / "uploads" / "instagram"
+EK_URL_ONEKI = "/static/uploads/instagram"
+GORSEL_UZANTILAR = {"jpg", "jpeg", "png", "gif", "webp"}
+VIDEO_UZANTILAR = {"mp4", "mov"}
+DOSYA_UZANTILAR = {"pdf", "doc", "docx", "xls", "xlsx", "txt", "csv"}
+GORSEL_AZAMI = 8 * 1024 * 1024       # Instagram görsel eki üst sınırı
+EK_AZAMI = 25 * 1024 * 1024          # video/dosya (uygulama MAX_CONTENT_LENGTH ayrıca sınırlar)
+EK_SAYI_AZAMI = 10                   # konuşma başına bekleyen ek
 
 
 class InstagramHatasi(Exception):
@@ -517,41 +535,203 @@ def urun_baglantisi_ekle(text: str, anahtar: str) -> str:
     return f"{text}\n\n{URUN_BAGLANTI_ONEKI}{adres}"
 
 
-def answer_conversation(conv_id: int, text: str, username: str | None = None) -> dict:
-    """Cevabı Instagram'dan müşteriye gönder. Dönen: {'ok': bool, 'hata': str|None}"""
+# ── Panelden gönderilen ekler ────────────────────────────────────────────────
+
+def public_base_url() -> str:
+    """Eklerin dışarıdan erişilen kök adresi: .env PUBLIC_BASE_URL, yoksa isteğin kökü."""
+    taban = (_env("PUBLIC_BASE_URL") or "").strip().rstrip("/")
+    if not taban and has_request_context():
+        taban = request.url_root.rstrip("/")
+    return taban
+
+
+def ek_turu(dosya_adi: str) -> tuple[str | None, str]:
+    """Uzantıdan ek türü: ('image'|'video'|'file'|None, uzantı)."""
+    uzanti = dosya_adi.rsplit(".", 1)[-1].lower() if "." in dosya_adi else ""
+    if uzanti in GORSEL_UZANTILAR:
+        return "image", uzanti
+    if uzanti in VIDEO_UZANTILAR:
+        return "video", uzanti
+    if uzanti in DOSYA_UZANTILAR:
+        return "file", uzanti
+    return None, uzanti
+
+
+def ek_yolu(ek: InstagramAttachment) -> Path:
+    return EK_KOK / str(ek.conversation_id) / ek.filename
+
+
+def ek_url(ek: InstagramAttachment, mutlak: bool = True) -> str:
+    yol = f"{EK_URL_ONEKI}/{ek.conversation_id}/{ek.filename}"
+    return f"{public_base_url()}{yol}" if mutlak else yol
+
+
+def ek_sozluk(ek: InstagramAttachment) -> dict:
+    return {
+        "id": ek.id, "kind": ek.kind, "name": ek.original_name or ek.filename,
+        "note": ek.note or "", "size": ek.size or 0, "status": ek.status,
+        "url": ek_url(ek, mutlak=False),
+    }
+
+
+def bekleyen_ekler(conv_id: int) -> list[InstagramAttachment]:
+    """Konuşmanın cevapla birlikte gidecek (henüz gönderilmemiş) ekleri."""
+    return (InstagramAttachment.query.filter_by(conversation_id=conv_id, status="staged")
+            .order_by(InstagramAttachment.id).all())
+
+
+def gonderilen_ekler(conv_id: int) -> list[InstagramAttachment]:
+    return (InstagramAttachment.query.filter_by(conversation_id=conv_id, status="sent")
+            .order_by(InstagramAttachment.id).all())
+
+
+def ek_kaydet(conv_id: int, dosya, note: str = "", username: str | None = None) -> dict:
+    """Yüklenen dosyayı diske + tabloya yaz (staged). Dönen: {'ok', 'ek'|'hata'}."""
+    conv = db.session.get(InstagramConversation, conv_id)
+    if not conv:
+        return {"ok": False, "hata": "Konuşma bulunamadı."}
+    orijinal = secure_filename(dosya.filename or "") or "dosya"
+    tur, uzanti = ek_turu(orijinal)
+    if not tur:
+        return {"ok": False, "hata": f"Desteklenmeyen dosya türü (.{uzanti or '?'}). Görsel: jpg/png/gif/webp, "
+                                     "video: mp4/mov, dosya: pdf/doc/docx/xls/xlsx/txt/csv."}
+    if len(bekleyen_ekler(conv_id)) >= EK_SAYI_AZAMI:
+        return {"ok": False, "hata": f"Bir cevaba en fazla {EK_SAYI_AZAMI} ek eklenebilir."}
+    dosya.stream.seek(0, os.SEEK_END)
+    boyut = dosya.stream.tell()
+    dosya.stream.seek(0)
+    sinir = GORSEL_AZAMI if tur == "image" else EK_AZAMI
+    if boyut <= 0:
+        return {"ok": False, "hata": "Dosya boş."}
+    if boyut > sinir:
+        return {"ok": False, "hata": f"{orijinal} çok büyük (en fazla {sinir // (1024 * 1024)} MB)."}
+
+    ad = f"{uuid.uuid4().hex}.{uzanti}"
+    klasor = EK_KOK / str(conv_id)
+    klasor.mkdir(parents=True, exist_ok=True)
+    dosya.save(str(klasor / ad))
+    ek = InstagramAttachment(
+        conversation_id=conv_id, kind=tur, filename=ad, original_name=orijinal[:255],
+        mime=(dosya.mimetype or "")[:100], size=boyut, note=(note or "")[:500],
+        status="staged", uploaded_by=username or "panel", created_at=_simdi(),
+    )
+    db.session.add(ek)
+    db.session.commit()
+    return {"ok": True, "ek": ek_sozluk(ek)}
+
+
+def ek_sil(conv_id: int, ek_id: int) -> dict:
+    ek = db.session.get(InstagramAttachment, ek_id)
+    if not ek or ek.conversation_id != conv_id:
+        return {"ok": False, "hata": "Ek bulunamadı."}
+    if ek.status != "staged":
+        return {"ok": False, "hata": "Gönderilmiş ek silinemez."}
+    try:
+        ek_yolu(ek).unlink(missing_ok=True)
+    except OSError:
+        logger.warning("[INSTAGRAM] ek dosyası silinemedi: %s", ek_yolu(ek))
+    db.session.delete(ek)
+    db.session.commit()
+    return {"ok": True}
+
+
+def ek_not_guncelle(conv_id: int, ek_id: int, note: str) -> dict:
+    ek = db.session.get(InstagramAttachment, ek_id)
+    if not ek or ek.conversation_id != conv_id:
+        return {"ok": False, "hata": "Ek bulunamadı."}
+    ek.note = (note or "").strip()[:500]
+    db.session.commit()
+    return {"ok": True, "ek": ek_sozluk(ek)}
+
+
+def _ek_gonder(conv: InstagramConversation, ek: InstagramAttachment, username: str | None) -> None:
+    """Tek görsel/video ekini ayrı mesaj olarak gönderir; başarıda 'sent' işaretler."""
+    adres = ek_url(ek)
+    data = _api(
+        "POST", f"{_env('INSTAGRAM_ACCOUNT_ID') or 'me'}/messages",
+        json_body={"recipient": {"id": conv.igsid},
+                   "message": {"attachment": {"type": ek.kind, "payload": {"url": adres}}}},
+        timeout=30,
+    )
+    mid = data.get("message_id") or f"panel-{uuid.uuid4().hex}"
+    ek.status, ek.sent_at, ek.message_mid = "sent", _simdi(), mid[:400]
+    db.session.commit()
+    try:
+        kaydet_mesaj(conv.igsid, mid, "out", "", _simdi(), attachment_type=ek.kind,
+                     attachment_url=adres, sent_by=username or "panel")
+    except Exception:
+        db.session.rollback()
+        logger.exception("[INSTAGRAM] gönderilen ek kaydedilemedi (konuşma %s)", conv.id)
+
+
+def answer_conversation(conv_id: int, text: str, username: str | None = None,
+                        ek_ids: list[int] | None = None) -> dict:
+    """Cevabı (ve seçilen bekleyen ekleri) Instagram'dan müşteriye gönder.
+
+    Sıra: görsel/video ekleri tek tek ayrı mesaj, sonra metin. Dosya ekleri
+    (pdf vb.) Instagram'da ek olarak gitmez; metnin sonuna bağlantı olarak eklenir.
+    Bir ek reddedilirse metin gönderilmez; gönderilmiş ekler 'sent' kalır, tekrar
+    denemede yeniden gitmez. Dönen: {'ok': bool, 'hata': str|None}
+    """
     text = (text or "").strip()
     conv = db.session.get(InstagramConversation, conv_id)
     if not conv:
         return {"ok": False, "hata": "Konuşma bulunamadı."}
-    if not text:
+    secili = {int(i) for i in (ek_ids or []) if str(i).lstrip("-").isdigit()}
+    ekler = [e for e in bekleyen_ekler(conv.id) if e.id in secili] if secili else []
+    if not text and not ekler:
         return {"ok": False, "hata": "Cevap boş olamaz."}
-    from trendyol_qna.instagram_urun import konusma_anahtari
-    text = urun_baglantisi_ekle(text, konusma_anahtari(conv.id))
+    if text:
+        from trendyol_qna.instagram_urun import konusma_anahtari
+        text = urun_baglantisi_ekle(text, konusma_anahtari(conv.id))
+    dosyalar = [e for e in ekler if e.kind == "file"]
+    if dosyalar:
+        text = (text + "\n\n" if text else "") + "\n".join(
+            f"📎 {e.original_name}: {ek_url(e)}" for e in dosyalar)
     if len(text) > TEXT_MAX:
-        return {"ok": False, "hata": f"Instagram mesajı (ürün bağlantısı dahil) en fazla {TEXT_MAX} karakter olabilir."}
+        return {"ok": False, "hata": f"Instagram mesajı (ürün/dosya bağlantıları dahil) en fazla {TEXT_MAX} karakter olabilir."}
     if not pencere_acik(conv):
         return {"ok": False, "hata": PENCERE_HATASI}
+    if ekler and not public_base_url().startswith("https://"):
+        return {"ok": False, "hata": "Ek göndermek için .env'e PUBLIC_BASE_URL=https://... "
+                                     "(panelin dışarıdan erişilen adresi) ekleyin."}
 
-    try:
-        data = _api(
-            "POST", f"{_env('INSTAGRAM_ACCOUNT_ID') or 'me'}/messages",
-            json_body={"recipient": {"id": conv.igsid}, "message": {"text": text}},
-            timeout=20,
-        )
-    except InstagramHatasi as exc:
-        logger.warning("[INSTAGRAM] cevap gönderilemedi (konuşma %s): %s", conv_id, exc)
-        if exc.subcode == PENCERE_DISI_ALT_KOD:
-            return {"ok": False, "hata": PENCERE_HATASI}
-        return {"ok": False, "hata": f"Instagram cevabı kabul etmedi: {exc}"}
+    for ek in ekler:
+        if ek.kind == "file":
+            continue
+        try:
+            _ek_gonder(conv, ek, username)
+        except InstagramHatasi as exc:
+            logger.warning("[INSTAGRAM] ek gönderilemedi (konuşma %s, ek %s): %s", conv_id, ek.id, exc)
+            if exc.subcode == PENCERE_DISI_ALT_KOD:
+                return {"ok": False, "hata": PENCERE_HATASI}
+            return {"ok": False, "hata": f"Instagram eki kabul etmedi ({ek.original_name}): {exc}"}
 
-    mid = data.get("message_id") or f"panel-{uuid.uuid4().hex}"
-    try:
-        kaydet_mesaj(conv.igsid, mid, "out", text, _simdi(), sent_by=username or "panel")
-    except Exception:
-        # Mesaj müşteriye GİTTİ; yerel kayıt echo/yoklama ile sonradan tamamlanır
-        db.session.rollback()
-        logger.exception("[INSTAGRAM] gönderilen cevap kaydedilemedi (konuşma %s)", conv_id)
-    logger.info("[INSTAGRAM] konuşma %s cevaplandı (%s)", conv_id, username)
+    if text:
+        try:
+            data = _api(
+                "POST", f"{_env('INSTAGRAM_ACCOUNT_ID') or 'me'}/messages",
+                json_body={"recipient": {"id": conv.igsid}, "message": {"text": text}},
+                timeout=20,
+            )
+        except InstagramHatasi as exc:
+            logger.warning("[INSTAGRAM] cevap gönderilemedi (konuşma %s): %s", conv_id, exc)
+            if exc.subcode == PENCERE_DISI_ALT_KOD:
+                return {"ok": False, "hata": PENCERE_HATASI}
+            return {"ok": False, "hata": f"Instagram cevabı kabul etmedi: {exc}"}
+
+        mid = data.get("message_id") or f"panel-{uuid.uuid4().hex}"
+        try:
+            kaydet_mesaj(conv.igsid, mid, "out", text, _simdi(), sent_by=username or "panel")
+        except Exception:
+            # Mesaj müşteriye GİTTİ; yerel kayıt echo/yoklama ile sonradan tamamlanır
+            db.session.rollback()
+            logger.exception("[INSTAGRAM] gönderilen cevap kaydedilemedi (konuşma %s)", conv_id)
+        for ek in dosyalar:
+            ek.status, ek.sent_at, ek.message_mid = "sent", _simdi(), mid[:400]
+        if dosyalar:
+            db.session.commit()
+    logger.info("[INSTAGRAM] konuşma %s cevaplandı (%s, %d ek)", conv_id, username, len(ekler))
     return {"ok": True, "hata": None}
 
 
@@ -869,7 +1049,8 @@ def new_comment_count() -> int:
 
 def ensure_table_exists() -> None:
     """Tablolar yoksa oluştur (prod'da alembic yok — ShopifyQuestion deseni)."""
-    for model in (InstagramConversation, InstagramMessage, InstagramComment, InstagramMediaProduct):
+    for model in (InstagramConversation, InstagramMessage, InstagramComment, InstagramMediaProduct,
+                  InstagramAttachment):
         try:
             model.__table__.create(bind=db.engine, checkfirst=True)
         except Exception:

@@ -299,6 +299,35 @@
   .qna-draft-talimat { min-width:0; height:40px; border-radius:9px !important; border-color:#e1e2e7; font-size:.78rem; }
   .qna-revise-btn { flex:0 0 auto; min-height:40px; padding:0 12px; border:0; border-radius:9px; background:#ecebfd; color:var(--qna-blue); font-size:.74rem; font-weight:700; }
   .qna-answer-actions { display:flex; align-items:center; gap:9px; margin-top:11px; }
+  /* Instagram cevabına ekler (görsel/dosya) */
+  .qna-ek-wrap { margin-top:8px; }
+  .qna-ek-bar { display:flex; flex-wrap:wrap; gap:6px; }
+  .qna-ek-bar:empty { display:none; }
+  .qna-ek-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 6px 4px 4px; border:1px solid #e1e2e7; border-radius:10px; background:#fff; font-size:.74rem; max-width:100%; }
+  .qna-ek-chip img, .qna-ek-ico { width:36px; height:36px; border-radius:7px; flex:0 0 auto; }
+  .qna-ek-chip img { object-fit:cover; }
+  .qna-ek-ico { display:inline-flex; align-items:center; justify-content:center; background:#f0f0f6; color:var(--qna-blue); font-size:1rem; }
+  .qna-ek-ad { max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+  .qna-ek-not { height:28px; width:170px; font-size:.72rem; border-radius:7px !important; border-color:#e1e2e7; padding:2px 7px; }
+  .qna-ek-sil { border:0; background:none; color:#9a9ea8; padding:0 3px; line-height:1; }
+  .qna-ek-sil:hover { color:#d33; }
+  .qna-ek-btns { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:6px; }
+  .qna-ek-add { display:inline-flex; align-items:center; gap:5px; padding:6px 10px; border:1px dashed #c9c9d6; border-radius:9px; background:transparent; font-size:.74rem; color:var(--qna-blue); font-weight:600; }
+  .qna-ek-add:hover { background:#f4f3fd; }
+  .qna-ek-add:disabled { opacity:.6; }
+  .qna-revise-row .qna-ek-add { padding:0 10px; min-height:40px; }
+  .qna-bubble-img { display:block; max-width:200px; max-height:200px; border-radius:9px; margin-bottom:4px; border:1px solid #e6e7ea; cursor:zoom-in; }
+  .qna-bubble-audio { display:block; width:240px; max-width:100%; height:36px; margin-bottom:4px; }
+  .qna-bubble-video { display:block; max-width:240px; max-height:240px; border-radius:9px; margin-bottom:4px; background:#000; }
+  .qna-ek-chip img { cursor:zoom-in; }
+  /* Görsel büyütme kutusu: yeni sekme yerine sayfa içinde */
+  .qna-lightbox { position:fixed; inset:0; z-index:2000; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.82); padding:24px; cursor:zoom-out; }
+  .qna-lightbox.is-open { display:flex; }
+  .qna-lightbox img { max-width:100%; max-height:100%; border-radius:10px; box-shadow:0 20px 60px rgba(0,0,0,.5); cursor:default; }
+  .qna-lightbox-close { position:absolute; top:14px; right:18px; border:0; background:rgba(255,255,255,.14); color:#fff; width:40px; height:40px; border-radius:50%; font-size:1.2rem; }
+  .qna-lightbox-open { position:absolute; bottom:16px; right:18px; color:#fff; font-size:.78rem; opacity:.8; text-decoration:underline; }
+  html.gs-dark .qna-ek-chip { background:#1b1d24; border-color:#2b2e38; }
+  html.gs-dark .qna-ek-ico { background:#262933; }
   .qna-send-btn {
     min-height:43px; display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:0 16px;
     border:0; border-radius:11px; background:var(--qna-orange); color:#fff; font-size:.8rem; font-weight:720;
@@ -786,6 +815,20 @@
     return `<span class="qna-window ${kalanDk < 180 ? 'qna-window--warn' : ''}"><i class="bi bi-clock-history"></i> Cevap için kalan: ${sa ? sa + ' sa ' : ''}${dk} dk</span>`;
   }
 
+  // Cevapla birlikte gidecek ekler (bekleyen). Not kutusu AI'a "bu ne" bilgisini verir.
+  function ekChipsHtml(ekler, key) {
+    return (ekler || []).map(e => `
+      <span class="qna-ek-chip" data-eid="${e.id}" data-kind="${esc(e.kind)}">
+        ${e.kind === 'image'
+          ? `<img class="qna-zoom" src="${esc(e.url)}" alt="" title="Büyütmek için tıklayın">`
+          : `<span class="qna-ek-ico"><i class="bi ${e.kind === 'video' ? 'bi-camera-video' : 'bi-file-earmark-text'}"></i></span>`}
+        <span class="qna-ek-ad" title="${esc(e.name)}">${esc(e.name)}</span>
+        <input type="text" class="form-control qna-ek-not" data-id="${key}" data-eid="${e.id}" maxlength="500"
+               placeholder="Bu ne? (AI için not)" value="${esc(e.note || '')}" aria-label="Ek notu">
+        <button type="button" class="qna-ek-sil" data-id="${key}" data-eid="${e.id}" title="Kaldır"><i class="bi bi-x-lg"></i></button>
+      </span>`).join('');
+  }
+
   function instagramCardHtml(s) {
     const key = 'i' + s.id;
     const waiting = s.status === 'WAITING_FOR_ANSWER';
@@ -796,11 +839,18 @@
     const azami = s.metin_azami || 1000;
     const profil = s.username ? `https://www.instagram.com/${encodeURIComponent(s.username)}/` : '';
     const thread = (s.mesajlar || []).map(m => {
-      const ek = m.ek_tipi
-        ? `<span class="qna-bubble-ek"><i class="bi bi-paperclip"></i>${m.ek_url
+      let ek = '';
+      if (m.ek_tipi === 'image' && m.ek_url) {
+        ek = `<img class="qna-bubble-img qna-zoom" src="${esc(m.ek_url)}" alt="Görsel" loading="lazy" title="Büyütmek için tıklayın">`;
+      } else if (m.ek_tipi === 'audio' && m.ek_url) {
+        ek = `<audio class="qna-bubble-audio" controls preload="none" src="${esc(m.ek_url)}"></audio>`;
+      } else if (m.ek_tipi === 'video' && m.ek_url) {
+        ek = `<video class="qna-bubble-video" controls preload="metadata" src="${esc(m.ek_url)}"></video>`;
+      } else if (m.ek_tipi) {
+        ek = `<span class="qna-bubble-ek"><i class="bi bi-paperclip"></i>${m.ek_url
             ? `<a href="${esc(m.ek_url)}" target="_blank" rel="noopener noreferrer">Eki aç (${esc(m.ek_tipi)})</a>`
-            : `Ek (${esc(m.ek_tipi)})`}</span>${m.text ? '<br>' : ''}`
-        : '';
+            : `Ek (${esc(m.ek_tipi)})`}</span>${m.text ? '<br>' : ''}`;
+      }
       const kim = m.yon === 'out' ? (m.gonderen ? esc(m.gonderen) + ' · ' : 'Biz · ') : '';
       return `<div class="qna-bubble qna-bubble--${m.yon === 'out' ? 'out' : 'in'}">${ek}${esc(m.text)}<span class="qna-bubble-meta">${kim}${esc(m.tarih || '')}</span></div>`;
     }).join('');
@@ -825,12 +875,22 @@
           <textarea class="qna-answer-text" id="qna-answer-${key}" data-id="${key}" data-min="1" data-max="${azami}" rows="4"
                     maxlength="${azami}" aria-label="Müşteriye Instagram mesajı olarak gönderilecek cevap"
                     placeholder="Cevabınızı yazın… Müşteriye Instagram mesajı olarak gider.">${esc(draftVal)}</textarea>
+          <div class="qna-ek-wrap">
+            <div class="qna-ek-bar" data-id="${key}">${ekChipsHtml(s.ekler, key)}</div>
+            <div class="qna-ek-btns">
+              <button type="button" class="qna-ek-add" data-kind="image" data-id="${key}" data-qid="${s.id}"><i class="bi bi-image"></i> Görsel ekle</button>
+              <button type="button" class="qna-ek-add" data-kind="file" data-id="${key}" data-qid="${s.id}"><i class="bi bi-paperclip"></i> Dosya ekle</button>
+              <span class="qna-meta">Ekler cevapla birlikte gider; AI taslağı ekleri görür.</span>
+            </div>
+          </div>
           <details class="qna-revise">
             <summary><i class="bi bi-magic"></i> AI ile bu cevabı düzenle</summary>
             <div class="qna-revise-row">
               <input type="text" class="form-control qna-draft-talimat" data-id="${key}" maxlength="500"
                      aria-label="AI düzeltme talimatı"
-                     placeholder="Ör: Daha kısa yaz, fiyattan bahsetme…">
+                     placeholder="Ör: Daha kısa yaz, ekteki görseldeki modeli anlat…">
+              <button type="button" class="qna-ek-add" data-kind="image" data-id="${key}" data-qid="${s.id}" data-ai="1" title="Görsel ekle — AI görseli görür, cevapla birlikte müşteriye gider"><i class="bi bi-image"></i></button>
+              <button type="button" class="qna-ek-add" data-kind="file" data-id="${key}" data-qid="${s.id}" data-ai="1" title="Dosya ekle — AI dosyayı okur, bağlantısı cevapla gider"><i class="bi bi-paperclip"></i></button>
               <button class="qna-revise-btn" data-id="${key}" data-qid="${s.id}" data-base="/soru-cevap/api/instagram">
                 <i class="bi bi-stars"></i> Düzenle
               </button>
@@ -1313,13 +1373,18 @@
     }
   }
 
+  function ekIdleri(key) {
+    return [...list.querySelectorAll(`.qna-ek-bar[data-id="${key}"] .qna-ek-chip`)].map(c => +c.dataset.eid);
+  }
+
   async function sendInstagram(btn) {
     const key = btn.dataset.id, qid = btn.dataset.qid;
     const textEl = list.querySelector(`.qna-answer-text[data-id="${key}"]`);
     const text = textEl ? textEl.value.trim() : '';
     const err = list.querySelector(`.qna-err[data-id="${key}"]`);
     if (err) err.textContent = '';
-    if (!text) { if (err) err.textContent = 'Cevap boş olamaz.'; return; }
+    const ek_ids = ekIdleri(key);
+    if (!text && !ek_ids.length) { if (err) err.textContent = 'Cevap boş olamaz.'; return; }
     btn.disabled = true;
     const eskiHtml = btn.innerHTML;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span><span>Gönderiliyor…</span>';
@@ -1327,7 +1392,7 @@
       const r = await fetch('/soru-cevap/api/instagram/cevapla', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-Requested-With': 'fetch'},
-        body: JSON.stringify({id: +qid, text})
+        body: JSON.stringify({id: +qid, text, ek_ids})
       });
       const d = await r.json();
       if (d.ok) {
@@ -1390,8 +1455,11 @@
     const qid = btn.dataset.qid || id;
     const base = btn.dataset.base || (btn.dataset.qid ? '/soru-cevap/api/shopify' : '/soru-cevap/api');
     const talimatEl = list.querySelector(`.qna-draft-talimat[data-id="${id}"]`);
-    const talimat = revize ? (talimatEl ? talimatEl.value.trim() : '') : '';
-    if (revize && !talimat) { alert('Önce düzeltme talimatını yazın.'); return; }
+    let talimat = revize ? (talimatEl ? talimatEl.value.trim() : '') : '';
+    if (revize && !talimat) {
+      if (ekIdleri(id).length) talimat = 'Ekteki görsel/dosyaları dikkate alarak cevabı güncelle.';
+      else { alert('Önce düzeltme talimatını yazın ya da bir görsel/dosya ekleyin.'); return; }
+    }
     const metinEl = list.querySelector(`.qna-answer-text[data-id="${id}"]`);
     btn.disabled = true;
     const eskiHtml = btn.innerHTML;
@@ -1594,11 +1662,112 @@
     this.disabled = false;
   });
 
+  // ── Görsel büyütme kutusu (yeni sekme açılmaz) ──
+  const lightbox = document.createElement('div');
+  lightbox.className = 'qna-lightbox';
+  lightbox.innerHTML = '<button type="button" class="qna-lightbox-close" aria-label="Kapat"><i class="bi bi-x-lg"></i></button>'
+    + '<img alt="Görsel"><a class="qna-lightbox-open" target="_blank" rel="noopener noreferrer">Yeni sekmede aç</a>';
+  document.body.appendChild(lightbox);
+  const lbImg = lightbox.querySelector('img'), lbOpen = lightbox.querySelector('.qna-lightbox-open');
+  const lightboxKapat = () => { lightbox.classList.remove('is-open'); lbImg.src = ''; };
+  lightbox.addEventListener('click', e => { if (e.target === lightbox || e.target.closest('.qna-lightbox-close')) lightboxKapat(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && lightbox.classList.contains('is-open')) lightboxKapat(); });
+  list.addEventListener('click', e => {
+    const img = e.target.closest('img.qna-zoom');
+    if (!img) return;
+    e.preventDefault();
+    lbImg.src = img.src;
+    lbOpen.href = img.src;
+    lightbox.classList.add('is-open');
+  });
+
+  // ── Instagram ekleri: gizli dosya girişi + liste üzerinde delegasyon ──
+  const ekInput = document.createElement('input');
+  ekInput.type = 'file';
+  ekInput.multiple = true;
+  ekInput.hidden = true;
+  document.body.appendChild(ekInput);
+  let ekHedef = null;   // {key, qid, ai}
+
+  function ekBarYenile(key, ekler) {
+    const bar = list.querySelector(`.qna-ek-bar[data-id="${key}"]`);
+    if (bar) bar.innerHTML = ekChipsHtml(ekler, key);
+  }
+
+  list.addEventListener('click', e => {
+    const add = e.target.closest('.qna-ek-add');
+    if (add) {
+      e.preventDefault();
+      ekHedef = {key: add.dataset.id, qid: add.dataset.qid, ai: add.dataset.ai === '1'};
+      ekInput.accept = add.dataset.kind === 'image' ? 'image/jpeg,image/png,image/gif,image/webp' : '.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.mp4,.mov';
+      ekInput.value = '';
+      ekInput.click();
+      return;
+    }
+    const sil = e.target.closest('.qna-ek-sil');
+    if (sil) {
+      e.preventDefault();
+      const chip = sil.closest('.qna-ek-chip');
+      const qid = (list.querySelector(`.qna-instagram-send[data-id="${sil.dataset.id}"]`) || {}).dataset?.qid;
+      if (!qid) return;
+      sil.disabled = true;
+      fetch(`/soru-cevap/api/instagram/ek/${qid}/${sil.dataset.eid}/sil`, {
+        method: 'POST', headers: {'X-Requested-With': 'fetch'}
+      }).then(r => r.json()).then(d => {
+        if (d.ok) ekBarYenile(sil.dataset.id, d.ekler);
+        else { alert(d.hata || 'Ek kaldırılamadı.'); sil.disabled = false; }
+      }).catch(() => { alert('Sunucuya ulaşılamadı.'); sil.disabled = false; });
+    }
+  });
+
+  // Not alanı: odaktan çıkınca / Enter'da kaydet
+  const ekNotKaydet = (inp) => {
+    const qid = (list.querySelector(`.qna-instagram-send[data-id="${inp.dataset.id}"]`) || {}).dataset?.qid;
+    if (!qid || inp.dataset.son === inp.value) return;
+    inp.dataset.son = inp.value;
+    fetch(`/soru-cevap/api/instagram/ek/${qid}/${inp.dataset.eid}/not`, {
+      method: 'POST', headers: {'Content-Type': 'application/json', 'X-Requested-With': 'fetch'},
+      body: JSON.stringify({not: inp.value.trim()})
+    }).catch(() => {});
+  };
+  list.addEventListener('focusout', e => { if (e.target.classList?.contains('qna-ek-not')) ekNotKaydet(e.target); });
+  list.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.classList?.contains('qna-ek-not')) { e.preventDefault(); ekNotKaydet(e.target); e.target.blur(); }
+  });
+
+  ekInput.addEventListener('change', async () => {
+    if (!ekHedef || !ekInput.files.length) return;
+    const {key, qid, ai} = ekHedef;
+    const btns = list.querySelectorAll(`.qna-ek-add[data-id="${key}"]`);
+    btns.forEach(b => b.disabled = true);
+    const fd = new FormData();
+    [...ekInput.files].forEach(f => fd.append('dosya', f));
+    // AI düzeltme satırından eklendiyse yazılı talimat ekin notu olur (AI "bu ne" bilgisini alır)
+    const talimatEl = list.querySelector(`.qna-draft-talimat[data-id="${key}"]`);
+    if (ai && talimatEl && talimatEl.value.trim()) fd.append('not', talimatEl.value.trim());
+    try {
+      const r = await fetch(`/soru-cevap/api/instagram/ek/${qid}`, {
+        method: 'POST', headers: {'X-Requested-With': 'fetch'}, body: fd
+      });
+      const d = await r.json();
+      if (d.ekler) ekBarYenile(key, d.ekler);
+      if (!d.ok || d.hata) alert(d.hata || 'Ek yüklenemedi.');
+      else if (ai) {
+        // Düzeltme kutusu açık kalsın, kullanıcı isterse talimat yazıp "Düzenle"ye bassın
+        const det = list.querySelector(`#qna-${key} details.qna-revise`);
+        if (det) det.open = true;
+        if (talimatEl) { talimatEl.placeholder = 'Ek yüklendi — isterseniz talimat yazın, sonra Düzenle'; talimatEl.focus(); }
+      }
+    } catch (e) { alert('Yüklenemedi: dosyalar toplam 10 MB sınırını aşıyor olabilir ya da sunucuya ulaşılamadı.'); }
+    btns.forEach(b => b.disabled = false);
+    ekInput.value = '';
+  });
+
   load();
   motorYukle();
   talimatYukle();
   setInterval(() => {
-    const aktifDuzenleme = list.querySelector('.qna-answer-text:focus, .qna-answer-text[data-dirty="true"], .qna-note-input:focus, details.qna-revise[open], details.qna-urun-panel[open]');
+    const aktifDuzenleme = list.querySelector('.qna-answer-text:focus, .qna-answer-text[data-dirty="true"], .qna-note-input:focus, .qna-ek-not:focus, details.qna-revise[open], details.qna-urun-panel[open]');
     if (curStatus === 'WAITING_FOR_ANSWER' && curPage === 1 && !aktifDuzenleme) load();
     else refreshBadge();
   }, 30000);

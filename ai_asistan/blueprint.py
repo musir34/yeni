@@ -259,7 +259,8 @@ def _codex_ciktisi_coz(stdout: str) -> tuple[str, str | None]:
 def _codex_calistir(soru: str, sistem_prompt: str, timeout_sn: int,
                     resume_session_id: str | None = None,
                     cwd: Path | None = None,
-                    model: str | None = None) -> dict:
+                    model: str | None = None,
+                    images: list[str] | None = None) -> dict:
     """
     Headless Codex CLI'yi çağırır; _claude_calistir ile AYNI sözleşmeyi döner:
     {'ok': bool, 'cevap'/'hata': str, 'session_id': str|None}
@@ -296,6 +297,9 @@ def _codex_calistir(soru: str, sistem_prompt: str, timeout_sn: int,
         model = CODEX_MODEL
     if model:
         cmd += ["-m", model]
+    # Görsel ekler (ör. Instagram cevabıyla gidecek fotoğraf): codex exec -i <dosya>
+    for g in images or []:
+        cmd += ["-i", str(g)]
 
     try:
         sonuc = subprocess.run(
