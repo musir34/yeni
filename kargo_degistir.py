@@ -103,7 +103,7 @@ KARGO_ROZET: dict[str, dict] = {
 def kargo_firma_tespit(takip_no: str | None, kargo_adi: str | None = None) -> dict | None:
     """Takip numarası ön eki → firma; yoksa kargo adından tahmin. Rozet sözlüğü döner
     ({"kod","kisa","ad","bg","fg"}) ya da None."""
-    takip = (takip_no or "").strip()
+    takip = _takip_str(takip_no)
     kod = None
     for onek, k in TAKIP_ONEKLERI:
         if takip.startswith(onek):
@@ -153,6 +153,20 @@ def _headers() -> dict:
     }
 
 
+def _takip_str(v) -> str:
+    """Trendyol cargoTrackingNumber'ı JSON'da SAYI (ör. 7330037975717623) olarak döndürür;
+    str değilse .strip() AttributeError → 500 verirdi. Her zaman metin döner."""
+    return "" if v is None else str(v).strip()
+
+
+def _paket_normalize(p: dict) -> dict:
+    """Trendyol paketindeki kargo alanlarını metne çevirir (None → "")."""
+    p["cargoTrackingNumber"] = _takip_str(p.get("cargoTrackingNumber"))
+    p["cargoProviderName"] = _takip_str(p.get("cargoProviderName"))
+    p["cargoTrackingLink"] = _takip_str(p.get("cargoTrackingLink"))
+    return p
+
+
 def kod_tahmin(cargo_provider_name: str) -> str | None:
     """Yerel kargo adından ('Yurtiçi Kargo Marketplace') Trendyol kodunu tahmin eder."""
     ad = (cargo_provider_name or "").strip().lower()
@@ -199,15 +213,16 @@ def trendyol_paket_cek(order_number: str, package_id: str) -> dict | None:
         if r.status_code != 200:
             logger.warning("[KARGO] %s yeniden çekme HTTP %s", order_number, r.status_code)
             return None
-        icerik = (r.json() or {}).get("content") or []
+        govde = r.json()
+        icerik = (govde.get("content") or []) if isinstance(govde, dict) else []
     except (requests.RequestException, ValueError) as e:
         logger.warning("[KARGO] %s yeniden çekme hatası: %s", order_number, e)
         return None
     for p in icerik:
         pid = str(p.get("shipmentPackageId") or p.get("id") or "")
         if pid == str(package_id):
-            return p
-    return icerik[0] if len(icerik) == 1 else None
+            return _paket_normalize(p)
+    return _paket_normalize(icerik[0]) if len(icerik) == 1 else None
 
 
 def _aktif_satirlar(order_number: str):

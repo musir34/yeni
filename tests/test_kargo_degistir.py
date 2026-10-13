@@ -294,3 +294,49 @@ def test_api_guvenlik_ve_dogrulama():
     assert {"kod": "YKMP", "ad": "Yurtiçi Kargo"} in liste["firmalar"]
     anonim = app.test_client()
     assert anonim.get("/kargo-firmasi/api/liste").status_code == 403
+
+
+def test_trendyol_takip_numarasi_sayi_gelirse_500_vermez(monkeypatch):
+    """Gerçek vaka (11693392333): Trendyol cargoTrackingNumber'ı JSON'da SAYI döndürür
+    (7330037975717623). .strip() AttributeError → PUT başarılı ama yanıt 500 idi;
+    yenile turları da 500 verdiği için yerel kayıt bayat kalıyordu."""
+    _temizle()
+    _siparis(OrderCreated, "11693392333", pkg="4231017534", kargo="Yurtiçi Kargo Marketplace", takip="YK1")
+    s = _sahte(monkeypatch,
+               get_paket_oncesi={"shipmentPackageId": 4231017534, "id": 4231017534,
+                                 "cargoProviderName": "Yurtiçi Kargo Marketplace", "cargoTrackingNumber": 1234},
+               get_paket={"shipmentPackageId": 4231017534, "id": 4231017534,
+                          "cargoProviderName": "Trendyol Express Marketplace",
+                          "cargoTrackingNumber": 7330037975717623, "cargoTrackingLink": None})
+    with app.app_context():
+        r = kargo_degistir.siparis_kargo_degistir("11693392333", "TEXMP")
+        assert r["success"] and not r["skipped"], r
+        assert r["cargo_tracking_number"] == "7330037975717623"
+        assert r["firma"]["kod"] == "TEXMP"
+        o = OrderCreated.query.filter_by(order_number="11693392333").first()
+        assert o.cargo_tracking_number == "7330037975717623" and o.cargo_tracking_link == ""
+        # yenile de sayı ile çalışmalı
+        y = kargo_degistir.siparis_kargo_yenile("11693392333")
+        assert y["success"] and y["cargo_tracking_number"] == "7330037975717623", y
+    assert len(s.put_calls) == 1
+    # HTTP katmanı: 500 değil JSON
+    c = _client()
+    j = c.post("/kargo-firmasi/api/yenile", json={"order_numbers": ["11693392333"]}, headers=FETCH)
+    assert j.status_code == 200 and j.get_json()["alinan"] == 1
+    # Panelin kullandığı yol: /api/degistir de sayı ile 200 + JSON dönmeli (500 değil)
+    _temizle()
+    _siparis(OrderPicking, "11693392333", pkg="4231017534", kargo="Yurtiçi Kargo Marketplace", takip="YK1")
+    s2 = _sahte(monkeypatch,
+                get_paket_oncesi={"shipmentPackageId": 4231017534, "cargoProviderName": "Yurtiçi Kargo Marketplace",
+                                  "cargoTrackingNumber": 1234},
+                get_paket={"shipmentPackageId": 4231017534, "cargoProviderName": "Trendyol Express Marketplace",
+                           "cargoTrackingNumber": 7330037975717623, "cargoTrackingLink": None})
+    d = c.post("/kargo-firmasi/api/degistir", json={"kargo_kodu": "TEXMP", "order_numbers": ["11693392333"]},
+               headers=FETCH)
+    assert d.status_code == 200 and d.content_type.startswith("application/json")
+    x = d.get_json()["sonuclar"][0]
+    assert x["success"] and x["cargo_tracking_number"] == "7330037975717623" and x["firma"]["kisa"] == "TEX", x
+    assert len(s2.put_calls) == 1
+    # rozet tespiti sayı/None ile de çalışır
+    assert kargo_degistir.kargo_firma_tespit(7330037975717623, None)["kod"] == "TEXMP"
+    assert kargo_degistir.kargo_firma_tespit(None, None) is None
