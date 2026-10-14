@@ -96,6 +96,37 @@
     html.gs-dark .eritme-grup { border-color:#333; }
     html.gs-dark .eritme-grup__baslik, html.gs-dark .eritme-model { color:#ddd; }
     html.gs-dark .eritme-model { background:rgba(255,255,255,.08); }
+    /* Üretim Modelleri kartı (son 30 gün sipariş / fiyat) */
+    .uretim-card h5 { color:#666; font-weight:600; }
+    .uretim-ozet__kutu {
+      border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:10px 14px; height:100%;
+      background:linear-gradient(135deg, rgba(0,0,0,.02), transparent);
+    }
+    .uretim-ozet__deger { font-size:1.5rem; font-weight:800; color:var(--color-primary); line-height:1.1; }
+    .uretim-ozet__etiket { font-size:.78rem; color:#777; }
+    .uretim-tablo-kap { max-height:420px; overflow:auto; border:1px solid rgba(0,0,0,.08); border-radius:12px; }
+    .uretim-tablo thead th {
+      position:sticky; top:0; z-index:1; background:#fafafa; font-size:.78rem; font-weight:600;
+      color:#777; text-transform:uppercase; letter-spacing:.03em; border-bottom:1px solid rgba(0,0,0,.08);
+    }
+    .uretim-tablo td { font-size:.9rem; vertical-align:middle; }
+    .uretim-tablo .uretim-kod { font-weight:800; font-size:1rem; color:#222; }
+    .uretim-tablo .uretim-baslik { max-width:260px; font-size:.75rem; }
+    .uretim-bar { display:flex; align-items:center; gap:8px; min-width:150px; }
+    .uretim-bar__cubuk { flex:1; height:8px; border-radius:999px; background:rgba(0,0,0,.06); overflow:hidden; }
+    .uretim-bar__cubuk span { display:block; height:100%; border-radius:999px; background:var(--color-primary); }
+    .uretim-bar__sayi { font-weight:700; min-width:2ch; text-align:right; }
+    .uretim-fiyat { font-weight:700; white-space:nowrap; }
+    .uretim-fark {
+      display:inline-block; margin-left:4px; padding:0 6px; border-radius:999px; font-size:.72rem; font-weight:700;
+    }
+    .uretim-fark--artis { background:rgba(25,135,84,.12); color:#198754; }
+    .uretim-fark--dusus { background:rgba(220,53,69,.12); color:#dc3545; }
+    .uretim-satir--pasif td { opacity:.45; }
+    html.gs-dark .uretim-ozet__kutu, html.gs-dark .uretim-tablo-kap { border-color:#333; }
+    html.gs-dark .uretim-tablo thead th { background:#1f1f1f; color:#aaa; border-color:#333; }
+    html.gs-dark .uretim-tablo .uretim-kod { color:#eee; }
+    html.gs-dark .uretim-bar__cubuk { background:rgba(255,255,255,.1); }
     .stock-substats {
       margin-top:12px; padding-top:12px; border-top:1px solid rgba(0,0,0,.08);
       display:flex; flex-direction:column; gap:7px;
@@ -442,6 +473,73 @@
           </div>
         </div>
         {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Üretim Modelleri: son 30 gün sipariş / fiyat -->
+    {% if uretim %}
+    <div class="card-soft p-3 mt-3 uretim-card">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <h5 class="mb-0">🏭 Üretim Modelleri: Sipariş ve Fiyat</h5>
+        <span class="text-muted small">Son {{ uretim.gun }} gün · fiyat Trendyol satır fiyatı · stoklar canlı</span>
+      </div>
+      <div class="row g-2 mb-3">
+        {% for deger, etiket in [
+          (uretim.aktif_model ~ ' / ' ~ uretim.model_sayisi, 'sipariş alan / üretimdeki model'),
+          (uretim.toplam_siparis, 'üretim siparişi'),
+          (uretim.toplam_cift, 'çift'),
+          ((uretim.ort_fiyat_str ~ ' ₺') if uretim.ort_fiyat is not none else '—', 'ortalama çift fiyatı')] %}
+        <div class="col-6 col-md-3">
+          <div class="uretim-ozet__kutu">
+            <div class="uretim-ozet__deger">{{ deger }}</div>
+            <div class="uretim-ozet__etiket">{{ etiket }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="uretim-tablo-kap">
+        <table class="table table-sm table-hover align-middle mb-0 uretim-tablo">
+          <thead>
+            <tr>
+              <th>Model</th>
+              <th class="text-end">Stok</th>
+              <th>Sipariş ({{ uretim.gun }} gün)</th>
+              <th class="text-end">Son Fiyat</th>
+              <th class="text-end">Ort. Fiyat</th>
+              <th class="text-end">Son Sipariş</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in uretim.modeller %}
+            <tr class="{% if not m.siparis %}uretim-satir--pasif{% endif %}">
+              <td>
+                <div class="uretim-kod">{{ m.kod }}</div>
+                <div class="uretim-baslik text-muted text-truncate" title="{{ m.baslik }}">{{ m.baslik }}</div>
+              </td>
+              <td class="text-end">{{ m.stok }}</td>
+              <td>
+                <div class="uretim-bar" title="{{ m.cift }} çift">
+                  <div class="uretim-bar__cubuk">
+                    <span style="width: {{ (100 * m.siparis / uretim.max_siparis) if uretim.max_siparis else 0 }}%"></span>
+                  </div>
+                  <span class="uretim-bar__sayi">{{ m.siparis }}</span>
+                  <small class="text-muted">{{ m.cift }} çift</small>
+                </div>
+              </td>
+              <td class="text-end">
+                <span class="uretim-fiyat">{{ m.son_fiyat_str }}{% if m.son_fiyat is not none %} ₺{% endif %}</span>
+                {% if m.fark is not none and m.fark|abs >= 1 %}
+                <span class="uretim-fark {{ 'uretim-fark--artis' if m.fark > 0 else 'uretim-fark--dusus' }}"
+                      title="Son fiyat − ortalama">{{ '+' if m.fark > 0 else '−' }}{{ "%.0f"|format(m.fark|abs) }}</span>
+                {% endif %}
+              </td>
+              <td class="text-end uretim-fiyat">{{ m.ort_fiyat_str }}{% if m.ort_fiyat is not none %} ₺{% endif %}</td>
+              <td class="text-end small text-muted">{{ m.son_tarih|ist('%d.%m.%Y') if m.son_tarih else '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
     {% endif %}

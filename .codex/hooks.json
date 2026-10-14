@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '\\\\Mac\\Home\\Documents\\Webs\\yeni\\.codex\\hooks\\load-memory.sh'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '\\\\Mac\\Home\\Documents\\Webs\\yeni\\.codex\\hooks\\on-stop.sh'"
+          }
+        ]
+      }
+    ]
+  }
+}

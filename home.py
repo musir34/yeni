@@ -24,6 +24,9 @@ from overdue_orders import overdue_counts
 # --- Stok eritme görevi (anasayfa kartı) ---
 from eritme_gorevi import eritme_ozeti
 
+# --- Üretim modelleri kartı (son 30 gün sipariş/fiyat) ---
+from uretim_gorevi import uretim_ozeti
+
 # --- Shopify Servisi ---
 try:
     from shopify_site.shopify_service import shopify_service
@@ -167,6 +170,7 @@ def index():
         weather=weather_info,
         current_time=now,
         eritme=eritme_ozeti(),
+        uretim=uretim_ozeti(),
     )
 
 
