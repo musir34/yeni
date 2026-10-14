@@ -482,7 +482,14 @@
     <div class="card-soft p-3 mt-3 uretim-card">
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
         <h5 class="mb-0">🏭 Üretim Modelleri: Sipariş ve Fiyat</h5>
-        <span class="text-muted small">Son {{ uretim.gun }} gün · fiyat Trendyol satır fiyatı · stoklar canlı</span>
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-muted small">Son {{ uretim.gun }} gün · fiyat Trendyol satır fiyatı · stoklar canlı</span>
+          <button class="btn btn-sm btn-outline-primary eritme-kopyala" type="button"
+                  data-modeller="{{ uretim.modeller|map(attribute='kod')|join('. ') }}"
+                  title="Üretim modeli kodlarını kopyala">
+            <i class="fas fa-copy me-1"></i> Kopyala
+          </button>
+        </div>
       </div>
       <div class="row g-2 mb-3">
         {% for deger, etiket in [
