@@ -410,13 +410,23 @@ def _dosya_metni(dosya) -> tuple[str, str]:
     return ad, metin
 
 
-def _system_prompt() -> str:
+def _system_prompt(sema: bool = False) -> str:
     """
     İş bilgisini sistem promptu olarak yükle.
     Öncelik: Obsidian vault klasöründeki tüm .md notları (ada göre sıralı, birleştirilmiş).
     Vault yoksa IS_KURALLARI.md; o da yoksa asgari bir prompt.
+    Ardından kendini güncelleyen bilgi eki (bilgi_dizini): repo memory/ notlarının dizini
+    ve (sema=True ise) canlı şema özeti — Codex yolu şemayı kendi talimatıyla ekler.
     Panelden girilen kalıcı genel talimat (varsa) her durumda sona eklenir.
     """
+    from ai_asistan.bilgi_dizini import bilgi_eki
+    try:
+        ek = bilgi_eki(sema=sema)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).warning("[AI-ASISTAN] bilgi eki üretilemedi", exc_info=True)
+        ek = ""
+
     if VAULT_DIR.is_dir():
         notlar = sorted(VAULT_DIR.glob("*.md"))
         parcalar = []
@@ -426,14 +436,14 @@ def _system_prompt() -> str:
             except OSError:
                 continue
         if parcalar:
-            return _genel_talimat_ekle("\n\n---\n\n".join(parcalar))
+            return _genel_talimat_ekle("\n\n---\n\n".join(parcalar) + ek)
 
     try:
-        return _genel_talimat_ekle(IS_KURALLARI.read_text(encoding="utf-8"))
+        return _genel_talimat_ekle(IS_KURALLARI.read_text(encoding="utf-8") + ek)
     except OSError:
         # Hiçbir bağlam yoksa asistan yine çalışır.
         return _genel_talimat_ekle(
-            "Sen Güllü panelinin AI asistanısın. Soruları gulludb veritabanını sorgulayarak Türkçe yanıtla.")
+            "Sen Güllü panelinin AI asistanısın. Soruları gulludb veritabanını sorgulayarak Türkçe yanıtla." + ek)
 
 
 def _genel_talimat_ekle(prompt: str) -> str:
@@ -483,7 +493,7 @@ def _claude_calistir(soru: str, resume_session_id: str | None = None) -> dict:
             # Oturum sürüyor: sistem promptu ve önceki konuşma oturumda zaten var.
             cmd += ["--resume", resume_id]
         else:
-            cmd += ["--append-system-prompt", _system_prompt()]
+            cmd += ["--append-system-prompt", _system_prompt(sema=True)]
 
         try:
             sonuc = subprocess.run(
