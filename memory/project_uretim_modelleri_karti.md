@@ -30,3 +30,5 @@ HESAP_OK / SABLON_OK). Canlı veriyle görsel kontrol deploy sonrası.
 **İnceleme (code-reviewer, 2026-10-14):** kritik yok. Düzeltildi: alias barkodlu siparişte fiyat kaçırma (tek barkodlu siparişte `(order_number, "*")` geri düşüşü) ve özet kutusunda "— ₺". Bilinçli bırakıldı: kısmi sonuç 5 dk önbelleklenir, kilit yok (eritme kartında önbellek bile yok); raftan karşılanan kalemler üretim sayısına girmez (kart "üretim siparişi" der, doğru).
 
 - 2026-10-14: kart başlığına Kopyala düğmesi (model kodları, eritme kartıyla ortak `.eritme-kopyala` işleyicisi).
+
+- 2026-10-14 akşam: canlıda düğme yazıları görünmüyordu (home.html genel .btn kuralı beyaz yazı + kenarlıksız; outline düğme saydam). Eritme + üretim kartı küçük düğmelerine gradyan dolgu verildi.

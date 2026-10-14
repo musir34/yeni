@@ -127,6 +127,11 @@
     html.gs-dark .uretim-tablo thead th { background:#1f1f1f; color:#aaa; border-color:#333; }
     html.gs-dark .uretim-tablo .uretim-kod { color:#eee; }
     html.gs-dark .uretim-bar__cubuk { background:rgba(255,255,255,.1); }
+    /* Kart içi küçük çerçeveli düğmeler: sayfanın genel .btn kuralı (beyaz yazı, kenarlıksız)
+       saydam outline zeminde yazıyı görünmez kılıyor → gradyan dolgu verilir */
+    .eritme-card .btn-sm, .uretim-card .btn-sm { padding:6px 12px; font-size:.8rem; }
+    .eritme-card .btn-outline-secondary, .uretim-card .btn-outline-secondary { background:linear-gradient(135deg,#757f9a,#d7dde8); color:#fff; }
+    .eritme-card .btn-outline-primary, .uretim-card .btn-outline-primary { background:linear-gradient(135deg,#2193b0,#6dd5ed); color:#fff; }
     .stock-substats {
       margin-top:12px; padding-top:12px; border-top:1px solid rgba(0,0,0,.08);
       display:flex; flex-direction:column; gap:7px;
