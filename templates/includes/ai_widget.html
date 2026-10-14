@@ -42,6 +42,17 @@
   .aiw-giris textarea{flex:1;resize:none;height:40px;padding:9px 11px;border:1px solid #d1d5db;border-radius:10px;font-size:.86rem;font-family:inherit}
   .aiw-giris button{border:none;border-radius:10px;background:#4f46e5;color:#fff;padding:0 16px;font-weight:600;cursor:pointer}
   .aiw-giris button:disabled{opacity:.5;cursor:not-allowed}
+  .aiw-giris .aiw-dosya-btn{background:transparent;color:#888;border:1px solid #d1d5db;padding:0 11px;font-size:.95rem}
+  .aiw-giris .aiw-dosya-btn:hover{color:#4f46e5;border-color:#4f46e5}
+  /* Dosya/görsel ekleri (tam sayfa asistanla aynı: Excel, CSV, PDF, görsel; en fazla 3) */
+  .aiw-ekler{display:none;flex-wrap:wrap;gap:6px;padding:8px 10px 0;background:#fff}
+  .aiw-ekler.acik{display:flex}
+  .aiw-ek-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid #d1d5db;border-radius:999px;background:#f7f8fa;font-size:.74rem;color:#222;max-width:100%}
+  .aiw-ek-chip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+  .aiw-ek-chip img{width:20px;height:20px;object-fit:cover;border-radius:4px}
+  .aiw-ek-chip button{background:none;border:none;color:#c0392b;cursor:pointer;font-size:.85rem;padding:0 2px;line-height:1}
+  #aiw-panel.surukle{outline:2px dashed #4f46e5;outline-offset:-6px}
+  #aiw-panel.surukle::after{content:"Bırakın: Excel, CSV, PDF veya görsel";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.8);color:#4f46e5;font-weight:700;font-size:.9rem;z-index:9;pointer-events:none}
   /* Geçmiş sohbetler overlay'i */
   #aiw-gecmis{position:absolute;inset:52px 0 0 0;background:#fff;display:none;flex-direction:column;z-index:5}
   #aiw-gecmis.acik{display:flex}
@@ -87,8 +98,11 @@
       <div id="aiw-gecmis-liste"></div>
     </div>
     <div id="aiw-msgs"><div class="aiw-bos" id="aiw-bos">Merhaba! Sipariş, stok veya satış verilerin hakkında soru sorabilirsin.</div></div>
+    <div class="aiw-ekler" id="aiw-ekler"></div>
     <div class="aiw-giris">
-      <textarea id="aiw-soru" placeholder="Sorunuzu yazın… (Enter ile gönder)"></textarea>
+      <button id="aiw-dosya-btn" class="aiw-dosya-btn" type="button" title="Dosya ekle (Excel, CSV, PDF, görsel — en fazla 3; sürükle-bırak ve yapıştırma da çalışır)"><i class="fas fa-paperclip"></i></button>
+      <input type="file" id="aiw-dosya-input" accept=".xlsx,.csv,.pdf,.png,.jpg,.jpeg,.webp,.gif,image/*" multiple hidden>
+      <textarea id="aiw-soru" placeholder="Sorunuzu yazın… (Enter ile gönder · dosya/görsel sürükleyin ya da yapıştırın)"></textarea>
       <button id="aiw-gonder">Sor</button>
     </div>
   </div>
@@ -196,17 +210,87 @@
     },2000);
   }
 
+  // ── Dosya/görsel ekleri: tam sayfa asistanla aynı akış (ataş, sürükle-bırak, yapıştırma) ──
+  var MAX_DOSYA=3, KABUL_UZANTI=/\.(xlsx|csv|pdf|png|jpe?g|webp|gif)$/i;
+  var ekliDosyalar=[];
+  var eklerKutu=document.getElementById('aiw-ekler'),
+      dosyaBtn=document.getElementById('aiw-dosya-btn'), dosyaInput=document.getElementById('aiw-dosya-input');
+  function gorselMi(f){ return /^image\//.test(f.type)||/\.(png|jpe?g|webp|gif)$/i.test(f.name); }
+  function eklerCiz(){
+    eklerKutu.innerHTML='';
+    eklerKutu.classList.toggle('acik', ekliDosyalar.length>0);
+    ekliDosyalar.forEach(function(f,i){
+      var chip=document.createElement('span'); chip.className='aiw-ek-chip';
+      if(gorselMi(f)){
+        var img=document.createElement('img'); img.alt=''; img.src=URL.createObjectURL(f);
+        img.addEventListener('load',function(){ URL.revokeObjectURL(img.src); });
+        chip.appendChild(img);
+      } else { chip.appendChild(document.createTextNode('📎')); }
+      var ad=document.createElement('span'); ad.textContent=f.name; ad.title=f.name; chip.appendChild(ad);
+      var x=document.createElement('button'); x.type='button'; x.title='Kaldır'; x.textContent='×';
+      x.addEventListener('click',function(){ ekliDosyalar.splice(i,1); eklerCiz(); });
+      chip.appendChild(x); eklerKutu.appendChild(chip);
+    });
+  }
+  function dosyaEkle(dosyalar){
+    for(var i=0;i<dosyalar.length;i++){
+      var f=dosyalar[i]; if(!f||!f.name) continue;
+      if(!KABUL_UZANTI.test(f.name)&&!/^image\//.test(f.type)){ ekle("'"+f.name+"': yalnızca Excel (.xlsx), CSV, PDF ve görsel eklenebilir.",'err'); continue; }
+      if(ekliDosyalar.length>=MAX_DOSYA){ ekle('En fazla '+MAX_DOSYA+' dosya eklenebilir.','err'); break; }
+      ekliDosyalar.push(f);
+    }
+    eklerCiz();
+  }
+  dosyaBtn.addEventListener('click',function(){ dosyaInput.click(); });
+  dosyaInput.addEventListener('change',function(){ dosyaEkle(dosyaInput.files); dosyaInput.value=''; });
+  // Sürükle-bırak: hedef sohbet penceresi; panel kapalıyken sayfanın kendi davranışı bozulmaz
+  var surukleSayac=0;
+  function dosyaTasiyor(e){ return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types,'Files')>=0; }
+  panel.addEventListener('dragenter',function(e){ if(!dosyaTasiyor(e)) return; e.preventDefault(); surukleSayac++; panel.classList.add('surukle'); });
+  panel.addEventListener('dragover',function(e){ if(!dosyaTasiyor(e)) return; e.preventDefault(); e.dataTransfer.dropEffect='copy'; });
+  panel.addEventListener('dragleave',function(){ surukleSayac=Math.max(0,surukleSayac-1); if(!surukleSayac) panel.classList.remove('surukle'); });
+  panel.addEventListener('drop',function(e){ e.preventDefault(); e.stopPropagation(); surukleSayac=0; panel.classList.remove('surukle'); if(e.dataTransfer&&e.dataTransfer.files.length) dosyaEkle(e.dataTransfer.files); });
+  // Yapıştırma: yalnız panel açıkken ve odak panelde/boştayken (sayfadaki formlara karışmasın)
+  document.addEventListener('paste',function(e){
+    if(!panel.classList.contains('acik')) return;
+    var a=document.activeElement;
+    if(a && a!==document.body && a!==soruEl && !panel.contains(a)) return;
+    var items=e.clipboardData&&e.clipboardData.items; if(!items) return;
+    var dosyalar=[];
+    for(var i=0;i<items.length;i++){
+      var it=items[i]; if(it.kind!=='file') continue;
+      var f=it.getAsFile(); if(!f) continue;
+      if(/^image\//.test(f.type)&&!/\./.test(f.name)){
+        var uz=(f.type.split('/')[1]||'png').replace('jpeg','jpg');
+        dosyalar.push(new File([f],'yapistirilan-'+Date.now()+'.'+uz,{type:f.type}));
+      } else { dosyalar.push(f); }
+    }
+    if(dosyalar.length){ e.preventDefault(); dosyaEkle(dosyalar); }
+  });
+
   async function sor(){
-    var soru=soruEl.value.trim(); if(!soru) return;
+    var soru=soruEl.value.trim();
+    var dosyalar=ekliDosyalar.slice();
+    if(!soru&&!dosyalar.length) return;
     soruEl.value=''; gonder.disabled=true;
     gecmisPanel.classList.remove('acik');
-    ekle(soru,'kul');
+    var ekList=dosyalar.length?'\n📎 '+dosyalar.map(function(f){return f.name;}).join(', '):'';
+    ekle((soru||'Ekli dosyaları incele ve özetle.')+ekList,'kul');
     var beklDiv=ekle('Düşünüyor…','bot');
     try{
-      var r=await fetch('/ai-asistan/sor',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({soru:soru, sohbet_id:sohbetId()})});
+      var r;
+      if(dosyalar.length){
+        var fd=new FormData(); fd.append('soru',soru);
+        if(sohbetId()) fd.append('sohbet_id',sohbetId());
+        dosyalar.forEach(function(f){ fd.append('dosyalar',f); });
+        r=await fetch('/ai-asistan/sor',{method:'POST',headers:{'X-Requested-With':'fetch'},body:fd});
+      } else {
+        r=await fetch('/ai-asistan/sor',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({soru:soru, sohbet_id:sohbetId()})});
+      }
       var d=await r.json();
       if(d.ok){
+        ekliDosyalar=[]; eklerCiz();
         sohbetIdYaz(d.sohbet_id);
         bekleyenYaz({mesajId:d.mesaj_id, sohbetId:d.sohbet_id});
         yokla(d.mesaj_id, beklDiv);

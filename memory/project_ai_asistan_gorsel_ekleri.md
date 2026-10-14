@@ -28,3 +28,5 @@ sunucu bloğu varsa toplam istek de 10M'ı geçmemeli). GIF ilk kare olarak gör
 Panelden uçtan uca deneme deploy sonrası (ekran görüntüsü yapıştırıp "bu nedir?" sor).
 
 **Durum:** yerelde, commit/deploy bekliyor (`git pull && systemctl restart gullupanel.service`).
+
+**2026-10-14 ek: küçük sohbet kutusu (widget).** `templates/includes/ai_widget.html` (her sayfada sağ altta yüzen asistan) aynı yetenekleri aldı: ataş düğmesi + gizli dosya girişi, ek çipleri (`.aiw-ekler`), panel üzerine sürükle-bırak (`#aiw-panel.surukle`), yapıştırma (yalnız panel açıkken ve odak panelde/boştayken; sayfadaki formlara karışmaz), dosya varsa FormData ile `/ai-asistan/sor`. Sunucu tarafı ortak, ek kod yok.
