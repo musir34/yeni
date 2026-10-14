@@ -86,6 +86,11 @@ BASLIK_UZUNLUK = 60            # sohbet başlığı = ilk sorunun ilk N karakter
 # Motorlar diskten dosya OKUYAMAZ (claude --allowedTools yalnız DB sorgusu,
 # codex salt-okunur sandbox) — dosya diske de yazılmaz, bellekte işlenir.
 DOSYA_UZANTILAR = {".xlsx", ".csv", ".pdf"}
+# Görsel ekler (2026-10-14): metne çevrilemez, model görür. Soru başına geçici
+# klasöre yazılır; Claude'a YALNIZ o klasör için Read izni + --add-dir, Codex'e -i
+# ile verilir; cevap üretilince klasör silinir (gorsel_klasoru_sil).
+GORSEL_UZANTILAR = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+GORSEL_IMZALAR = (b"\x89PNG", b"\xff\xd8\xff", b"RIFF", b"GIF8")   # uzantı sahte olmasın
 MAX_DOSYA_SAYISI = 3
 MAX_DOSYA_BOYUT = 10 * 1024 * 1024   # dosya başına 10 MB
 MAX_DOSYA_METIN = 20000              # dosya başına prompta girecek azami karakter
@@ -378,18 +383,55 @@ def _pdf_metni(veri: bytes, ad: str) -> str:
         raise ValueError(f"'{ad}' PDF'i okunamadı: {e}")
 
 
+def _dosya_adi_uzanti(dosya) -> tuple[str, str]:
+    ad = (dosya.filename or "dosya").rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+    uzanti = ("." + ad.rsplit(".", 1)[-1].lower()) if "." in ad else ""
+    return ad, uzanti
+
+
+def gorsel_mi(dosya) -> bool:
+    return _dosya_adi_uzanti(dosya)[1] in GORSEL_UZANTILAR
+
+
+def _gorsel_kaydet(dosya, klasor: Path, sira: int) -> tuple[str, Path]:
+    """Görseli geçici klasöre güvenli adla yaz → (özgün ad, yol). Hata → ValueError."""
+    ad, uzanti = _dosya_adi_uzanti(dosya)
+    veri = dosya.read(MAX_DOSYA_BOYUT + 1)
+    if len(veri) > MAX_DOSYA_BOYUT:
+        raise ValueError(f"'{ad}' çok büyük (sınır {MAX_DOSYA_BOYUT // (1024 * 1024)} MB).")
+    if not veri:
+        raise ValueError(f"'{ad}' boş görünüyor.")
+    if not veri.startswith(GORSEL_IMZALAR):
+        raise ValueError(f"'{ad}' geçerli bir görsel dosyası değil.")
+    yol = klasor / f"gorsel{sira}{'.jpg' if uzanti == '.jpeg' else uzanti}"
+    yol.write_bytes(veri)
+    return ad, yol
+
+
+def gorsel_klasoru_olustur() -> Path:
+    import tempfile
+    return Path(tempfile.mkdtemp(prefix="gullu_ai_gorsel_"))
+
+
+def gorsel_klasoru_sil(klasor: Path | None) -> None:
+    if klasor is None:
+        return
+    import shutil
+    shutil.rmtree(klasor, ignore_errors=True)
+
+
 def _dosya_metni(dosya) -> tuple[str, str]:
     """
     Yüklenen dosyayı (werkzeug FileStorage) metne çevir → (dosya adı, metin).
     Geçersiz/okunamayan dosyada kullanıcıya gösterilecek ValueError fırlatır.
     """
-    ad = (dosya.filename or "dosya").rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
-    uzanti = ("." + ad.rsplit(".", 1)[-1].lower()) if "." in ad else ""
+    ad, uzanti = _dosya_adi_uzanti(dosya)
     if uzanti == ".xls":
         raise ValueError(f"'{ad}': eski .xls biçimi desteklenmiyor — dosyayı Excel'de "
                          f".xlsx olarak kaydedip yükleyin.")
     if uzanti not in DOSYA_UZANTILAR:
-        raise ValueError(f"'{ad}': yalnızca Excel (.xlsx), CSV ve PDF yüklenebilir.")
+        raise ValueError(f"'{ad}': yalnızca Excel (.xlsx), CSV, PDF ve görsel "
+                         f"(PNG, JPG, WEBP, GIF) yüklenebilir.")
     veri = dosya.read(MAX_DOSYA_BOYUT + 1)
     if len(veri) > MAX_DOSYA_BOYUT:
         raise ValueError(f"'{ad}' çok büyük (sınır {MAX_DOSYA_BOYUT // (1024 * 1024)} MB).")
@@ -457,13 +499,17 @@ def _genel_talimat_ekle(prompt: str) -> str:
             + talimat)
 
 
-def _claude_calistir(soru: str, resume_session_id: str | None = None) -> dict:
+def _claude_calistir(soru: str, resume_session_id: str | None = None,
+                     gorseller: list[Path] | None = None) -> dict:
     """
     Headless Claude Code'u çağırır.
     Dönen: {'ok': bool, 'cevap'/'hata': str, 'session_id': str|None}
     resume_session_id verilirse oturum --resume ile sürdürülür (tam bağlam);
     resume başarısız olursa (oturum dosyası silinmiş vb.) taze oturumla
     bir kez daha denenir — kullanıcıya hata yansımaz, sadece bağlam tazelenir.
+    gorseller: geçici klasördeki görsel yolları; Read aracı YALNIZ o klasör için
+    açılır (Read(//klasor/**)) ve klasör --add-dir ile çalışma alanına eklenir —
+    .env/.mcp.json gibi dosyalar okunamaz.
     """
     claude_bin = _claude_bin()
     if not claude_bin:
@@ -481,13 +527,22 @@ def _claude_calistir(soru: str, resume_session_id: str | None = None) -> dict:
         if not (k.startswith("ANTHROPIC") or (k.startswith("CLAUDE") and k not in ("CLAUDE_BIN", "CLAUDE_CODE_OAUTH_TOKEN")))
     }
 
+    araclar = ALLOWED_TOOLS
+    ek_args: list[str] = []
+    if gorseller:
+        klasor = gorseller[0].parent.resolve().as_posix()
+        # İzin kuralı: '//' mutlak yol; yalnız bu klasörün altı okunabilir.
+        araclar += f",Read(//{klasor.lstrip('/')}/**)"
+        ek_args = ["--add-dir", klasor]
+
     def _dene(resume_id: str | None) -> dict:
         cmd = [
             claude_bin,
             "-p", soru,
             "--model", CLAUDE_MODEL,
-            "--allowedTools", ALLOWED_TOOLS,
+            "--allowedTools", araclar,
             "--output-format", "json",
+            *ek_args,
         ]
         if resume_id:
             # Oturum sürüyor: sistem promptu ve önceki konuşma oturumda zaten var.
@@ -581,7 +636,8 @@ satır sınırı olmadan) indirilebilir. Bu yüzden:
 """
 
 
-def _codex_sql_dongusu(soru: str, resume_session_id: str | None = None) -> dict:
+def _codex_sql_dongusu(soru: str, resume_session_id: str | None = None,
+                       gorseller: list[Path] | None = None) -> dict:
     """
     Codex için Claude'un MCP döngüsünün eşdeğeri: Codex ```sql bloğu yazar,
     sorgu burada ai_readonly ile çalıştırılır, sonuç bir sonraki tura beslenir.
@@ -595,11 +651,13 @@ def _codex_sql_dongusu(soru: str, resume_session_id: str | None = None) -> dict:
     sistem = _system_prompt() + "\n\n" + CODEX_SQL_TALIMATI.format(
         tur=AZAMI_SQL_TUR, sema=sema_ozeti())
     model = codex_model("asistan")
+    images = [str(g) for g in gorseller] if gorseller else None
 
-    sonuc = _codex_calistir(soru, sistem, QUERY_TIMEOUT_SN, resume_session_id, model=model)
+    sonuc = _codex_calistir(soru, sistem, QUERY_TIMEOUT_SN, resume_session_id, model=model,
+                            images=images)
     if not sonuc["ok"] and resume_session_id:
         # Oturum kayıp/bozuk olabilir → taze oturumla bir kez daha.
-        sonuc = _codex_calistir(soru, sistem, QUERY_TIMEOUT_SN, None, model=model)
+        sonuc = _codex_calistir(soru, sistem, QUERY_TIMEOUT_SN, None, model=model, images=images)
 
     son_sql = None            # başarıyla çalışan SON sorgu → "Excel indir" bunu kullanır
     for _ in range(AZAMI_SQL_TUR):
@@ -628,30 +686,35 @@ def _codex_sql_dongusu(soru: str, resume_session_id: str | None = None) -> dict:
     return sonuc
 
 
-def _ai_calistir(soru: str, resume_session_id: str | None = None) -> dict:
+def _ai_calistir(soru: str, resume_session_id: str | None = None,
+                 gorseller: list[Path] | None = None) -> dict:
     """
     Seçili motora göre Claude Code veya Codex CLI'yi çalıştırır (aynı sözleşme).
     Motor panelden değiştirilebilir; ayar yoksa .env'deki AI_MOTOR geçerlidir.
     Codex tarafında da resume başarısız olursa taze oturumla bir kez denenir.
+    gorseller: soruya ekli görsel dosya yolları (geçici klasör), motor görür.
     """
     from ai_asistan.motor_ayar import aktif_motor
 
     if aktif_motor("asistan") != "codex":
-        return _claude_calistir(soru, resume_session_id)
-    return _codex_sql_dongusu(soru, resume_session_id)
+        return _claude_calistir(soru, resume_session_id, gorseller)
+    return _codex_sql_dongusu(soru, resume_session_id, gorseller)
 
 
-def _arka_planda_cevapla(app, mesaj_id: int, sohbet_id: int, soru: str) -> None:
+def _arka_planda_cevapla(app, mesaj_id: int, sohbet_id: int, soru: str,
+                         gorseller: list[Path] | None = None,
+                         gorsel_klasor: Path | None = None) -> None:
     """
     Thread gövdesi: Claude'u çalıştır, sonucu 'bekliyor' durumundaki asistan
     mesajına yaz. İstek worker'ı bloklanmaz; frontend /durum/<id> ile yoklar.
+    Görsel ekler cevap üretilince (hata olsa da) geçici klasörle birlikte silinir.
     """
     with app.app_context():
         try:
             sohbet = db.session.get(AiSohbet, sohbet_id)
             resume_id = sohbet.claude_session_id if sohbet else None
 
-            sonuc = _ai_calistir(soru, resume_id)
+            sonuc = _ai_calistir(soru, resume_id, gorseller)
 
             mesaj = db.session.get(AiMesaj, mesaj_id)
             if mesaj is None:                      # sohbet bu arada silinmiş
@@ -679,6 +742,7 @@ def _arka_planda_cevapla(app, mesaj_id: int, sohbet_id: int, soru: str) -> None:
                 db.session.rollback()
         finally:
             db.session.remove()
+            gorsel_klasoru_sil(gorsel_klasor)
 
 
 def _bayat_bekleyenleri_isaretle(uid: str) -> None:
@@ -822,24 +886,47 @@ def sor():
     # Girdi doğrulama (sistem sınırında)
     if len(dosyalar) > MAX_DOSYA_SAYISI:
         return jsonify({"ok": False, "hata": f"En fazla {MAX_DOSYA_SAYISI} dosya eklenebilir."}), 400
-    ek_bloklar = []
-    for dosya in dosyalar:
-        try:
-            ek_bloklar.append(_dosya_metni(dosya))
-        except ValueError as e:
-            return jsonify({"ok": False, "hata": str(e)}), 400
-        except Exception:
-            current_app.logger.exception("[AI-ASISTAN] dosya okunamadı: %r", dosya.filename)
-            return jsonify({"ok": False, "hata": f"'{dosya.filename}' okunamadı."}), 400
-    if not soru and ek_bloklar:
-        soru = "Ekli dosyaları incele ve özetle."
-    if not soru:
-        return jsonify({"ok": False, "hata": "Soru boş olamaz."}), 400
-    if len(soru) > MAX_SORU_UZUNLUK:
-        return jsonify({"ok": False, "hata": "Soru çok uzun."}), 400
+    ek_bloklar = []             # metne çevrilen ekler: (ad, metin)
+    gorseller: list[Path] = []  # geçici klasöre yazılan görseller
+    gorsel_adlari: list[str] = []
+    gorsel_klasor: Path | None = None
+    devir = {"thread": False}   # True → klasörün sahibi cevap thread'i (o siler)
+    try:
+        for dosya in dosyalar:
+            try:
+                if gorsel_mi(dosya):
+                    if gorsel_klasor is None:
+                        gorsel_klasor = gorsel_klasoru_olustur()
+                    ad, yol = _gorsel_kaydet(dosya, gorsel_klasor, len(gorseller) + 1)
+                    gorseller.append(yol)
+                    gorsel_adlari.append(ad)
+                else:
+                    ek_bloklar.append(_dosya_metni(dosya))
+            except ValueError as e:
+                return jsonify({"ok": False, "hata": str(e)}), 400
+            except Exception:
+                current_app.logger.exception("[AI-ASISTAN] dosya okunamadı: %r", dosya.filename)
+                return jsonify({"ok": False, "hata": f"'{dosya.filename}' okunamadı."}), 400
+        if not soru and (ek_bloklar or gorseller):
+            soru = "Ekli dosyaları incele ve özetle."
+        if not soru:
+            return jsonify({"ok": False, "hata": "Soru boş olamaz."}), 400
+        if len(soru) > MAX_SORU_UZUNLUK:
+            return jsonify({"ok": False, "hata": "Soru çok uzun."}), 400
 
-    uid = _kullanici_id()
-    _bayat_bekleyenleri_isaretle(uid)
+        uid = _kullanici_id()
+        _bayat_bekleyenleri_isaretle(uid)
+        return _soruyu_kuyrukla(soru, sohbet_id, uid, ek_bloklar, gorseller,
+                                gorsel_adlari, gorsel_klasor, devir)
+    finally:
+        if not devir["thread"]:
+            gorsel_klasoru_sil(gorsel_klasor)   # 400/hata: thread başlamadı, burada temizle
+
+
+def _soruyu_kuyrukla(soru: str, sohbet_id, uid: str, ek_bloklar: list, gorseller: list[Path],
+                     gorsel_adlari: list[str], gorsel_klasor: Path | None, devir: dict):
+    """Soruyu DB'ye yazıp cevabı arka plana ver. Thread başlayınca görsel klasörünün
+    sahipliği ona geçer (devir['thread']=True); öncesinde dönen hatalarda sor() siler."""
 
     # Aynı anda kullanıcı başına tek bekleyen soru (Claude süreçleri yığılmasın).
     bekleyen = (
@@ -860,7 +947,8 @@ def sor():
 
     # Sohbet geçmişinde ham içerik değil ek işareti görünür; AI'ya giden soruya
     # ise dosya içerikleri metin olarak iliştirilir (motorlar dosya okuyamaz).
-    kayit_metin = soru + "".join(f"\n📎 {ad}" for ad, _ in ek_bloklar)
+    kayit_metin = (soru + "".join(f"\n📎 {ad}" for ad, _ in ek_bloklar)
+                   + "".join(f"\n🖼️ {ad}" for ad in gorsel_adlari))
     ai_soru = soru
     if ek_bloklar:
         parcalar = [f"## Dosya: {ad}\n```\n{metin}\n```" for ad, metin in ek_bloklar]
@@ -869,6 +957,14 @@ def sor():
                    "çıkarıldı. Soruyu bu içeriklere dayanarak yanıtla; gerekirse "
                    "veritabanı sorgularıyla birleştir. İçerikleri uydurma, yalnızca "
                    "verilenlere dayan:\n\n" + "\n\n".join(parcalar))
+    if gorseller:
+        # Claude: yolları Read ile açar (izin yalnız bu klasöre); Codex: -i ile görür.
+        liste = "\n".join(f"- {ad} → {yol.as_posix()}" for ad, yol in zip(gorsel_adlari, gorseller))
+        ai_soru += ("\n\n# Kullanıcının eklediği görseller\n"
+                    "Aşağıdaki görselleri AÇIP İNCELE (Read aracı bu dosyalar için açık; "
+                    "ekran görüntüsü, ürün fotoğrafı, tablo fotoğrafı olabilir). Gördüğünü "
+                    "soruyla birlikte değerlendir, gerekirse veritabanıyla birleştir; "
+                    "görselde olmayan şeyi uydurma:\n" + liste)
 
     sohbet.updated_at = datetime.utcnow()
     db.session.add(AiMesaj(sohbet_id=sohbet.id, rol="kullanici", metin=kayit_metin, durum="hazir"))
@@ -878,10 +974,12 @@ def sor():
 
     t = threading.Thread(
         target=_arka_planda_cevapla,
-        args=(current_app._get_current_object(), cevap_mesaj.id, sohbet.id, ai_soru),
+        args=(current_app._get_current_object(), cevap_mesaj.id, sohbet.id, ai_soru,
+              gorseller or None, gorsel_klasor),
         daemon=True,
     )
     t.start()
+    devir["thread"] = True
 
     return jsonify({
         "ok": True,

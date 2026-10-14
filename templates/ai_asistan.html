@@ -44,6 +44,11 @@
     .ai-ekler{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 0}
     .ai-ek-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-bg-light);font-size:.78rem}
     .ai-ek-chip button{background:none;border:none;color:#c0392b;cursor:pointer;font-size:.85rem;padding:0 2px;line-height:1}
+    .ai-ek-chip img{width:22px;height:22px;object-fit:cover;border-radius:4px}
+    /* Sürükle-bırak: dosya sohbet alanının üstüne gelince vurgulanır */
+    .ai-chat.surukle{outline:2px dashed var(--color-primary);outline-offset:-6px}
+    .ai-chat.surukle::after{content:"Bırakın: Excel, CSV, PDF veya görsel";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.75);color:var(--color-primary);font-weight:700;font-size:1rem;z-index:6;pointer-events:none}
+    html.gs-dark .ai-chat.surukle::after{background:rgba(0,0,0,.6)}
     .ai-ipucu{font-size:.75rem;color:#888;margin:8px 4px 0}
 
     /* Geçmiş sohbetler overlay'i */
@@ -104,9 +109,9 @@
     </div>
     <div class="ai-ekler" id="aiEkler" style="display:none;"></div>
     <div class="ai-giris">
-        <button id="aiDosyaBtn" class="ai-dosya-btn" title="Dosya ekle (Excel .xlsx, CSV, PDF — en fazla 3)"><i class="fas fa-paperclip"></i></button>
-        <input type="file" id="aiDosyaInput" accept=".xlsx,.csv,.pdf" multiple hidden>
-        <textarea id="aiSoru" placeholder="Sorunuzu yazın... (Enter ile gönder)"></textarea>
+        <button id="aiDosyaBtn" class="ai-dosya-btn" title="Dosya ekle (Excel .xlsx, CSV, PDF, görsel — en fazla 3; sürükle-bırak ve yapıştırma da çalışır)"><i class="fas fa-paperclip"></i></button>
+        <input type="file" id="aiDosyaInput" accept=".xlsx,.csv,.pdf,.png,.jpg,.jpeg,.webp,.gif,image/*" multiple hidden>
+        <textarea id="aiSoru" placeholder="Sorunuzu yazın... (Enter ile gönder · dosya/görsel sürükleyin ya da yapıştırın)"></textarea>
         <button id="aiGonder">Sor</button>
     </div>
 </div>
@@ -128,9 +133,13 @@
     const dosyaInput = document.getElementById('aiDosyaInput');
     const eklerKutu = document.getElementById('aiEkler');
 
-    // ── Dosya ekleri (Excel/CSV/PDF): sunucu içeriği metne çevirip AI'ya verir ──
+    // ── Dosya ekleri: Excel/CSV/PDF sunucuda metne çevrilir, görseli model görür ──
+    // Üç yol: ataş düğmesi, sürükle-bırak (sohbet alanı), panodan yapıştırma (ekran görüntüsü).
     const MAX_DOSYA = 3;
+    const KABUL_UZANTI = /\.(xlsx|csv|pdf|png|jpe?g|webp|gif)$/i;
     let ekliDosyalar = [];
+
+    function gorselMi(f) { return /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif)$/i.test(f.name); }
 
     function eklerCiz() {
         eklerKutu.innerHTML = '';
@@ -139,7 +148,15 @@
         ekliDosyalar.forEach(function (f, i) {
             const chip = document.createElement('span');
             chip.className = 'ai-ek-chip';
-            chip.textContent = '📎 ' + f.name;
+            if (gorselMi(f)) {
+                const img = document.createElement('img');
+                img.alt = ''; img.src = URL.createObjectURL(f);
+                img.addEventListener('load', function () { URL.revokeObjectURL(img.src); });
+                chip.appendChild(img);
+                chip.appendChild(document.createTextNode(' ' + f.name));
+            } else {
+                chip.textContent = '📎 ' + f.name;
+            }
             const x = document.createElement('button');
             x.type = 'button'; x.title = 'Kaldır'; x.textContent = '×';
             x.addEventListener('click', function () { ekliDosyalar.splice(i, 1); eklerCiz(); });
@@ -147,14 +164,63 @@
             eklerKutu.appendChild(chip);
         });
     }
-    dosyaBtn.addEventListener('click', function () { dosyaInput.click(); });
-    dosyaInput.addEventListener('change', function () {
-        for (const f of dosyaInput.files) {
+    function dosyaEkle(dosyalar) {
+        for (const f of dosyalar) {
+            if (!f || !f.name) continue;
+            if (!KABUL_UZANTI.test(f.name) && !/^image\//.test(f.type)) {
+                ekle("'" + f.name + "': yalnızca Excel (.xlsx), CSV, PDF ve görsel eklenebilir.", 'hata');
+                continue;
+            }
             if (ekliDosyalar.length >= MAX_DOSYA) { ekle('En fazla ' + MAX_DOSYA + ' dosya eklenebilir.', 'hata'); break; }
             ekliDosyalar.push(f);
         }
-        dosyaInput.value = '';
         eklerCiz();
+    }
+    dosyaBtn.addEventListener('click', function () { dosyaInput.click(); });
+    dosyaInput.addEventListener('change', function () {
+        dosyaEkle(dosyaInput.files);
+        dosyaInput.value = '';
+    });
+
+    // Sürükle-bırak: sohbet kutusunun tamamı hedef; sayfanın dosyayı açmasını engelle
+    const chatKutu = document.querySelector('.ai-chat');
+    let surukleSayac = 0;
+    chatKutu.addEventListener('dragenter', function (e) {
+        if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes('Files')) return;
+        e.preventDefault(); surukleSayac++; chatKutu.classList.add('surukle');
+    });
+    chatKutu.addEventListener('dragover', function (e) {
+        if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes('Files')) return;
+        e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
+    });
+    chatKutu.addEventListener('dragleave', function () {
+        surukleSayac = Math.max(0, surukleSayac - 1);
+        if (!surukleSayac) chatKutu.classList.remove('surukle');
+    });
+    chatKutu.addEventListener('drop', function (e) {
+        e.preventDefault(); surukleSayac = 0; chatKutu.classList.remove('surukle');
+        if (e.dataTransfer && e.dataTransfer.files.length) dosyaEkle(e.dataTransfer.files);
+    });
+    window.addEventListener('dragover', function (e) { e.preventDefault(); });
+    window.addEventListener('drop', function (e) { e.preventDefault(); });
+
+    // Panodan yapıştırma: ekran görüntüsü (Win+Shift+S / Cmd+Shift+4) doğrudan eklenir
+    document.addEventListener('paste', function (e) {
+        const items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+        const dosyalar = [];
+        for (const it of items) {
+            if (it.kind !== 'file') continue;
+            const f = it.getAsFile();
+            if (!f) continue;
+            if (/^image\//.test(f.type) && !/\./.test(f.name)) {
+                const uz = (f.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+                dosyalar.push(new File([f], 'yapistirilan-' + Date.now() + '.' + uz, { type: f.type }));
+            } else {
+                dosyalar.push(f);
+            }
+        }
+        if (dosyalar.length) { e.preventDefault(); dosyaEkle(dosyalar); }
     });
 
     function sohbetId() { const v = localStorage.getItem('aip_sohbet'); return v ? parseInt(v, 10) : null; }

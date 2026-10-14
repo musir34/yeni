@@ -29,5 +29,5 @@ tekrar gönderilmez. Dosya okuma yetkisi verilmedi (`.env` sızıntı riski; Cod
 py_compile geçti. Canlı deneme deploy sonrası: asistana "üretim modundaki modeller son 30 günde
 ortalama kaça satıldı" sorulup haritadaki kalıbı kullanıp kullanmadığına bakılacak.
 
-**Durum:** yerelde, commit/deploy bekliyor (`git pull && systemctl restart gullupanel.service`;
+**Durum:** f420c27 push edildi (2026-10-14); sunucuda pull+restart bekliyor (`git pull && systemctl restart gullupanel.service`;
 `memory/` git'te takipli, sunucuya pull ile gelir).
