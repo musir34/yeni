@@ -19,6 +19,7 @@ from user_logs import log_user_action
 from .adres import tr_upper
 from .durum import ETIKETLER, SIPARIS_ACILDI
 from .etiket import png_kirp, zpl_png
+from .zpl_svg import zpl_to_svg
 from .servis import (
     DURUM_BEKLIYOR, DURUM_HATA, _api_ile_ac, barkod_al, gonderi_haritasi, kaydi_sorgula, kayit_iptal,
     otomatik_acik,
@@ -119,18 +120,25 @@ def etiket_sayfasi(gonderi_id):
     if not kayit.zpl:
         flash(f"{kayit.referans}: MNG etiketi henüz yok ({kayit.hata or etiket(kayit.durum)}).", "warning")
         return redirect(url_for("kargo_gonderi.liste"))
-    png = zpl_png(kayit.zpl)
-    if not png:
-        flash("Etiket görüntüsü üretilemedi (Labelary erişilemedi). ZPL dosyasını indirip Zebra'ya gönderebilirsiniz.", "danger")
-        return redirect(url_for("kargo_gonderi.liste"))
-    import base64
-    png = png_kirp(png)          # boş kenarları at → 100x100 ruloya sığar (order_label ile aynı sayfa)
+    # Vektör (SVG): termal yazıcıda PNG pürüzlü çıkıyor; sipariş hazırla etiketi gibi SVG basılır.
+    svg, png_b64 = "", ""
+    try:
+        svg = zpl_to_svg(kayit.zpl)
+    except Exception:
+        logger.warning("[MNG] ZPL→SVG başarısız, PNG'ye düşülüyor (%s)", kayit.referans, exc_info=True)
+    if not svg:
+        png = zpl_png(kayit.zpl)
+        if not png:
+            flash("Etiket üretilemedi. ZPL dosyasını indirip Zebra'ya gönderebilirsiniz.", "danger")
+            return redirect(url_for("kargo_gonderi.liste"))
+        import base64
+        png_b64 = base64.b64encode(png_kirp(png)).decode("ascii")   # boş kenarları at → 100x100
     try:
         log_user_action("PRINT", {"işlem_açıklaması": f"MNG kargo etiketi yazdırıldı — {kayit.kaynak_ad} ({kayit.referans})",
                                   "sayfa": "Kargo Gönderileri", "takip_no": kayit.shipment_id})
     except Exception:
         logger.warning("MNG etiket PRINT hareketi loglanamadı", exc_info=True)
-    return render_template("kargo_gonderi_etiket.html", kayit=kayit, png_b64=base64.b64encode(png).decode("ascii"))
+    return render_template("kargo_gonderi_etiket.html", kayit=kayit, svg=svg, png_b64=png_b64)
 
 
 @kargo_gonderi_bp.route("/kargo-gonderi/<int:gonderi_id>/yeniden-dene", methods=["POST"])

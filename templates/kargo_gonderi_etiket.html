@@ -11,11 +11,14 @@
   * { box-sizing: border-box; }
   .label{ width:100mm; height:100mm; display:flex; align-items:center; justify-content:center;
           overflow:hidden; page-break-inside: avoid; }
-  .label img{ max-width:100mm; max-height:100mm; width:auto; height:auto; display:block; image-rendering: crisp-edges; }
+  .label img, .label svg{ max-width:100mm; max-height:100mm; width:auto; height:auto; display:block; }
+  .label img{ image-rendering: crisp-edges; }
 </style>
 </head>
 <body>
-  <div class="label"><img src="data:image/png;base64,{{ png_b64 }}" alt="MNG etiket {{ kayit.barkod }}"></div>
+  <div class="label">
+    {% if svg %}{{ svg|safe }}{% else %}<img src="data:image/png;base64,{{ png_b64 }}" alt="MNG etiket {{ kayit.barkod }}">{% endif %}
+  </div>
   <script>
     window.onload = function () {
       window.print();
