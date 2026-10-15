@@ -64,6 +64,11 @@ SAYFALAR: tuple[Sayfa, ...] = (
     Sayfa("uretim", "Üretim Siparişleri", "Siparişler", blueprints=("uretim",)),
     Sayfa("kargo_mutabakat", "Kargo Mutabakat", "Siparişler", blueprints=("kargo_mutabakat_bp",), roller=SADECE_ADMIN),
     Sayfa("kargo_gonderi", "Kargo Gönderileri", "Siparişler", blueprints=("kargo_gonderi",), roller=YONETIM),
+    # MNG etiket yazdırma / ZPL / kart rozeti: değişim, yeni sipariş, sipariş hazırla ve sipariş listesine
+    # girebilen herkese açık (depo bilgisayarı worker rolünde; yönetim sayfası ayrı kalır)
+    Sayfa("kargo_gonderi_etiket", "MNG Kargo Etiketi", "Siparişler", roller=YONETIM,
+          endpoints=("kargo_gonderi.etiket_sayfasi", "kargo_gonderi.zpl", "kargo_gonderi.durumlar"),
+          ebeveynler=("degisim", "yeni_siparis", "siparis_hazirla", "siparis_listesi"), menude=False),
     Sayfa("arsiv", "Arşiv", "Siparişler", blueprints=("archive",)),
     Sayfa("siparis_takip", "Sipariş Takip", "Siparişler", blueprints=("siparis_zaman",), roller=YONETIM),
     Sayfa("siparis_iz", "Sipariş İz Sürme", "Siparişler", blueprints=("order_audit",), roller=YONETIM),
