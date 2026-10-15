@@ -32,6 +32,13 @@ VARSAYILAN_TC = "11111111111"
 # MNG recipient.email'i de boş kabul etmiyor (26039 "geçerli bir e-posta olmalı"); değişim ve
 # manuel siparişte müşteri e-postası toplanmıyor → mağaza adresi (MNG_VARSAYILAN_EMAIL ile değişir).
 VARSAYILAN_EMAIL = os.getenv("MNG_VARSAYILAN_EMAIL") or "info@gullushoes.com"
+# MNG SMS tercihleri (ApiZone createOrder şeması, 2026-10-15):
+#   smsPreference1: kargo VARIŞ ŞUBESİNE ulaştığında alıcıya SMS      → açık
+#   smsPreference2: kargo İLK HAZIRLANDIĞINDA alıcıya SMS              → açık (MNG_SMS_HAZIRLANDI=0 kapatır)
+#   smsPreference3: kargo TESLİM edildiğinde GÖNDERİCİYE SMS           → kapalı (MNG_SMS_TESLIM_GONDERICI=1 açar)
+SMS_VARIS = 1
+SMS_HAZIRLANDI = 0 if (os.getenv("MNG_SMS_HAZIRLANDI") or "1").strip() in ("0", "false", "hayir", "hayır") else 1
+SMS_TESLIM_GONDERICI = 1 if (os.getenv("MNG_SMS_TESLIM_GONDERICI") or "0").strip() in ("1", "true", "evet") else 0
 _EMAIL_DESENI = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 
@@ -153,9 +160,9 @@ def siparis_govdesi(istek: GonderiIstegi, shipper_customer_id: str | int) -> dic
             "shipmentServiceType": SHIPMENT_SERVICE_STANDART,
             "packagingType": PACKAGING_PAKET,
             "content": istek.icerik or VARSAYILAN_ICERIK,
-            "smsPreference1": 1,
-            "smsPreference2": 0,
-            "smsPreference3": 0,
+            "smsPreference1": SMS_VARIS,
+            "smsPreference2": SMS_HAZIRLANDI,
+            "smsPreference3": SMS_TESLIM_GONDERICI,
             "paymentType": PAYMENT_GONDERICI,
             "deliveryType": DELIVERY_ADRESE_TESLIM,
             "description": istek.aciklama or istek.icerik or VARSAYILAN_ICERIK,

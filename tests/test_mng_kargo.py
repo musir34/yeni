@@ -158,3 +158,8 @@ def test_png_kirp_bos_kenarlari_atar():
     kirpik = Image.open(BytesIO(png_kirp(ham.getvalue())))
     assert kirpik.width <= 790 and 740 <= kirpik.height <= 780      # 959 → içerik + 8 px kenar
     assert png_kirp(b"bozuk") == b"bozuk"
+
+
+def test_sms_tercihleri_varsayilan():
+    o = siparis_govdesi(_istek(), 1)["order"]
+    assert (o["smsPreference1"], o["smsPreference2"], o["smsPreference3"]) == (1, 1, 0)
