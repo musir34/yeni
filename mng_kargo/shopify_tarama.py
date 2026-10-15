@@ -104,10 +104,41 @@ def siparis_icin_ac(order: dict):
     )
 
 
+def iptalleri_tara() -> int:
+    """Shopify yönetiminden iptal edilen siparişler: kurye almadıysa MNG gönderisi de iptal edilir."""
+    from models import KargoGonderi
+    from .durum import HAZIRLANDI, SIPARIS_ACILDI
+    from .servis import DURUM_BEKLIYOR, DURUM_HATA, kayit_iptal
+    acik = (KargoGonderi.query
+            .filter(KargoGonderi.kaynak == KAYNAK_SHOPIFY,
+                    KargoGonderi.durum.in_((DURUM_BEKLIYOR, DURUM_HATA, SIPARIS_ACILDI, HAZIRLANDI)))
+            .all())
+    if not acik:
+        return 0
+    from shopify_site.shopify_service import shopify_service
+    esik = (datetime.now(timezone.utc) - timedelta(days=_geriye_gun())).strftime("%Y-%m-%d")
+    sonuc = shopify_service.get_orders(limit=TARAMA_LIMIT, query_filter=f"status:cancelled updated_at:>{esik}")
+    if not sonuc.get("success"):
+        return 0
+    iptal_refler = {str(o.get("legacyResourceId") or str(o.get("id") or "").split("/")[-1])
+                    for o in sonuc.get("orders") or []}
+    sayi = 0
+    for kayit in acik:
+        if kayit.kaynak_ref in iptal_refler and kayit_iptal(kayit):
+            logger.info("[MNG] Shopify iptali → MNG gönderisi iptal edildi %s (%s)", kayit.kaynak_ad, kayit.referans)
+            sayi += 1
+    return sayi
+
+
 def yeni_siparisleri_tara() -> int:
     """Zamanlayıcı girişi; hata yutulur, açılan gönderi sayısı döner."""
     if not otomatik_acik():
         return 0
+    try:
+        iptalleri_tara()
+    except Exception:
+        db.session.rollback()
+        logger.exception("[MNG] Shopify iptal taraması hatası (yutuldu)")
     acilan = 0
     try:
         from siparis_hazirla import _fetch_shopify_beklemede_orders

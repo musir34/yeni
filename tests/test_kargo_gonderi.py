@@ -443,3 +443,26 @@ def test_shopify_urun_adedi():
     assert urun_adedi({"line_items": [{"quantity": 2, "currentQuantity": 2}, {"quantity": 1, "currentQuantity": 0}]}) == 2
     assert urun_adedi({"lineItems": {"edges": [{"node": {"quantity": 3}}]}}) == 3
     assert urun_adedi({"line_items": []}) == 1
+
+
+# ---------------------------------------------------------------- Shopify iptal taraması
+class SahteShopifyIptal:
+    def __init__(self, iptal_idler):
+        self.iptal_idler = iptal_idler
+
+    def get_orders(self, limit=20, query_filter=None, **kw):
+        assert "status:cancelled" in query_filter
+        return {"success": True, "orders": [{"legacyResourceId": i} for i in self.iptal_idler]}
+
+
+def test_shopify_yonetiminden_iptal_mng_gonderisini_iptal_eder(ctx, monkeypatch):
+    from mng_kargo.shopify_tarama import iptalleri_tara
+    _shopify_yama(monkeypatch, SahteShopifyIptal(["77010", "77012"]))
+    k1 = _ac_ve_barkodla("shopify", "77010", "#1510", "SH1510")        # barkodlu, kurye almadı → iptal
+    k2 = servis.gonderi_ac("shopify", "77011", "#1511", "SH1511", _alici())   # iptal değil → kalır
+    k3 = _ac_ve_barkodla("shopify", "77012", "#1512", "SH1512")
+    k3.durum = "kargoda"; db.session.commit()                            # kurye aldı → iptal edilmez (taramaya girmez)
+    assert iptalleri_tara() == 1
+    assert KargoGonderi.query.get(k1.id).durum == "iptal" and ctx.iptal_gonderiler == [("SH1510", "195991365254")]
+    assert KargoGonderi.query.get(k2.id).durum == "siparis_acildi"
+    assert KargoGonderi.query.get(k3.id).durum == "kargoda"

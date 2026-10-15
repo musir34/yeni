@@ -119,6 +119,13 @@ def cancel_order(order_id):
     )
     if result.get("success"):
         log_user_action("UPDATE", {"işlem_açıklaması": f"Shopify sipariş iptal edildi — {order_id}", "sayfa": "Shopify Siparişler"})
+        # 🚚 MNG gönderisi açıldıysa iptal (kurye almadıysa); hata yutulur
+        try:
+            from mng_kargo.servis import KAYNAK_SHOPIFY, gonderi_iptal
+            gonderi_iptal(KAYNAK_SHOPIFY, str(order_id).split("/")[-1])
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception("[SHOPIFY] MNG gönderi iptali başarısız (yutuldu)")
     status_code = 200 if result.get("success") else 400
     return jsonify(result), status_code
 
