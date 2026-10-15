@@ -13,6 +13,7 @@ Sabitler:
 """
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -28,6 +29,10 @@ VARSAYILAN_ICERIK = "Ayakkabi"
 # MNG recipient.taxNumber'ı boş kabul etmiyor (26056: 11 haneli TC ya da 10 haneli VKN zorunlu).
 # Bireysel alıcıdan TC toplanmıyor → entegratörlerin kullandığı yer tutucu.
 VARSAYILAN_TC = "11111111111"
+# MNG recipient.email'i de boş kabul etmiyor (26039 "geçerli bir e-posta olmalı"); değişim ve
+# manuel siparişte müşteri e-postası toplanmıyor → mağaza adresi (MNG_VARSAYILAN_EMAIL ile değişir).
+VARSAYILAN_EMAIL = os.getenv("MNG_VARSAYILAN_EMAIL") or "info@gullushoes.com"
+_EMAIL_DESENI = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 
 @dataclass(frozen=True)
@@ -81,6 +86,12 @@ def telefon_normalize(telefon: str) -> str:
     return rakamlar
 
 
+def email_normalize(email: str) -> str:
+    """Geçerli e-posta yoksa mağaza adresi (MNG zorunlu tutuyor)."""
+    temiz = (email or "").strip()
+    return temiz if _EMAIL_DESENI.match(temiz) else VARSAYILAN_EMAIL
+
+
 def _kapida_odeme(tutar) -> tuple[int, float]:
     if tutar is None:
         return 0, 0
@@ -119,7 +130,7 @@ def alici_govdesi(alici: Alici) -> dict:
         "districtName": (alici.ilce or "").strip(),
         "address": (alici.adres or "").strip(),
         "bussinessPhoneNumber": "",
-        "email": (alici.email or "").strip(),
+        "email": email_normalize(alici.email),
         "taxOffice": "" if alici.tc_vergi_no else "SAHIS",
         "taxNumber": (alici.tc_vergi_no or "").strip() or VARSAYILAN_TC,
         "fullName": (alici.ad_soyad or "").strip(),

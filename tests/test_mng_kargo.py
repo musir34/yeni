@@ -136,3 +136,11 @@ def test_sube_cozulmedi_yalniz_gecici_20001():
     assert sube_cozulmedi(MngHata("x [20001] VARIŞ ŞUBESİ BULUNAMADI ! DAHA SONRA TEKRAR DENEYİN", kod="20001", http=500))
     assert not sube_cozulmedi(MngHata("x [20001] Tahsilatlı Kapıda Gönderi Tutar en az 20 TL", kod="20001", http=500))
     assert not sube_cozulmedi(MngHata("x [26056] tax", kod="26056", http=400))
+
+
+def test_email_bos_veya_bozuksa_magaza_adresi():
+    from mng_kargo.govde import VARSAYILAN_EMAIL, email_normalize
+    assert email_normalize("") == VARSAYILAN_EMAIL
+    assert email_normalize("ayse@") == VARSAYILAN_EMAIL
+    assert email_normalize(" ayse@ornek.com ") == "ayse@ornek.com"
+    assert siparis_govdesi(_istek(), 1)["recipient"]["email"] == VARSAYILAN_EMAIL
