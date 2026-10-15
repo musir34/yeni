@@ -37,7 +37,7 @@ from .client import MngClient, MngHata, sube_cozulmedi
 from .durum import (
     BILINMIYOR, HAZIRLANDI, IPTAL, KAPANMIS, SIPARIS_ACILDI, TESLIM, YOLDA, GonderiDurumu, geri_mi,
 )
-from .govde import Alici, GonderiIstegi, Parca, referans_normalize
+from .govde import Alici, GonderiIstegi, parca_adetle, referans_normalize
 
 logger = logging.getLogger(__name__)
 
@@ -138,10 +138,10 @@ def gonderi_haritasi(kaynak: str, kaynak_refler) -> dict[str, KargoGonderi]:
 
 
 # ---------------------------------------------------------------- açma
-def _kayit_olustur(kaynak, kaynak_ref, kaynak_ad, referans, alici: Alici, kapida_odeme_tutari) -> KargoGonderi:
+def _kayit_olustur(kaynak, kaynak_ref, kaynak_ad, referans, alici: Alici, kapida_odeme_tutari, adet: int = 1) -> KargoGonderi:
     kayit = KargoGonderi(
         kaynak=kaynak, kaynak_ref=str(kaynak_ref), kaynak_ad=(kaynak_ad or "")[:60],
-        referans=referans, ortam=client().ayar.ortam, durum=DURUM_BEKLIYOR,
+        referans=referans, ortam=client().ayar.ortam, durum=DURUM_BEKLIYOR, parca_adet=max(1, int(adet or 1)),
         kapida_odeme_tutari=Decimal(str(kapida_odeme_tutari)) if kapida_odeme_tutari else None,
         alici_ad=(alici.ad_soyad or "")[:120], alici_telefon=(alici.telefon or "")[:30],
         alici_adres=alici.adres, il=(alici.il or "")[:40], ilce=(alici.ilce or "")[:40],
@@ -163,7 +163,7 @@ def _istek_kur(kayit: KargoGonderi, icerik: str = "Ayakkabi", aciklama: str = ""
     except Exception:
         logger.warning("[MNG] il/ilçe çözümleme atlandı (%s)", kayit.referans, exc_info=True)
     return GonderiIstegi(
-        referans=kayit.referans, alici=alici, parcalar=(Parca(),),
+        referans=kayit.referans, alici=alici, parcalar=(parca_adetle(kayit.parca_adet or 1),),
         kapida_odeme_tutari=float(kayit.kapida_odeme_tutari) if kayit.kapida_odeme_tutari else None,
         icerik=icerik, aciklama=aciklama or f"Gullu Shoes {kayit.kaynak_ad or kayit.referans}",
     )
@@ -245,7 +245,7 @@ def barkod_iste(kaynak: str, kaynak_ref: str, commit: bool = True, bekle: bool =
 
 def gonderi_ac(kaynak: str, kaynak_ref: str, kaynak_ad: str, referans: str, alici: Alici,
                kapida_odeme_tutari=None, icerik: str = "Ayakkabi", aciklama: str = "",
-               commit: bool = True) -> KargoGonderi | None:
+               commit: bool = True, adet: int = 1) -> KargoGonderi | None:
     """Kaynak kaydı için MNG siparişi aç (idempotent). Otomatik kapalıysa None.
 
     API hatası kaydı engellemez: kayıt 'bekliyor' kalır, takip işi yeniden dener.
@@ -259,7 +259,7 @@ def gonderi_ac(kaynak: str, kaynak_ref: str, kaynak_ad: str, referans: str, alic
             return mevcut
         if gonderi_kaydi_var(kaynak, kaynak_ref):      # iptal edilmiş: aynı referans tekrar açılmaz
             return None
-        kayit = _kayit_olustur(kaynak, kaynak_ref, kaynak_ad, referans, alici, kapida_odeme_tutari)
+        kayit = _kayit_olustur(kaynak, kaynak_ref, kaynak_ad, referans, alici, kapida_odeme_tutari, adet)
         _api_ile_ac(kayit, icerik, aciklama)
         if commit:
             db.session.commit()

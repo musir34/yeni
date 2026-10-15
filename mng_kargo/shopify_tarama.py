@@ -73,6 +73,20 @@ def kapida_odeme_tutari(order: dict):
         return None
 
 
+def urun_adedi(order: dict) -> int:
+    """Siparişteki toplam çift sayısı (shopify_service.get_orders line_items; ham lineItems da desteklenir)."""
+    kalemler = order.get("line_items")
+    if kalemler is None:
+        kalemler = [e.get("node", {}) for e in (order.get("lineItems") or {}).get("edges", [])]
+    toplam = 0
+    for k in kalemler or []:
+        try:
+            toplam += int(k.get("currentQuantity") if k.get("currentQuantity") is not None else k.get("quantity") or 0)
+        except (TypeError, ValueError):
+            continue
+    return toplam or 1
+
+
 def siparis_icin_ac(order: dict):
     kaynak_ref = str(order.get("legacyResourceId") or str(order.get("id") or "").split("/")[-1])
     if not kaynak_ref:
@@ -86,6 +100,7 @@ def siparis_icin_ac(order: dict):
     return gonderi_ac(
         KAYNAK_SHOPIFY, kaynak_ref, ad, shopify_referansi(ad), siparis_alicisi(order),
         kapida_odeme_tutari=kapida_odeme_tutari(order), aciklama=f"Gullu Shoes siparis {ad}",
+        adet=urun_adedi(order),                      # desi = 2 × çift
     )
 
 

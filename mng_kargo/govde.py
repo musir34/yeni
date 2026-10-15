@@ -23,8 +23,8 @@ SHIPMENT_SERVICE_STANDART = 1
 PACKAGING_PAKET = 3
 DELIVERY_ADRESE_TESLIM = 1
 PAYMENT_GONDERICI = 1
-VARSAYILAN_DESI = 2          # ayakkabı kutusu — köprüdeki iade gövdesiyle aynı
-VARSAYILAN_KG = 1
+VARSAYILAN_DESI = int(os.getenv("MNG_DESI_BIRIM") or 2)   # çift başına desi (Komutan: 1 ürün 2, 2 ürün 4, 3 ürün 6)
+VARSAYILAN_KG = int(os.getenv("MNG_KG_BIRIM") or 1)       # çift başına kg
 VARSAYILAN_ICERIK = "Ayakkabi"
 # MNG recipient.taxNumber'ı boş kabul etmiyor (26056: 11 haneli TC ya da 10 haneli VKN zorunlu).
 # Bireysel alıcıdan TC toplanmıyor → entegratörlerin kullandığı yer tutucu.
@@ -60,6 +60,12 @@ class Parca:
     icerik: str = VARSAYILAN_ICERIK
     desi: int = VARSAYILAN_DESI
     kg: int = VARSAYILAN_KG
+
+
+def parca_adetle(adet: int) -> Parca:
+    """Tek paket, içindeki çift sayısına göre beyan: desi = birim × adet, kg = birim × adet."""
+    adet = max(1, int(adet or 1))
+    return Parca(desi=VARSAYILAN_DESI * adet, kg=VARSAYILAN_KG * adet)
 
 
 @dataclass(frozen=True)

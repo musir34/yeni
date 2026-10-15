@@ -308,6 +308,7 @@ def yeni_siparis():
                           il=data.get('il') or '', ilce=data.get('ilce') or ''),
                 kapida_odeme_tutari=(kapida_odeme_tutari if kapida_odeme else None),
                 aciklama=f"Gullu Shoes siparis {siparis_no}",
+                adet=sum(int(u.get('adet') or 0) for u in data.get('urunler') or []) or 1,   # desi = 2 × çift
             )
         except Exception:
             logger.exception("[YENI-SIPARIS] MNG gönderisi açılamadı (yutuldu, sipariş korunur)")

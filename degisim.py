@@ -499,6 +499,7 @@ def degisim_kaydet():
                 alici_kur(f"{ad} {soyad}", adres, telefon_no,
                           il=request.form.get('il') or '', ilce=request.form.get('ilce') or ''),
                 aciklama=f"Gullu Shoes degisim {siparis_no}",
+                adet=toplam_tahsis or 1,               # desi = 2 × çift
             )
         except Exception:
             logger.exception("[DEGISIM] MNG gönderisi açılamadı (yutuldu, değişim kaydı korunur)")

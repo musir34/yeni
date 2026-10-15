@@ -163,3 +163,10 @@ def test_png_kirp_bos_kenarlari_atar():
 def test_sms_tercihleri_varsayilan():
     o = siparis_govdesi(_istek(), 1)["order"]
     assert (o["smsPreference1"], o["smsPreference2"], o["smsPreference3"]) == (1, 1, 0)
+
+
+def test_parca_adetle():
+    from mng_kargo.govde import parca_adetle
+    assert (parca_adetle(1).desi, parca_adetle(1).kg) == (2, 1)
+    assert (parca_adetle(3).desi, parca_adetle(3).kg) == (6, 3)
+    assert parca_adetle(0).desi == 2

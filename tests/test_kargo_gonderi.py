@@ -425,3 +425,21 @@ def test_shopify_kapida_odeme_yalniz_odenmemis_cod():
     assert not kapida_odeme_mi({"paymentGatewayNames": ["iyzico sandbox"], "displayFinancialStatus": "PAID"})
     assert not kapida_odeme_mi({"paymentGatewayNames": ["manual"], "displayFinancialStatus": "PENDING"})
     assert not kapida_odeme_mi({"paymentGatewayNames": ["Money Order"], "displayFinancialStatus": "PENDING"})
+
+
+# ---------------------------------------------------------------- desi = 2 × çift
+def test_desi_cift_sayisina_gore(ctx):
+    k = _ac_ve_barkodla("manuel", "SP30", "SP30", "MN30", adet=3)
+    assert k.parca_adet == 3
+    parca = ctx.siparisler[-1].parcalar[0]
+    assert (parca.desi, parca.kg) == (6, 3)
+    assert ctx.barkodlar[-1].parcalar[0].desi == 6
+    k1 = servis.gonderi_ac("manuel", "SP31", "SP31", "MN31", _alici())
+    assert k1.parca_adet == 1 and ctx.siparisler[-1].parcalar[0].desi == 2
+
+
+def test_shopify_urun_adedi():
+    from mng_kargo.shopify_tarama import urun_adedi
+    assert urun_adedi({"line_items": [{"quantity": 2, "currentQuantity": 2}, {"quantity": 1, "currentQuantity": 0}]}) == 2
+    assert urun_adedi({"lineItems": {"edges": [{"node": {"quantity": 3}}]}}) == 3
+    assert urun_adedi({"line_items": []}) == 1

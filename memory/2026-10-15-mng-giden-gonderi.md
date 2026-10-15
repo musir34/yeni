@@ -95,3 +95,6 @@
   Hazır/Onaylandı", Shopify "Hazirlaniyor" (update_service confirm_packing, uretim_routes paketlendi, shopify_routes
   tek/toplu), MNG Etiket basımı ve /kargo-gonderi Sorgula. KargoGonderi.barkod_istendi kolonu (script ALTER ADD
   COLUMN IF NOT EXISTS); takip işi yalnız bayraklı kayıtların barkodunu alır. SMS: 1 varış + 2 hazırlandı açık.
+- Desi (Komutan): tek paket, beyan desi = 2 × çift, kg = 1 × çift (govde.parca_adetle, MNG_DESI_BIRIM/MNG_KG_BIRIM);
+  KargoGonderi.parca_adet kolonu (ALTER ADD IF NOT EXISTS); değişim toplam_tahsis, manuel adet toplamı, Shopify
+  line_items currentQuantity/quantity toplamı.
