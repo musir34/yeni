@@ -93,6 +93,18 @@ def order_detail(order_id):
     return jsonify(result), status_code
 
 
+def _mng_barkod_iste(order_id, new_status):
+    """Hazirlaniyor'a geçince MNG barkodu istenir (müşteriye "kargonuz hazırlandı" SMS'i); hata yutulur."""
+    if new_status != "Hazirlaniyor":
+        return
+    try:
+        from mng_kargo.servis import KAYNAK_SHOPIFY, barkod_iste
+        barkod_iste(KAYNAK_SHOPIFY, str(order_id).split("/")[-1])
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("[SHOPIFY] MNG barkod isteği başarısız (yutuldu)")
+
+
 @shopify_bp.route("/api/orders/<order_id>/cancel", methods=["POST"])
 @login_required
 @check_shopify_config
@@ -156,6 +168,7 @@ def update_order_status(order_id):
     result = shopify_service.update_order_status(order_id=order_id, new_status=new_status)
     if result.get("success"):
         log_user_action("UPDATE", {"işlem_açıklaması": f"Shopify sipariş durumu güncellendi — {order_id} → {new_status}", "sayfa": "Shopify Siparişler"})
+        _mng_barkod_iste(order_id, new_status)
     status_code = 200 if result.get("success") else 400
     return jsonify(result), status_code
 
@@ -179,6 +192,7 @@ def bulk_update_order_status():
         result = shopify_service.update_order_status(order_id=oid, new_status=new_status)
         if result.get("success"):
             results["success_count"] += 1
+            _mng_barkod_iste(oid, new_status)
         else:
             results["fail_count"] += 1
             results["errors"].append({"order_id": oid, "error": result.get("error") or result.get("errors", "Bilinmeyen hata")})

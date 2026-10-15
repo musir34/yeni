@@ -7,8 +7,10 @@ düşürür. "Kargoya ver" demeye gerek kalmaz.
 
 MNG'nin iki aşama kuralı (entegrasyon yazısı + canlı prova 2026-10-15):
   1. createOrder  → sipariş kaydı anında (alıcıya göre varış şubesi MNG'de çözülür)
-  2. createbarcode → ~30-45 sn sonra; erken istenirse 20001 "VARIŞ ŞUBESİ BULUNAMADI"
-     → kayıt 'siparis_acildi'de bekler; takip işi (5 dk) ya da etiket basımı barkodu alır.
+  2. createbarcode → sipariş İŞLEME ALININCA (değişim "İşleme Al", site siparişi "Hazirlaniyor",
+     manuel "Hazırlanıyor/Kargoya Hazır") ya da etiket basılınca: barkod_iste() bayrağı koyar ve dener;
+     MNG o anda alıcıya "kargonuz hazırlandı" SMS'i atar (govde.SMS_HAZIRLANDI). Erken istenirse
+     20001 "VARIŞ ŞUBESİ BULUNAMADI" → kayıt 'siparis_acildi'de kalır, takip işi (5 dk) tekrar dener.
   İptal: barkod alınmadıysa cancelorder, alındıysa cancelshipment (şube kabulünden önce).
   Kapıda ödeme: MNG alt sınırı 20 TL (altı 20001 ile reddedilir).
 
@@ -47,7 +49,6 @@ DURUM_HATA = "hata"             # deneme sınırı doldu ya da kalıcı hata, in
 MAX_DENEME = 5
 YENIDEN_DENEME_PENCERESI = timedelta(days=3)
 SORGU_ARALIGI = timedelta(minutes=20)       # aynı gönderi bu süreden sık sorulmaz
-BARKOD_BEKLEME = timedelta(seconds=45)      # createOrder → createbarcode arası (canlıda ~31 sn'de çözüldü)
 KAPIDA_ODEME_MIN = Decimal("20")            # MNG: "Tahsilatlı Kapıda Gönderi Tutar en az 20 TL"
 TAKIP_URL_SABLON = os.getenv("MNG_TAKIP_URL_SABLON") or "https://kargotakip.dhlecommerce.com.tr/?takipNo={shipment_id}"
 
@@ -222,6 +223,26 @@ def barkod_al(kayit: KargoGonderi, bekle: bool = False) -> bool:
     return True
 
 
+def barkod_iste(kaynak: str, kaynak_ref: str, commit: bool = True, bekle: bool = False) -> bool:
+    """Kaynak işleme alındı → barkod bayrağını koy ve hemen dene. Sipariş MNG'de henüz açılmadıysa
+    (bekliyor) bayrak kalır, takip işi açtıktan sonra barkodu alır. Hata yutulur, çağıran akış bozulmaz."""
+    if not otomatik_acik():
+        return False
+    try:
+        kayit = gonderi_bul(kaynak, kaynak_ref)
+        if not kayit or kayit.barkod or kayit.durum in (IPTAL, TESLIM):
+            return False
+        kayit.barkod_istendi = True
+        basarili = barkod_al(kayit, bekle=bekle) if kayit.durum == SIPARIS_ACILDI else False
+        if commit:
+            db.session.commit()
+        return basarili
+    except Exception:
+        db.session.rollback()
+        logger.exception("[MNG] barkod_iste beklenmeyen hata (%s %s) — yutuldu", kaynak, kaynak_ref)
+        return False
+
+
 def gonderi_ac(kaynak: str, kaynak_ref: str, kaynak_ad: str, referans: str, alici: Alici,
                kapida_odeme_tutari=None, icerik: str = "Ayakkabi", aciklama: str = "",
                commit: bool = True) -> KargoGonderi | None:
@@ -351,12 +372,10 @@ def bekleyen_gonderiler(simdi: datetime | None = None) -> list[KargoGonderi]:
             .all())
 
 
-def barkod_bekleyenler(simdi: datetime | None = None) -> list[KargoGonderi]:
-    """Siparişi açılmış, BARKOD_BEKLEME süresi geçmiş kayıtlar (createbarcode sırası)."""
-    simdi = simdi or datetime.utcnow()
+def barkod_bekleyenler() -> list[KargoGonderi]:
+    """Siparişi açılmış ve barkodu İSTENMİŞ (işleme alınmış) ama henüz alınamamış kayıtlar."""
     return (KargoGonderi.query
-            .filter(KargoGonderi.durum == SIPARIS_ACILDI)
-            .filter(KargoGonderi.guncellendi_at <= simdi - BARKOD_BEKLEME)
+            .filter(KargoGonderi.durum == SIPARIS_ACILDI, KargoGonderi.barkod_istendi.is_(True))
             .order_by(KargoGonderi.id.asc())
             .all())
 

@@ -821,6 +821,7 @@ class KargoGonderi(db.Model):
     zpl = db.Column(db.Text)                                             # MNG'nin ürettiği etiket (Zebra)
     durum = db.Column(db.String(20), nullable=False, default='bekliyor', index=True)  # mng_kargo.durum sabitleri + bekliyor/hata
     kaynak_durum = db.Column(db.String(30))                              # kaynağa başarıyla yazılan son statü (yeniden deneme için)
+    barkod_istendi = db.Column(db.Boolean, default=False, nullable=False)  # işleme alındı / etiket basıldı → barkod (ve MNG 'hazırlandı' SMS'i)
     mng_durum_kodu = db.Column(db.Integer)
     mng_durum_metni = db.Column(db.String(80))
     takip_url = db.Column(db.String(255))

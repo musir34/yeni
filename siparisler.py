@@ -759,6 +759,13 @@ def siparis_durum_guncelle(siparis_no):
         eski_durum = sip.durum
         sip.durum = yeni_durum
         db.session.commit()
+        # 🚚 Hazırlanıyor / Kargoya Hazır → MNG barkodu istenir (müşteriye "kargonuz hazırlandı" SMS'i)
+        if yeni_durum in ('Hazırlanıyor', 'Kargoya Hazır', 'Onaylandı'):
+            try:
+                from mng_kargo.servis import KAYNAK_MANUEL, barkod_iste
+                barkod_iste(KAYNAK_MANUEL, siparis_no)
+            except Exception:
+                logger.exception("[YENI-SIPARIS] MNG barkod isteği başarısız (yutuldu)")
         try: log_user_action("UPDATE", {"işlem_açıklaması": f"Sipariş durumu güncellendi — {siparis_no}: {eski_durum} → {yeni_durum}", "sayfa": "Sipariş Listesi", "sipariş_no": siparis_no, "eski_durum": eski_durum, "yeni_durum": yeni_durum})
         except: pass
         return jsonify(success=True, message='Sipariş durumu güncellendi', new_status=yeni_durum)

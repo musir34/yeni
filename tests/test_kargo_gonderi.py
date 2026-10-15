@@ -118,16 +118,10 @@ def _alici():
     return Alici(ad_soyad="Ayşe Yılmaz", adres="Moda Cad. 3", telefon="5321234567", il="İSTANBUL", ilce="KADIKÖY")
 
 
-def _barkod_zamani_gecir(k):
-    """Takip işi barkodu BARKOD_BEKLEME geçince alır; testte süreyi geriye çek."""
-    k.guncellendi_at = datetime.utcnow() - timedelta(minutes=2)
-    db.session.commit()
-
-
 def _ac_ve_barkodla(kaynak, ref, ad, referans, **ek):
+    """Sipariş aç + işleme al (barkod_iste) → hazırlandı."""
     k = servis.gonderi_ac(kaynak, ref, ad, referans, _alici(), **ek)
-    _barkod_zamani_gecir(k)
-    servis.takip_isi()
+    servis.barkod_iste(kaynak, ref)
     return KargoGonderi.query.get(k.id)
 
 
@@ -144,11 +138,11 @@ def test_gonderi_ac_siparisi_acar_barkod_ikinci_asamada(ctx):
     assert k1.durum == "siparis_acildi" and k1.shipment_id is None
     assert len(ctx.siparisler) == 1 and ctx.siparisler[0].alici.il == "İSTANBUL"
 
-    servis.takip_isi()                                    # 45 sn dolmadı → barkod istenmez
-    assert ctx.barkodlar == []
-    _barkod_zamani_gecir(k1)
-    assert servis.takip_isi()["barkod"] == 1
+    servis.takip_isi()                                    # işleme alınmadı → barkod (ve SMS) istenmez
+    assert ctx.barkodlar == [] and not k1.barkod_istendi
+    assert servis.barkod_iste("degisim", "uuid-1")        # "İşleme Al" → barkod
     k = KargoGonderi.query.get(k1.id)
+    assert k.barkod_istendi
     assert k.durum == "hazirlandi" and k.shipment_id == "195991365254" and k.barkod.startswith("D@")
     assert k.zpl.startswith("^XA") and k.takip_url.endswith("takipNo=195991365254")
 
@@ -156,10 +150,21 @@ def test_gonderi_ac_siparisi_acar_barkod_ikinci_asamada(ctx):
 def test_sube_cozulmediyse_barkod_sonraki_turda(ctx):
     ctx.barkod_hatasi = SUBE_YOK
     k = _ac_ve_barkodla("manuel", "SP1", "SP1", "MN1")
-    assert k.durum == "siparis_acildi" and "şubesini henüz çözmedi" in k.hata
+    assert k.durum == "siparis_acildi" and k.barkod_istendi and "şubesini henüz çözmedi" in k.hata
     ctx.barkod_hatasi = None
-    _barkod_zamani_gecir(k)
-    servis.takip_isi()
+    assert servis.takip_isi()["barkod"] == 1              # bayrak duruyor → takip işi alır
+    assert KargoGonderi.query.get(k.id).durum == "hazirlandi"
+
+
+def test_barkod_iste_siparis_henuz_acilmadiysa_bayrak_kalir(ctx):
+    ctx.hata = MngHata("MNG token hatası", http=500)
+    k = servis.gonderi_ac("manuel", "SP1b", "SP1b", "MN1B", _alici())
+    assert k.durum == "bekliyor"
+    assert servis.barkod_iste("manuel", "SP1b") is False
+    assert KargoGonderi.query.get(k.id).barkod_istendi
+    ctx.hata = None
+    ozet = servis.takip_isi()                            # önce açar, aynı turda barkodu alır
+    assert ozet["acildi"] == 1 and ozet["barkod"] == 1
     assert KargoGonderi.query.get(k.id).durum == "hazirlandi"
 
 

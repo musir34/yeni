@@ -362,6 +362,12 @@ async def confirm_packing():
                 if tag_result.get("success"):
                     flash(f"Shopify siparis {order_number} Hazirlaniyor olarak guncellendi.", 'success')
                     logger.info(f"[SHOPIFY][OK] {order_number} -> Hazirlaniyor")
+                    # 🚚 Hazırlanınca MNG barkodu istenir (müşteriye "kargonuz hazırlandı" SMS'i); hata yutulur
+                    try:
+                        from mng_kargo.servis import KAYNAK_SHOPIFY, barkod_iste
+                        barkod_iste(KAYNAK_SHOPIFY, shopify_id)
+                    except Exception:
+                        logger.exception("[SHOPIFY] MNG barkod isteği başarısız (yutuldu)")
                 else:
                     logger.error(f"[SHOPIFY][FAIL] Tag güncellenemedi: {tag_result}")
                     flash(f"⚠️ Shopify tag güncellemesi başarısız: {tag_result.get('error', '')}", 'danger')

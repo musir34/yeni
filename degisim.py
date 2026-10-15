@@ -572,6 +572,14 @@ def update_status():
         rec.degisim_durumu = status
         db.session.commit()
 
+        # 🚚 İşleme alınınca MNG barkodu istenir (MNG o anda müşteriye "kargonuz hazırlandı" SMS'i atar)
+        if status == 'İşleme Alındı':
+            try:
+                from mng_kargo.servis import KAYNAK_DEGISIM, barkod_iste
+                barkod_iste(KAYNAK_DEGISIM, degisim_no)
+            except Exception:
+                logger.exception("[DEGISIM] MNG barkod isteği başarısız (yutuldu)")
+
         _safe_log("UPDATE", {
             "işlem_açıklaması": f"Değişim durumu güncellendi — {degisim_no} → {status}",
             "sayfa": "Değişim Talepleri",
@@ -634,6 +642,14 @@ def bulk_update_status():
 
         db.session.commit()
 
+        # 🚚 Toplu "İşleme Alındı" → her kayıt için MNG barkodu (hata yutulur)
+        if status == 'İşleme Alındı':
+            try:
+                from mng_kargo.servis import KAYNAK_DEGISIM, barkod_iste
+                for no in nos:
+                    barkod_iste(KAYNAK_DEGISIM, no)
+            except Exception:
+                logger.exception("[DEGISIM] toplu MNG barkod isteği başarısız (yutuldu)")
         _safe_log("UPDATE", {
             "işlem_açıklaması": f"Toplu değişim durumu güncellendi — {updated} kayıt → {status}",
             "sayfa": "Değişim Talepleri",

@@ -99,6 +99,7 @@ def sorgula(gonderi_id):
     if kayit.durum in (DURUM_BEKLIYOR, DURUM_HATA, "iptal"):
         flash("Bu gönderi MNG'de açık değil; önce Yeniden Dene.", "warning")
     elif kayit.durum == SIPARIS_ACILDI:
+        kayit.barkod_istendi = True
         basarili = barkod_al(kayit, bekle=True)
         db.session.commit()
         flash(f"{kayit.referans}: " + (f"barkod alındı, takip {kayit.shipment_id}" if basarili else (kayit.hata or "barkod henüz alınamadı")),
@@ -115,6 +116,7 @@ def etiket_sayfasi(gonderi_id):
     """MNG'nin ürettiği etiket (ZPL → PNG) yazdırma sayfası. Barkod henüz yoksa anlık alır."""
     kayit = _kayit(gonderi_id)
     if kayit.durum == SIPARIS_ACILDI:
+        kayit.barkod_istendi = True      # etiket basımı = işleme alındı
         barkod_al(kayit, bekle=True)
         db.session.commit()
     if not kayit.zpl:

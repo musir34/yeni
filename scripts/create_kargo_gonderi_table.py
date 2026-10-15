@@ -39,6 +39,7 @@ def main():
                 zpl TEXT,
                 durum VARCHAR(20) NOT NULL DEFAULT 'bekliyor',
                 kaynak_durum VARCHAR(30),
+                barkod_istendi BOOLEAN NOT NULL DEFAULT FALSE,
                 mng_durum_kodu INTEGER,
                 mng_durum_metni VARCHAR(80),
                 takip_url VARCHAR(255),
@@ -60,6 +61,9 @@ def main():
                 guncellendi_at TIMESTAMP
             )
         """))
+        # 2026-10-15 (ikinci sürüm): barkod işleme alınınca istenir — mevcut tabloya additive kolon
+        db.session.execute(text(
+            "ALTER TABLE kargo_gonderi ADD COLUMN IF NOT EXISTS barkod_istendi BOOLEAN NOT NULL DEFAULT FALSE"))
         db.session.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_kargo_gonderi_kaynak ON kargo_gonderi (kaynak)"))
         db.session.execute(text(

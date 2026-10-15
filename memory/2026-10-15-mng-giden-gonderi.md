@@ -74,3 +74,24 @@
   doldurur (_istek_kur içinde, başarısızsa adlarla devam). MNG il adları farklı (AFYON, İÇEL yok → MERSİN).
 - Shopify kapıda ödeme: yalnız gateway COD VE displayFinancialStatus != PAID ise tutar gönderilir
   (shopify_tarama.kapida_odeme_mi; 'manual' sayılmaz). Ödenmemiş ve COD olmayan sipariş kargoya açılmaz.
+- DEPLOY (2026-10-15 16:10 İst): 598438e + 7e2478f sunucuda, tablo açıldı, yeni/.env MNG_* + MNG_ORTAM=prod +
+  MNG_OTOMATIK_GONDERI=1, restart Komutan (sudo). İlk canlı kayıtlar: değişim DG5553919732 → takip 836134010774
+  (barkod "MNG Etiket" düğmesiyle anında alındı), site siparişi #1446 (SH1446, kapıda ödeme 1579,90) açıldı.
+  İlk hata 26039 (recipient.email boş) → govde.email_normalize ile mağaza adresi (MNG_VARSAYILAN_EMAIL).
+  Dikkat: uygulama dizini /home/musir/gullupanel/yeni (gullupanel/.env DEĞİL). AÇIK: site siparişi için MNG Etiket
+  düğmesi şimdilik yalnız /kargo-gonderi sayfasında (sipariş hazırla ekranına eklenebilir); kurye okutma gözlemi.
+- Etiket düzeltmeleri (aynı gün, canlı sonrası): (1) 26039 e-posta boş → govde.email_normalize mağaza adresi;
+  (2) tarayıcı başlık/altlık etiketin üstüne basıyordu → kargo_gonderi_etiket.html order_label ile birebir
+  (100x100 mm, margin 0, onload print/close), bilgi şeridi kaldırıldı; (3) depo bilgisayarı worker rolünde
+  anasayfaya atılıyordu → sayfa_yetki `kargo_gonderi_etiket` eylem sayfası (ebeveynler degisim/yeni_siparis/
+  siparis_hazirla/siparis_listesi, menude=False); (4) PNG termalde pürüzlü → `mng_kargo/zpl_svg.py` ZPL→SVG
+  (metin/döndürülmüş metin/kutu/Code128 python-barcode deseni/DataMatrix pystrich), içerik kutusuna kırpılır,
+  Labelary PNG yalnız yedek; pystrich requirements'a eklendi ve sunucu venv'e kuruldu (407b9f5).
+- SMS (ApiZone şemasından doğrulandı): smsPreference1 = varış şubesine ulaşınca alıcıya, smsPreference2 = ilk
+  hazırlanınca alıcıya, smsPreference3 = teslimde göndericiye. Panel: 1 ve 2 açık (MNG_SMS_HAZIRLANDI=0 kapatır),
+  3 kapalı (MNG_SMS_TESLIM_GONDERICI=1 açar). SMS'i MNG atar, metni MNG'nin.
+- Komutan kararı (aynı gün): "hazırlandı" SMS'i sipariş oluşunca değil İŞLEME ALININCA gitsin → barkod artık
+  otomatik 45 sn sonra değil, `barkod_iste()` ile: değişim "İşleme Al" (tek/toplu), manuel "Hazırlanıyor/Kargoya
+  Hazır/Onaylandı", Shopify "Hazirlaniyor" (update_service confirm_packing, uretim_routes paketlendi, shopify_routes
+  tek/toplu), MNG Etiket basımı ve /kargo-gonderi Sorgula. KargoGonderi.barkod_istendi kolonu (script ALTER ADD
+  COLUMN IF NOT EXISTS); takip işi yalnız bayraklı kayıtların barkodunu alır. SMS: 1 varış + 2 hazırlandı açık.

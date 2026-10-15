@@ -491,6 +491,12 @@ def paketlendi_isaretle(kayit_id: int):
         if not sonuc.get("success"):
             return jsonify({"success": False,
                             "message": "Shopify'da sipariş durumu güncellenemedi — tekrar deneyin."}), 502
+        # 🚚 Paketlenince MNG barkodu istenir (müşteriye "kargonuz hazırlandı" SMS'i); hata yutulur
+        try:
+            from mng_kargo.servis import KAYNAK_SHOPIFY, barkod_iste
+            barkod_iste(KAYNAK_SHOPIFY, kayit.order_number.replace("SH-", "", 1))
+        except Exception:
+            logger.exception("[URETIM] MNG barkod isteği başarısız (yutuldu)")
     kayit.paketlendi = not geri_al
     kayit.paketlendi_at = None if geri_al else datetime.utcnow()
     db.session.commit()
