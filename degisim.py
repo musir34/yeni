@@ -487,6 +487,22 @@ def degisim_kaydet():
         # CentralStock & Product.quantity event listener tarafından commit sonrası
         # otomatik senkronize edilir (models.py).
 
+        # 🚚 MNG giden gönderi: Trendyol'un referans üretmesi gibi, kayıt oluşur oluşmaz
+        # MNG'de gönderi açılır (takip no + barkod); takip işi statüyü kendisi düşürür.
+        # Anahtar MNG_OTOMATIK_GONDERI; hata yutulur, değişim kaydı korunur.
+        try:
+            from mng_kargo.adres import alici_kur
+            from mng_kargo.servis import KAYNAK_DEGISIM, degisim_referansi, gonderi_ac
+            gonderi_ac(
+                KAYNAK_DEGISIM, degisim_kaydi.degisim_no, degisim_kaydi.kargo_kodu,
+                degisim_referansi(degisim_kaydi.kargo_kodu),
+                alici_kur(f"{ad} {soyad}", adres, telefon_no,
+                          il=request.form.get('il') or '', ilce=request.form.get('ilce') or ''),
+                aciklama=f"Gullu Shoes degisim {siparis_no}",
+            )
+        except Exception:
+            logger.exception("[DEGISIM] MNG gönderisi açılamadı (yutuldu, değişim kaydı korunur)")
+
         # 🏭 Üretime gidecek kalemler: üretim kaydı + abone mail/WhatsApp — sipariş
         # yakalamayla aynı akış (DG-<degisim_no> numarasıyla). Hata yutulur.
         if uretim_kalemleri:
@@ -659,6 +675,12 @@ def bulk_delete():
                 )
             except Exception:
                 logger.exception("[DEGISIM] iade ledger yazımı başarısız (yutuldu)")
+            # 🚚 MNG gönderisi açıldıysa iptal et (hata yutulur)
+            try:
+                from mng_kargo.servis import KAYNAK_DEGISIM, gonderi_iptal
+                gonderi_iptal(KAYNAK_DEGISIM, rec.degisim_no, commit=False)
+            except Exception:
+                logger.exception("[DEGISIM] MNG gönderi iptali başarısız (yutuldu)")
             deleted_nos.append(rec.degisim_no)
             db.session.delete(rec)
 
@@ -737,6 +759,13 @@ def delete_exchange():
             )
         except Exception:
             logger.exception("[DEGISIM] iade ledger yazımı başarısız (yutuldu)")
+
+        # 🚚 MNG gönderisi açıldıysa kurye almadan iptal et (hata yutulur)
+        try:
+            from mng_kargo.servis import KAYNAK_DEGISIM, gonderi_iptal
+            gonderi_iptal(KAYNAK_DEGISIM, degisim_no, commit=False)
+        except Exception:
+            logger.exception("[DEGISIM] MNG gönderi iptali başarısız (yutuldu)")
 
         db.session.delete(rec)
         db.session.commit()
@@ -989,8 +1018,17 @@ def degisim_talep():
         'end_date': end_date_str, 'reason_keyword': reason_keyword
     }
 
+    # 🚚 MNG giden gönderi kayıtları (kartta takip no/durum rozeti + etikette MNG barkodu)
+    try:
+        from mng_kargo.servis import KAYNAK_DEGISIM, gonderi_haritasi
+        gonderiler = gonderi_haritasi(KAYNAK_DEGISIM, [e.degisim_no for e in degisim_kayitlari])
+    except Exception:
+        logger.warning("[DEGISIM] MNG gönderi haritası okunamadı", exc_info=True)
+        gonderiler = {}
+
     return render_template(
         'degisim_talep.html',
+        gonderiler=gonderiler,
         degisim_kayitlari=degisim_kayitlari,
         page=page,
         total_pages=pagination.pages,

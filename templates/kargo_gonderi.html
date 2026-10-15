@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Kargo Gönderileri - Güllü Shoes{% endblock %}
+{% block extra_css %}
+<style>
+  .kg-card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.06); margin-bottom: 1.5rem; }
+  .kg-table td, .kg-table th { font-size: .85rem; vertical-align: middle; }
+  .kg-table-wrap { overflow-x: auto; }
+  .kg-sayac .badge { font-size: .95rem; padding: .5rem .9rem; }
+  .kg-hata { max-width: 320px; white-space: normal; font-size: .78rem; }
+  .kg-mini { font-size: .78rem; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-4 flex-wrap gap-2">
+  <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm me-3"><i class="fas fa-home"></i> Anasayfa</a>
+  <h3 class="mb-0">🚚 Kargo Gönderileri (MNG)</h3>
+  <span class="text-muted ms-3">Değişim · manuel sipariş · site siparişi için otomatik açılan gönderiler</span>
+  {% if not otomatik %}
+    <span class="badge bg-danger ms-auto">Otomatik gönderi KAPALI (MNG_OTOMATIK_GONDERI=1 ile açılır)</span>
+  {% endif %}
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
+      {{ msg }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endwith %}
+
+<div class="card kg-card">
+  <div class="card-header fw-bold">Özet</div>
+  <div class="card-body kg-sayac d-flex flex-wrap gap-2">
+    <a class="badge bg-warning text-dark text-decoration-none" href="{{ url_for('kargo_gonderi.liste', durum='bekliyor') }}">Bekliyor {{ sayac.bekliyor }}</a>
+    <a class="badge bg-danger text-decoration-none" href="{{ url_for('kargo_gonderi.liste', durum='hata') }}">Hata {{ sayac.hata }}</a>
+    <a class="badge bg-light text-dark border text-decoration-none" href="{{ url_for('kargo_gonderi.liste', durum='siparis_acildi') }}">Barkod bekliyor {{ sayac.siparis_acildi }}</a>
+    <a class="badge bg-secondary text-decoration-none" href="{{ url_for('kargo_gonderi.liste', durum='hazirlandi') }}">Hazırlandı {{ sayac.hazirlandi }}</a>
+    <a class="badge bg-primary text-decoration-none" href="{{ url_for('kargo_gonderi.liste', durum='kargoda') }}">Kargoda {{ sayac.kargoda }}</a>
+    <a class="badge bg-info text-dark text-decoration-none" href="{{ url_for('kargo_gonderi.liste', durum='dagitimda') }}">Dağıtımda {{ sayac.dagitimda }}</a>
+    <a class="badge bg-success text-decoration-none" href="{{ url_for('kargo_gonderi.liste', durum='teslim') }}">Teslim {{ sayac.teslim }}</a>
+  </div>
+</div>
+
+<div class="card kg-card">
+  <div class="card-header fw-bold">Filtre</div>
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label mb-1">Kaynak</label>
+        <select name="kaynak" class="form-select form-select-sm">
+          <option value="">Hepsi</option>
+          {% for kod, ad in kaynak_ad.items() %}
+            <option value="{{ kod }}" {% if filtre.kaynak == kod %}selected{% endif %}>{{ ad }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label mb-1">Durum</label>
+        <select name="durum" class="form-select form-select-sm">
+          <option value="">Hepsi</option>
+          <option value="acik" {% if filtre.durum == 'acik' %}selected{% endif %}>Açık (teslim/iptal dışı)</option>
+          {% for kod in ('bekliyor','hata','siparis_acildi','hazirlandi','kargoda','dagitimda','teslim','teslim_edilemedi','geri','destek','iptal') %}
+            <option value="{{ kod }}" {% if filtre.durum == kod %}selected{% endif %}>{{ etiket(kod) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label mb-1">Ara (referans, takip no, sipariş, alıcı)</label>
+        <input type="text" name="q" value="{{ filtre.q }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary btn-sm w-100" type="submit">Uygula</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card kg-card">
+  <div class="card-header fw-bold">Gönderiler ({{ kayitlar|length }})</div>
+  <div class="card-body kg-table-wrap p-0">
+    <table class="table table-sm table-hover kg-table mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Kaynak</th><th>Sipariş</th><th>Alıcı</th><th>İl / İlçe</th><th>Referans</th><th>Takip No</th>
+          <th>Durum</th><th>Kapıda Ödeme</th><th>Son Sorgu</th><th>Hata</th><th class="text-end">İşlem</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for k in kayitlar %}
+        <tr>
+          <td>{{ kaynak_ad.get(k.kaynak, k.kaynak) }}<br><span class="text-muted kg-mini">{{ k.olusturuldu_at | ist('%d.%m %H:%M') }}</span></td>
+          <td><strong>{{ k.kaynak_ad or k.kaynak_ref }}</strong></td>
+          <td>{{ k.alici_ad }}<br><span class="text-muted kg-mini">{{ k.alici_telefon }}</span></td>
+          <td>{{ k.il or '-' }}{% if k.ilce %} / {{ k.ilce }}{% endif %}</td>
+          <td><code>{{ k.referans }}</code></td>
+          <td>
+            {% if k.shipment_id %}
+              {% if k.takip_url %}<a href="{{ k.takip_url }}" target="_blank" rel="noopener">{{ k.shipment_id }}</a>{% else %}{{ k.shipment_id }}{% endif %}
+              {% if k.barkod %}<br><span class="text-muted kg-mini">barkod {{ k.barkod }}</span>{% endif %}
+            {% else %}-{% endif %}
+          </td>
+          <td>
+            <span class="badge bg-{{ rozet(k.durum) }}">{{ etiket(k.durum) }}</span>
+            {% if k.mng_durum_metni %}<br><span class="text-muted kg-mini">{{ k.mng_durum_metni }}</span>{% endif %}
+            {% if k.teslim_alan %}<br><span class="text-muted kg-mini">alan: {{ k.teslim_alan }}</span>{% endif %}
+          </td>
+          <td>
+            {% if k.kapida_odeme_tutari %}
+              {{ k.kapida_odeme_tutari }} TL
+              {% if k.tahsil_edildi %}<span class="badge bg-success">tahsil</span>{% else %}<span class="badge bg-warning text-dark">bekliyor</span>{% endif %}
+            {% else %}-{% endif %}
+          </td>
+          <td class="kg-mini">{{ k.son_sorgu_at | ist('%d.%m %H:%M') if k.son_sorgu_at else '-' }}</td>
+          <td class="kg-hata text-danger">{{ k.hata or '' }}</td>
+          <td class="text-end text-nowrap">
+            {% if k.durum in ('bekliyor', 'hata') %}
+              <form method="post" action="{{ url_for('kargo_gonderi.yeniden_dene', gonderi_id=k.id) }}" class="d-inline-flex gap-1 align-items-center">
+                <input type="text" name="il" placeholder="İl" value="{{ k.il or '' }}" class="form-control form-control-sm" style="width:7rem">
+                <input type="text" name="ilce" placeholder="İlçe" value="{{ k.ilce or '' }}" class="form-control form-control-sm" style="width:7rem">
+                <button class="btn btn-sm btn-primary" type="submit" title="MNG'de yeniden aç"><i class="fas fa-redo"></i></button>
+              </form>
+            {% elif k.durum not in ('teslim', 'iptal') %}
+              <form method="post" action="{{ url_for('kargo_gonderi.sorgula', gonderi_id=k.id) }}" class="d-inline">
+                <button class="btn btn-sm btn-outline-primary" type="submit" title="{{ 'Barkodu şimdi al' if k.durum == 'siparis_acildi' else 'MNG durumunu şimdi sor' }}"><i class="fas fa-sync"></i></button>
+              </form>
+            {% endif %}
+            {% if k.zpl or k.durum == 'siparis_acildi' %}
+              <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('kargo_gonderi.etiket_sayfasi', gonderi_id=k.id) }}" target="_blank" title="MNG etiketini yazdır"><i class="fas fa-print"></i></a>
+            {% endif %}
+            {% if k.zpl %}
+              <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('kargo_gonderi.zpl', gonderi_id=k.id) }}" title="Zebra etiketi (ZPL) indir"><i class="fas fa-tag"></i></a>
+            {% endif %}
+            {% if k.durum not in ('teslim', 'iptal') %}
+              <form method="post" action="{{ url_for('kargo_gonderi.iptal', gonderi_id=k.id) }}" class="d-inline" onsubmit="return confirm('{{ k.referans }} MNG gönderisi iptal edilsin mi?');">
+                <button class="btn btn-sm btn-outline-danger" type="submit" title="MNG'de iptal et"><i class="fas fa-times"></i></button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="11" class="text-center text-muted py-4">Kayıt yok.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

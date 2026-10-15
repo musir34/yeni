@@ -41,6 +41,7 @@
         {% if sayfa_erisebilir('degisim') %}<li><a class="dropdown-item" href="{{ url_for('degisim_talep') }}"><i class="fas fa-exchange-alt me-2"></i>Değişim Talepleri</a></li>{% endif %}
         {% if sayfa_erisebilir('uretim') %}<li><a class="dropdown-item" href="{{ url_for('uretim.index') }}"><i class="fas fa-industry me-2"></i>Üretim Siparişleri</a></li>{% endif %}
         {% if sayfa_erisebilir('kargo_mutabakat') %}<li><a class="dropdown-item" href="{{ url_for('kargo_mutabakat_bp.kargo_mutabakat_page') }}"><i class="fas fa-truck me-2"></i>Kargo Mutabakat</a></li>{% endif %}
+        {% if sayfa_erisebilir('kargo_gonderi') %}<li><a class="dropdown-item" href="{{ url_for('kargo_gonderi.liste') }}"><i class="fas fa-shipping-fast me-2"></i>Kargo Gönderileri</a></li>{% endif %}
         <li><hr class="dropdown-divider"></li>
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Geçmiş & Takip</div></li>
         {% if sayfa_erisebilir('arsiv') %}<li><a class="dropdown-item" href="{{ url_for('display_archive') }}"><i class="fas fa-box me-2"></i>Arşiv</a></li>{% endif %}

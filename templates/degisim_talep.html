@@ -208,6 +208,17 @@
             {% if exchange.musteri_kargo_takip %}
               <p class="card-text text-muted small"><strong>Müşteri Takip No:</strong> {{ exchange.musteri_kargo_takip }}</p>
             {% endif %}
+            {% set mng = gonderiler.get(exchange.degisim_no) if gonderiler else none %}
+            {% if mng %}
+              <p class="card-text small mb-1">
+                <strong>MNG Gönderi:</strong>
+                <span class="badge bg-{{ mng_rozet(mng.durum) }}">{{ mng_etiket(mng.durum) }}</span>
+                {% if mng.shipment_id %}
+                  {% if mng.takip_url %}<a href="{{ mng.takip_url }}" target="_blank" rel="noopener">{{ mng.shipment_id }}</a>{% else %}{{ mng.shipment_id }}{% endif %}
+                {% endif %}
+                {% if mng.hata %}<span class="text-danger d-block">{{ mng.hata[:90] }}</span>{% endif %}
+              </p>
+            {% endif %}
             <hr>
             <div class="products-container mb-auto">
               {% if exchange.urunler %}
@@ -277,13 +288,16 @@
                 <form id="label-form-{{ exchange.degisim_no }}" action="{{ url_for('order_label') }}" method="post" target="_blank" class="d-inline">
                   <input type="hidden" name="order_number" value="{{ exchange.siparis_no }}">
                   <input type="hidden" name="uretim_ref" value="DG-{{ exchange.degisim_no }}">
-                  <input type="hidden" name="shipping_barcode" value="{{ exchange.kargo_kodu }}">
+                  <input type="hidden" name="shipping_barcode" value="{{ mng.barkod if (mng and mng.barkod) else exchange.kargo_kodu }}">
                   <input type="hidden" name="customer_name" value="{{ exchange.ad }}">
                   <input type="hidden" name="customer_surname" value="{{ exchange.soyad }}">
                   <input type="hidden" name="customer_address" value="{{ exchange.adres }}">
                   <input type="hidden" name="telefon_no" value="{{ exchange.telefon_no }}">
                 </form>
                 <button class="btn btn-secondary btn-sm" onclick="guardedLabelPrint('{{ exchange.degisim_no }}','{{ exchange.degisim_durumu }}')">Etiket</button>
+                {% if mng and (mng.zpl or mng.durum == 'siparis_acildi') %}
+                <a class="btn btn-dark btn-sm" href="{{ url_for('kargo_gonderi.etiket_sayfasi', gonderi_id=mng.id) }}" target="_blank" title="MNG'nin ürettiği barkodlu etiket">MNG Etiket</a>
+                {% endif %}
                 <button class="btn btn-danger btn-sm" onclick="deleteExchange('{{ exchange.degisim_no }}')">Sil</button>
               </div>
             </div>

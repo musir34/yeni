@@ -63,6 +63,7 @@ SAYFALAR: tuple[Sayfa, ...] = (
     Sayfa("degisim", "Değişim Talepleri", "Siparişler", blueprints=("degisim",)),
     Sayfa("uretim", "Üretim Siparişleri", "Siparişler", blueprints=("uretim",)),
     Sayfa("kargo_mutabakat", "Kargo Mutabakat", "Siparişler", blueprints=("kargo_mutabakat_bp",), roller=SADECE_ADMIN),
+    Sayfa("kargo_gonderi", "Kargo Gönderileri", "Siparişler", blueprints=("kargo_gonderi",), roller=YONETIM),
     Sayfa("arsiv", "Arşiv", "Siparişler", blueprints=("archive",)),
     Sayfa("siparis_takip", "Sipariş Takip", "Siparişler", blueprints=("siparis_zaman",), roller=YONETIM),
     Sayfa("siparis_iz", "Sipariş İz Sürme", "Siparişler", blueprints=("order_audit",), roller=YONETIM),

@@ -153,6 +153,18 @@
               <span class="badge bg-danger fs-6">💰 Kapıda Ödeme</span>
               {% endif %}
             </div>
+            {% set mng = gonderiler.get(siparis.siparis_no) if gonderiler else none %}
+            {% if mng %}
+            <p class="card-text small mt-2 mb-0">
+              <i class="bi bi-truck"></i> <strong>MNG:</strong>
+              <span class="badge bg-{{ mng_rozet(mng.durum) }}">{{ mng_etiket(mng.durum) }}</span>
+              {% if mng.shipment_id %}
+                {% if mng.takip_url %}<a href="{{ mng.takip_url }}" target="_blank" rel="noopener">{{ mng.shipment_id }}</a>{% else %}{{ mng.shipment_id }}{% endif %}
+              {% endif %}
+              {% if mng.kapida_odeme_tutari and mng.tahsil_edildi %}<span class="badge bg-success">tahsil edildi</span>{% endif %}
+              {% if mng.hata %}<span class="text-danger d-block">{{ mng.hata[:90] }}</span>{% endif %}
+            </p>
+            {% endif %}
             {% if siparis.notlar %}
             <hr class="my-2">
             <p class="card-text text-muted small fst-italic">
@@ -171,6 +183,12 @@
                       data-bs-toggle="tooltip" data-bs-placement="top" title="Müşteri Bilgilerini Yazdır">
                 <i class="bi bi-printer"></i> Müşteri
               </button>
+              {% if mng and (mng.zpl or mng.durum == 'siparis_acildi') %}
+              <a class="btn btn-sm btn-secondary" href="{{ url_for('kargo_gonderi.etiket_sayfasi', gonderi_id=mng.id) }}" target="_blank"
+                 data-bs-toggle="tooltip" data-bs-placement="top" title="MNG'nin ürettiği barkodlu kargo etiketi">
+                <i class="bi bi-tag"></i> MNG Etiket
+              </a>
+              {% endif %}
               <button class="btn btn-sm btn-danger" onclick="deleteSingleOrder('{{ siparis.siparis_no }}')" type="button"
                       data-bs-toggle="tooltip" data-bs-placement="top" title="Siparişi Sil">
                 <i class="bi bi-trash"></i> Sil
@@ -216,6 +234,19 @@
             <textarea class="form-control" id="customer_address" name="musteri_adres" rows="3" required></textarea>
             <div class="invalid-feedback">Lütfen adresi giriniz.</div>
           </div>
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label for="customer_il" class="form-label">İl <small class="text-muted">(MNG; boşsa adresten bulunur)</small></label>
+              <input type="text" class="form-control" id="customer_il" name="il" list="mng-iller" autocomplete="off">
+            </div>
+            <div class="col-6 mb-3">
+              <label for="customer_ilce" class="form-label">İlçe</label>
+              <input type="text" class="form-control" id="customer_ilce" name="ilce" autocomplete="off">
+            </div>
+          </div>
+          <datalist id="mng-iller">
+            {% for il in ['ADANA','ADIYAMAN','AFYONKARAHİSAR','AĞRI','AKSARAY','AMASYA','ANKARA','ANTALYA','ARDAHAN','ARTVİN','AYDIN','BALIKESİR','BARTIN','BATMAN','BAYBURT','BİLECİK','BİNGÖL','BİTLİS','BOLU','BURDUR','BURSA','ÇANAKKALE','ÇANKIRI','ÇORUM','DENİZLİ','DİYARBAKIR','DÜZCE','EDİRNE','ELAZIĞ','ERZİNCAN','ERZURUM','ESKİŞEHİR','GAZİANTEP','GİRESUN','GÜMÜŞHANE','HAKKARİ','HATAY','IĞDIR','ISPARTA','İSTANBUL','İZMİR','KAHRAMANMARAŞ','KARABÜK','KARAMAN','KARS','KASTAMONU','KAYSERİ','KIRIKKALE','KIRKLARELİ','KIRŞEHİR','KİLİS','KOCAELİ','KONYA','KÜTAHYA','MALATYA','MANİSA','MARDİN','MERSİN','MUĞLA','MUŞ','NEVŞEHİR','NİĞDE','ORDU','OSMANİYE','RİZE','SAKARYA','SAMSUN','SİİRT','SİNOP','SİVAS','ŞANLIURFA','ŞIRNAK','TEKİRDAĞ','TOKAT','TRABZON','TUNCELİ','UŞAK','VAN','YALOVA','YOZGAT','ZONGULDAK'] %}<option value="{{ il }}">{% endfor %}
+          </datalist>
         </div>
       </div>
 
@@ -1122,6 +1153,8 @@ document.querySelector('#orderForm form').addEventListener('submit', async funct
         musteri_adi: document.getElementById('customer_name').value,
         musteri_soyadi: document.getElementById('customer_surname').value,
         musteri_adres: document.getElementById('customer_address').value,
+        il: document.getElementById('customer_il')?.value || '',      // MNG gönderisi (opsiyonel)
+        ilce: document.getElementById('customer_ilce')?.value || '',
         musteri_telefon: document.getElementById('customer_phone').value,
         toplam_tutar: parseFloat(document.getElementById('toplam_tutar_hidden').value),
         notlar: document.getElementById('order_notes').value,

@@ -767,6 +767,35 @@ def schedule_jobs():
         minute=0
     )
 
+    # >>> MNG giden gönderi (değişim / manuel / site siparişi) — MNG_OTOMATIK_GONDERI=1 iken
+    # Shopify yeni siparişleri 5 dk'da bir taranıp sipariş açılır; takip işi 5 dk'da bir
+    # bekleyenleri yeniden dener, açılmış siparişlerin barkodunu alır (MNG iki aşama kuralı),
+    # açık gönderileri 20 dk'da bir sorar, kaynak statüsünü düşürür.
+    def _mng_shopify_job():
+        with app.app_context():
+            from mng_kargo.shopify_tarama import yeni_siparisleri_tara
+            yeni_siparisleri_tara()
+
+    def _mng_takip_job():
+        with app.app_context():
+            from mng_kargo.servis import takip_isi
+            takip_isi()
+
+    _add_job_safe(
+        _mng_shopify_job,
+        trigger='interval',
+        id="mng_shopify_gonderi",
+        minutes=5,
+        next_run_time=now + timedelta(minutes=3)
+    )
+    _add_job_safe(
+        _mng_takip_job,
+        trigger='interval',
+        id="mng_takip",
+        minutes=5,
+        next_run_time=now + timedelta(minutes=2)
+    )
+
     # >>> WooCommerce sipariş senkronizasyonu: her 10 dakika - DEVRE DIŞI
     # _add_job_safe(
     #     sync_woo_orders_background,

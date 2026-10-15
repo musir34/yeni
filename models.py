@@ -803,6 +803,52 @@ class SiparisNotu(db.Model):
         return f"<SiparisNotu {self.order_number}>"
 
 
+# MNG (DHL eCommerce) GİDEN gönderi kaydı — değişim / manuel sipariş / Shopify siparişi
+# oluştuğu anda API ile açılır (mng_kargo/servis.py), takip işi durumunu günceller ve
+# kaynak kaydın statüsünü (Kargoya Verildi / Kargoda / Teslim Edildi) kendisi düşürür.
+# Tablo: scripts/create_kargo_gonderi_table.py (additive, migration yok).
+class KargoGonderi(db.Model):
+    __tablename__ = 'kargo_gonderi'
+    id = db.Column(db.Integer, primary_key=True)
+    kaynak = db.Column(db.String(20), nullable=False, index=True)       # degisim | manuel | shopify
+    kaynak_ref = db.Column(db.String(120), nullable=False, index=True)  # degisim_no | siparis_no | Shopify order id
+    kaynak_ad = db.Column(db.String(60))                                 # ekranda görünen ad (#1428, SP..., 555...)
+    referans = db.Column(db.String(20), nullable=False, unique=True)    # MNG referenceId (BÜYÜK, ≤20)
+    ortam = db.Column(db.String(10), default='sandbox')                 # sandbox | prod
+    shipment_id = db.Column(db.String(30), index=True)                   # MNG takip no (12 hane)
+    fatura_id = db.Column(db.String(30))
+    barkod = db.Column(db.String(60))                                    # kuryenin okuttuğu barkod metni
+    zpl = db.Column(db.Text)                                             # MNG'nin ürettiği etiket (Zebra)
+    durum = db.Column(db.String(20), nullable=False, default='bekliyor', index=True)  # mng_kargo.durum sabitleri + bekliyor/hata
+    kaynak_durum = db.Column(db.String(30))                              # kaynağa başarıyla yazılan son statü (yeniden deneme için)
+    mng_durum_kodu = db.Column(db.Integer)
+    mng_durum_metni = db.Column(db.String(80))
+    takip_url = db.Column(db.String(255))
+    kapida_odeme_tutari = db.Column(db.Numeric(10, 2))
+    tahsil_edildi = db.Column(db.Boolean, default=False, nullable=False)
+    teslim_alan = db.Column(db.String(120))
+    teslim_zamani = db.Column(db.DateTime)
+    alici_ad = db.Column(db.String(120))
+    alici_telefon = db.Column(db.String(30))
+    alici_adres = db.Column(db.Text)
+    il = db.Column(db.String(40))
+    ilce = db.Column(db.String(40))
+    hata = db.Column(db.Text)                                            # son API hatası (yeniden deneme için)
+    deneme = db.Column(db.Integer, default=0, nullable=False)
+    son_sorgu_at = db.Column(db.DateTime)
+    kargoda_at = db.Column(db.DateTime)                                  # kurye aldı (ilk YOLDA görülme)
+    iptal_at = db.Column(db.DateTime)
+    olusturuldu_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    guncellendi_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index('ix_kargo_gonderi_kaynak_kaynak_ref', 'kaynak', 'kaynak_ref'),
+    )
+
+    def __repr__(self):
+        return f"<KargoGonderi {self.referans} {self.durum}>"
+
+
 # Trendyol sipariş no → müşteri hesabı (customerId). Soru-Cevap kartında soruyu soranın
 # siparişlerini göstermek için (soru API'si sipariş no vermez, ortak anahtar customerId).
 # Sipariş satırları statü değişiminde tablolar arasında taşındığından ayrı tabloda tutulur.

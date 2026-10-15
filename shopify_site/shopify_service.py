@@ -185,8 +185,12 @@ class ShopifyService:
                   address2
                   city
                   province
+                  provinceCode
+                  zip
+                  phone
                   country
                 }
+                email
                 paymentGatewayNames
                 fulfillments {
                   id

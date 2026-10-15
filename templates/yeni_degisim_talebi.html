@@ -212,6 +212,19 @@
                             <label class="form-label">Adres:</label>
                             <textarea class="form-control" id="adres" name="adres" rows="3"></textarea>
                         </div>
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label class="form-label">İl <small class="text-muted">(MNG; boşsa adresten bulunur)</small></label>
+                                <input type="text" class="form-control" id="il" name="il" list="mng-iller" autocomplete="off">
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label class="form-label">İlçe</label>
+                                <input type="text" class="form-control" id="ilce" name="ilce" autocomplete="off">
+                            </div>
+                        </div>
+                        <datalist id="mng-iller">
+                            {% for il in ['ADANA','ADIYAMAN','AFYONKARAHİSAR','AĞRI','AKSARAY','AMASYA','ANKARA','ANTALYA','ARDAHAN','ARTVİN','AYDIN','BALIKESİR','BARTIN','BATMAN','BAYBURT','BİLECİK','BİNGÖL','BİTLİS','BOLU','BURDUR','BURSA','ÇANAKKALE','ÇANKIRI','ÇORUM','DENİZLİ','DİYARBAKIR','DÜZCE','EDİRNE','ELAZIĞ','ERZİNCAN','ERZURUM','ESKİŞEHİR','GAZİANTEP','GİRESUN','GÜMÜŞHANE','HAKKARİ','HATAY','IĞDIR','ISPARTA','İSTANBUL','İZMİR','KAHRAMANMARAŞ','KARABÜK','KARAMAN','KARS','KASTAMONU','KAYSERİ','KIRIKKALE','KIRKLARELİ','KIRŞEHİR','KİLİS','KOCAELİ','KONYA','KÜTAHYA','MALATYA','MANİSA','MARDİN','MERSİN','MUĞLA','MUŞ','NEVŞEHİR','NİĞDE','ORDU','OSMANİYE','RİZE','SAKARYA','SAMSUN','SİİRT','SİNOP','SİVAS','ŞANLIURFA','ŞIRNAK','TEKİRDAĞ','TOKAT','TRABZON','TUNCELİ','UŞAK','VAN','YALOVA','YOZGAT','ZONGULDAK'] %}<option value="{{ il }}">{% endfor %}
+                        </datalist>
                         <div class="mb-3">
                             <label class="form-label">Telefon No:</label>
                             <input type="text" class="form-control" id="telefon_no" name="telefon_no">

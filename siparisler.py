@@ -152,7 +152,14 @@ def yeni_siparis():
                     s.toplam_tutar = 0.0
 
 
-            return render_template('yeni_siparis.html', siparisler=siparisler)
+            # 🚚 MNG giden gönderi kayıtları (kartta takip no/durum + MNG barkodlu etiket)
+            try:
+                from mng_kargo.servis import KAYNAK_MANUEL, gonderi_haritasi
+                gonderiler = gonderi_haritasi(KAYNAK_MANUEL, [getattr(s, 'siparis_no', None) for s in siparisler])
+            except Exception:
+                logger.warning("[YENI-SIPARIS] MNG gönderi haritası okunamadı", exc_info=True)
+                gonderiler = {}
+            return render_template('yeni_siparis.html', siparisler=siparisler, gonderiler=gonderiler)
 
         except Exception as e:
             logger.error(f"Siparişler listelenirken genel bir hata oluştu: {e}")
@@ -186,6 +193,8 @@ def yeni_siparis():
                 'kapida_odeme'    : request.form.get('kapida_odeme') == 'on',
                 'kapida_odeme_tutari' : request.form.get('kapida_odeme_tutari'),
                 'urunler'         : urunler_data,
+                'il'              : request.form.get('il', ''),      # MNG gönderisi için (opsiyonel)
+                'ilce'            : request.form.get('ilce', ''),
             }
             logger.info(f"🔍 KAPIDA ÖDEME DEBUG - Raw form data:")
             logger.info(f"   kapida_odeme checkbox: {request.form.get('kapida_odeme')}")
@@ -286,6 +295,22 @@ def yeni_siparis():
 
         db.session.commit()
         logger.info(f"Sipariş {siparis_no} başarıyla veritabanına kaydedildi.")
+
+        # 🚚 MNG giden gönderi: kayıt oluşur oluşmaz MNG'de gönderi açılır (takip no + barkod,
+        # kapıda ödeme tutarıyla); takip işi statüyü kendisi düşürür. Hata yutulur.
+        try:
+            from mng_kargo.adres import alici_kur
+            from mng_kargo.servis import KAYNAK_MANUEL, gonderi_ac, manuel_referansi
+            gonderi_ac(
+                KAYNAK_MANUEL, siparis_no, siparis_no, manuel_referansi(sip_id),
+                alici_kur(f"{data.get('musteri_adi') or ''} {data.get('musteri_soyadi') or ''}",
+                          data.get('musteri_adres') or '', data.get('musteri_telefon') or '',
+                          il=data.get('il') or '', ilce=data.get('ilce') or ''),
+                kapida_odeme_tutari=(kapida_odeme_tutari if kapida_odeme else None),
+                aciklama=f"Gullu Shoes siparis {siparis_no}",
+            )
+        except Exception:
+            logger.exception("[YENI-SIPARIS] MNG gönderisi açılamadı (yutuldu, sipariş korunur)")
         try:
             musteri = f"{data.get('musteri_adi','')} {data.get('musteri_soyadi','')}".strip()
             log_user_action("CREATE", {"işlem_açıklaması": f"Yeni sipariş oluşturuldu — {siparis_no}, {musteri}, {len(data.get('urunler',[]))} ürün", "sayfa": "Sipariş Oluştur", "sipariş_no": siparis_no, "müşteri": musteri, "ürün_sayısı": len(data.get('urunler',[]))})
@@ -614,6 +639,13 @@ def siparis_sil(siparis_no):
             return jsonify(success=False, message='Sipariş bulunamadı'), 404
 
         musteri = f"{sip.musteri_adi or ''} {sip.musteri_soyadi or ''}".strip()
+
+        # 🚚 MNG gönderisi açıldıysa kurye almadan iptal et (hata yutulur)
+        try:
+            from mng_kargo.servis import KAYNAK_MANUEL, gonderi_iptal
+            gonderi_iptal(KAYNAK_MANUEL, siparis_no, commit=False)
+        except Exception:
+            logger.exception("[YENI-SIPARIS] MNG gönderi iptali başarısız (yutuldu)")
 
         # Stok iade: Siparişe ait ürünleri rafa geri yükle
         from stock_ledger import record_shelf_movements, REASON_MANUAL
