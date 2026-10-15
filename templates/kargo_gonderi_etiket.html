@@ -1,25 +1,26 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="utf-8">
-  <title>MNG Etiket {{ kayit.referans }}</title>
-  <style>
-    @page { size: {{ en_mm }}mm {{ boy_mm }}mm; margin: 0; }
-    html, body { margin: 0; padding: 0; background: #fff; }
-    .etiket { width: {{ en_mm }}mm; height: {{ boy_mm }}mm; overflow: hidden; }
-    .etiket img { width: {{ en_mm }}mm; height: {{ boy_mm }}mm; display: block; image-rendering: crisp-edges; }
-    .bilgi { font: 13px/1.4 Arial, sans-serif; padding: 12px; }
-    @media print { .bilgi { display: none; } }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kargo Etiketi - Yazdır</title>
+<style>
+  /* order_label.html ile birebir: 100x100 mm rulo, kenar boşluğu yok → tarayıcı başlık/altlık basmaz */
+  @page { size: 100mm 100mm; margin: 0; }
+  html, body { width:100mm; height:100mm; margin:0; padding:0; background:#fff; }
+  * { box-sizing: border-box; }
+  .label{ width:100mm; height:100mm; display:flex; align-items:center; justify-content:center;
+          overflow:hidden; page-break-inside: avoid; }
+  .label img{ max-width:100mm; max-height:100mm; width:auto; height:auto; display:block; image-rendering: crisp-edges; }
+</style>
 </head>
 <body>
-  <div class="bilgi no-print">
-    <strong>{{ kayit.kaynak_ad }}</strong> · referans {{ kayit.referans }} · takip no {{ kayit.shipment_id }} · barkod {{ kayit.barkod }}
-    &nbsp;|&nbsp; <a href="{{ url_for('kargo_gonderi.zpl', gonderi_id=kayit.id) }}">ZPL indir (Zebra)</a>
-    &nbsp;|&nbsp; <button onclick="window.print()">Yazdır</button>
-    <div style="color:#888">Etiket {{ en_mm }}×{{ boy_mm }} mm. MNG uyarısı: konveyör okuması için 10x10 rulo MNG'den alınmalı ya da lamine olmalı.</div>
-  </div>
-  <div class="etiket"><img src="data:image/png;base64,{{ png_b64 }}" alt="MNG etiket {{ kayit.barkod }}"></div>
-  <script>window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 300); });</script>
+  <div class="label"><img src="data:image/png;base64,{{ png_b64 }}" alt="MNG etiket {{ kayit.barkod }}"></div>
+  <script>
+    window.onload = function () {
+      window.print();
+      window.onafterprint = function () { window.close(); };
+    };
+  </script>
 </body>
 </html>

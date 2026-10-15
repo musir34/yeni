@@ -39,6 +39,30 @@ def zpl_boyut_mm(zpl: str) -> tuple[int, int]:
     return round(en * 25.4), round(boy * 25.4)
 
 
+def png_kirp(png: bytes, kenar_px: int = 8, esik: int = 200) -> bytes:
+    """Etiket görüntüsünün boş (beyaz) kenarlarını kırp — MNG ZPL'i 104x120 mm tanımlı ama içerik
+    ~100 mm; depodaki rulo 100x100 (order_label ile aynı). Kırpılmış görüntü sayfaya 'contain' sığar."""
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        return png
+    try:
+        from io import BytesIO
+        img = Image.open(BytesIO(png)).convert("L")
+        kutu = ImageOps.invert(img).point(lambda p: 255 if p > (255 - esik) else 0).getbbox()
+        if not kutu:
+            return png
+        x0, y0, x1, y1 = kutu
+        x0, y0 = max(0, x0 - kenar_px), max(0, y0 - kenar_px)
+        x1, y1 = min(img.width, x1 + kenar_px), min(img.height, y1 + kenar_px)
+        cikti = BytesIO()
+        img.crop((x0, y0, x1, y1)).save(cikti, format="PNG")
+        return cikti.getvalue()
+    except Exception:
+        logger.warning("[MNG] etiket kırpma başarısız, ham görüntü", exc_info=True)
+        return png
+
+
 def zpl_png(zpl: str) -> bytes | None:
     """ZPL → PNG (Labelary). Aynı ZPL için bellek önbelleği."""
     if not zpl:

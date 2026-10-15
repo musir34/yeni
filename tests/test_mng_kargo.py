@@ -144,3 +144,17 @@ def test_email_bos_veya_bozuksa_magaza_adresi():
     assert email_normalize("ayse@") == VARSAYILAN_EMAIL
     assert email_normalize(" ayse@ornek.com ") == "ayse@ornek.com"
     assert siparis_govdesi(_istek(), 1)["recipient"]["email"] == VARSAYILAN_EMAIL
+
+
+def test_png_kirp_bos_kenarlari_atar():
+    from io import BytesIO
+    from PIL import Image
+    from mng_kargo.etiket import png_kirp
+    img = Image.new("L", (831, 959), 255)
+    for y in range(40, 800):
+        for x in range(30, 800, 7):
+            img.putpixel((x, y), 0)
+    ham = BytesIO(); img.save(ham, format="PNG")
+    kirpik = Image.open(BytesIO(png_kirp(ham.getvalue())))
+    assert kirpik.width <= 790 and 740 <= kirpik.height <= 780      # 959 → içerik + 8 px kenar
+    assert png_kirp(b"bozuk") == b"bozuk"

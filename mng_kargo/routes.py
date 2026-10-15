@@ -18,7 +18,7 @@ from user_logs import log_user_action
 
 from .adres import tr_upper
 from .durum import ETIKETLER, SIPARIS_ACILDI
-from .etiket import zpl_boyut_mm, zpl_png
+from .etiket import png_kirp, zpl_png
 from .servis import (
     DURUM_BEKLIYOR, DURUM_HATA, _api_ile_ac, barkod_al, gonderi_haritasi, kaydi_sorgula, kayit_iptal,
     otomatik_acik,
@@ -124,14 +124,13 @@ def etiket_sayfasi(gonderi_id):
         flash("Etiket görüntüsü üretilemedi (Labelary erişilemedi). ZPL dosyasını indirip Zebra'ya gönderebilirsiniz.", "danger")
         return redirect(url_for("kargo_gonderi.liste"))
     import base64
-    en_mm, boy_mm = zpl_boyut_mm(kayit.zpl)
+    png = png_kirp(png)          # boş kenarları at → 100x100 ruloya sığar (order_label ile aynı sayfa)
     try:
         log_user_action("PRINT", {"işlem_açıklaması": f"MNG kargo etiketi yazdırıldı — {kayit.kaynak_ad} ({kayit.referans})",
                                   "sayfa": "Kargo Gönderileri", "takip_no": kayit.shipment_id})
     except Exception:
         logger.warning("MNG etiket PRINT hareketi loglanamadı", exc_info=True)
-    return render_template("kargo_gonderi_etiket.html", kayit=kayit, png_b64=base64.b64encode(png).decode("ascii"),
-                           en_mm=en_mm, boy_mm=boy_mm)
+    return render_template("kargo_gonderi_etiket.html", kayit=kayit, png_b64=base64.b64encode(png).decode("ascii"))
 
 
 @kargo_gonderi_bp.route("/kargo-gonderi/<int:gonderi_id>/yeniden-dene", methods=["POST"])
