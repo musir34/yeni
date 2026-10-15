@@ -13,6 +13,12 @@
           overflow:hidden; page-break-inside: avoid; }
   .label img, .label svg{ max-width:100mm; max-height:100mm; width:auto; height:auto; display:block; }
   .label img{ image-rendering: crisp-edges; }
+  @media print {
+    /* Tarayıcı eklentilerinin (ör. Claude imleç halkası) sayfaya eklediği öğeler etikete basılmasın */
+    body > *:not(.label) { display: none !important; }
+    .label { position: fixed; top: 0; left: 0; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
 </style>
 </head>
 <body>
