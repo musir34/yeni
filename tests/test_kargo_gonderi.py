@@ -482,3 +482,11 @@ def test_shopify_gonderi_bul_iki_ad_bicimi_ve_etiket_hazirligi(ctx):
     assert servis.etiketi_var(servis.shopify_gonderi_bul("#1521")) and k2.zpl
     assert servis.kayit_iptal(k2)
     assert servis.shopify_gonderi_bul("#1521") is None                          # iptal edilen gönderi etiket vermez
+
+
+def test_ilce_cozulemezse_api_ye_gitmeden_acik_hata(ctx):
+    """Shopify adresinde yalnız 'Ankara' (ilçe yok): MNG 20311 ile reddeder; API'ye gitmeden kalıcı hata + yol gösteren mesaj."""
+    alici = Alici(ad_soyad="Gülşah K.", adres="Yayla mahallesi 1412.sokak no:22", telefon="5345416417", il="ANKARA", ilce="")
+    k = servis.gonderi_ac("shopify", "77030", "#1530", "SH1530", alici)
+    assert k.durum == "hata" and "İlçe bulunamadı" in k.hata and ctx.siparisler == []
+    assert servis.shopify_gonderi_bul("#1530").id == k.id and not servis.etiketi_var(k)   # klasik etiket çıkar

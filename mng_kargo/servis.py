@@ -204,9 +204,17 @@ def _api_ile_ac(kayit: KargoGonderi, icerik: str = "Ayakkabi", aciklama: str = "
         kayit.hata = f"Kapıda ödeme tutarı MNG alt sınırının ({KAPIDA_ODEME_MIN} TL) altında: {kayit.kapida_odeme_tutari}"
         kayit.durum = DURUM_HATA
         return False
+    istek = _istek_kur(kayit, icerik, aciklama)
+    # İlçe çözülemediyse MNG reddeder (20311, metinsiz); API'ye 5 kez gitmek yerine açık mesajla kalıcı hata.
+    if not (istek.alici.ilce or "").strip():
+        kayit.hata = (f"İlçe bulunamadı (il: {istek.alici.il or '?'}; adres: {(kayit.alici_adres or '')[:80]}). "
+                      "Kargo Gönderileri'nden ilçeyi yazıp Yeniden Dene.")
+        kayit.durum = DURUM_HATA
+        logger.warning("[MNG] sipariş açılmadı %s: ilçe yok", kayit.referans)
+        return False
     kayit.deneme = (kayit.deneme or 0) + 1
     try:
-        client().siparis_olustur(_istek_kur(kayit, icerik, aciklama))
+        client().siparis_olustur(istek)
     except (MngHata, ValueError) as exc:
         _hata_yaz(kayit, exc)
         logger.warning("[MNG] sipariş açılamadı %s (%s. deneme): %s", kayit.referans, kayit.deneme, exc)

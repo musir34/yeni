@@ -107,3 +107,7 @@
   servis.shopify_gonderi_bul(order_number) ('SH-' → kaynak_ref, '#' → kaynak_ad; çıplak rakam Trendyol sayılır,
   bakılmaz) + etiketi_var (zpl ya da siparis_acildi) ise kargo_gonderi.etiket_sayfasi'na 302 → MNG etiketi (SVG).
   Gönderi yoksa / bekliyor-hata ise klasik etiket. Sipariş hazırla 5 sn otomatik yazdırma da MNG etiketini açar.
+- 2026-10-16 #1453: Shopify adresi yalnız "Ankara" (province/zip boş, ilçe yok) → MNG createOrder 404 [20311]
+  (metinsiz) 5 deneme → hata → klasik etiket çıktı. Artık ilçe çözülemezse API'ye gidilmeden kalıcı hata +
+  "Kargo Gönderileri'nden ilçeyi yazıp Yeniden Dene" mesajı (_api_ile_ac). Çözüm yolu: /kargo-gonderi → il/ilçe
+  gir → Yeniden Dene → sipariş açılır → Fiş Yazdır MNG etiketi verir.
