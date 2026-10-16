@@ -115,6 +115,30 @@ def gonderi_bul(kaynak: str, kaynak_ref: str) -> KargoGonderi | None:
         .first()))
 
 
+def shopify_gonderi_bul(siparis_no: str) -> KargoGonderi | None:
+    """Site siparişinin aktif gönderisi; panelde sipariş iki adla dolaşır:
+    'SH-<Shopify id>' (sipariş hazırla/listesi, üretim) → kaynak_ref, '#1446' (mağaza adı,
+    Shopify Siparişler sayfası ve sipariş hazırla 'Yazdır') → kaynak_ad."""
+    ham = str(siparis_no or "").strip()
+    if not ham or not otomatik_acik():
+        return None
+    if ham.upper().startswith("SH-"):
+        return gonderi_bul(KAYNAK_SHOPIFY, ham[3:])
+    if not ham.startswith("#"):          # Trendyol/manuel numaraları buraya düşmesin
+        return None
+    return _savepoint_icinde(lambda: (
+        KargoGonderi.query
+        .filter_by(kaynak=KAYNAK_SHOPIFY, kaynak_ad=ham)
+        .filter(KargoGonderi.durum != IPTAL)
+        .order_by(KargoGonderi.id.desc())
+        .first()))
+
+
+def etiketi_var(kayit: KargoGonderi | None) -> bool:
+    """MNG etiketi basılabilir mi: ZPL alınmış ya da sipariş açık (etiket sayfası barkodu o anda alır)."""
+    return bool(kayit) and (bool(kayit.zpl) or kayit.durum == SIPARIS_ACILDI)
+
+
 def gonderi_kaydi_var(kaynak: str, kaynak_ref: str) -> bool:
     """İptal dahil herhangi bir kayıt var mı (iptal edilen referans MNG'de kullanılmış sayılır,
     aynı kaynağa ikinci kez açılmaz; gerekirse Kargo Gönderileri sayfasından elle)."""

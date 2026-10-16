@@ -98,3 +98,12 @@
 - Desi (Komutan): tek paket, beyan desi = 2 × çift, kg = 1 × çift (govde.parca_adetle, MNG_DESI_BIRIM/MNG_KG_BIRIM);
   KargoGonderi.parca_adet kolonu (ALTER ADD IF NOT EXISTS); değişim toplam_tahsis, manuel adet toplamı, Shopify
   line_items currentQuantity/quantity toplamı.
+- 2026-10-16 iptal yolları (c83087e): manuel sipariş "İptal Edildi" → gonderi_iptal; panelden Shopify iptali
+  (shopify_routes cancel) → gonderi_iptal; Shopify yönetiminden iptal edilenler 5 dk taramada (shopify_tarama.
+  iptalleri_tara, status:cancelled) kurye almadıysa MNG'de iptal. Kurye aldıktan sonra API iptali yok (şubeyle).
+- 2026-10-16 site siparişi etiketi: Komutan "Fiş Yazdır deyince eski etiket çıkıyor" dedi. Tüm site siparişi
+  yazdırma yolları (/shopify/orders Fiş Yazdır → order_number '#1446'; sipariş hazırla Yazdır → '#1446';
+  sipariş listesi kartı ve üretim → 'SH-<id>') zaten POST /order-label'a geliyor; orada
+  servis.shopify_gonderi_bul(order_number) ('SH-' → kaynak_ref, '#' → kaynak_ad; çıplak rakam Trendyol sayılır,
+  bakılmaz) + etiketi_var (zpl ya da siparis_acildi) ise kargo_gonderi.etiket_sayfasi'na 302 → MNG etiketi (SVG).
+  Gönderi yoksa / bekliyor-hata ise klasik etiket. Sipariş hazırla 5 sn otomatik yazdırma da MNG etiketini açar.

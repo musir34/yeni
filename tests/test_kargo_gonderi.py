@@ -466,3 +466,19 @@ def test_shopify_yonetiminden_iptal_mng_gonderisini_iptal_eder(ctx, monkeypatch)
     assert KargoGonderi.query.get(k1.id).durum == "iptal" and ctx.iptal_gonderiler == [("SH1510", "195991365254")]
     assert KargoGonderi.query.get(k2.id).durum == "siparis_acildi"
     assert KargoGonderi.query.get(k3.id).durum == "kargoda"
+
+
+def test_shopify_gonderi_bul_iki_ad_bicimi_ve_etiket_hazirligi(ctx):
+    """/order-label: site siparişi 'SH-<id>' ya da '#1446' adıyla gelir; MNG gönderisi varsa MNG etiketi."""
+    k = servis.gonderi_ac("shopify", "77020", "#1520", "SH1520", _alici())      # sipariş açık, barkod yok
+    assert servis.shopify_gonderi_bul("SH-77020").id == k.id
+    assert servis.shopify_gonderi_bul("#1520").id == k.id
+    assert servis.shopify_gonderi_bul("1520") is None                           # Trendyol/manuel numarası sayılır
+    assert servis.shopify_gonderi_bul("") is None
+    assert servis.etiketi_var(k)                                                # sipariş açık → etiket sayfası barkodu alır
+    k.durum = "bekliyor"; db.session.commit()
+    assert not servis.etiketi_var(k)                                            # MNG'de açılmadı → klasik etiket
+    k2 = _ac_ve_barkodla("shopify", "77021", "#1521", "SH1521")
+    assert servis.etiketi_var(servis.shopify_gonderi_bul("#1521")) and k2.zpl
+    assert servis.kayit_iptal(k2)
+    assert servis.shopify_gonderi_bul("#1521") is None                          # iptal edilen gönderi etiket vermez

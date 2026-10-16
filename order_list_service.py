@@ -746,6 +746,21 @@ def order_label():
             db.session.rollback()
             logger.warning("order_label: üretim hazırlayan damgası yazılamadı", exc_info=True)
 
+        # 🚚 Site siparişinin MNG gönderisi varsa etiket MNG'nin ürettiği barkodlu etikettir
+        # (Shopify Siparişler 'Fiş Yazdır', sipariş hazırla 'Yazdır', sipariş listesi, üretim —
+        # hepsi buradan geçer). Gönderi yoksa/etiket hazır değilse klasik etiket basılır.
+        mng = None
+        try:
+            from mng_kargo.servis import etiketi_var, shopify_gonderi_bul
+            mng = shopify_gonderi_bul(order_number)
+            if not etiketi_var(mng):
+                mng = None
+        except Exception:
+            logger.warning("order_label: MNG gönderisi sorgulanamadı", exc_info=True)
+            mng = None
+        if mng is not None:
+            return redirect(url_for('kargo_gonderi.etiket_sayfasi', gonderi_id=mng.id))
+
         # Barkod dosya YOK: inline (base64) veri
         # SVG (vektor): PNG olceklenince kenarlar gri/puruzlu basiliyordu; numara sablonda ayrica basiliyor
         barcode_data_uri = generate_barcode_svg_data_uri(shipping_barcode) if shipping_barcode else None
