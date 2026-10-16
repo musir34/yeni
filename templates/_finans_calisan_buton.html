@@ -9,3 +9,8 @@
         data-hesap="{{ d.kalem.varsayilan_hesap_kodu or 'elde' }}"
         data-sahsi="{{ '1' if d.kalem.calisan_cari and d.kalem.calisan_cari.tur == 'sahsi' else '0' }}"
         data-anahtar="{{ fn_odeme_anahtari() }}">{{ 'Hak ediş gir' if d.belirsiz else ('Ödeme ekle' if d.bekleyen else 'Hak edişi düzenle') }}</button>
+<button type="button" class="btn btn-sm btn-outline-primary" title="Bu haftaya mesai ekle"
+        data-bs-toggle="modal" data-bs-target="#fnMesaiModal"
+        data-kalem-id="{{ d.kalem.id }}" data-kalem-ad="{{ d.kalem.calisan_cari.ad }}"
+        data-donem="{{ d.donem }}" data-etiket="{{ d.etiket }}"
+        data-anahtar="{{ fn_odeme_anahtari() }}">⏱ Mesai</button>

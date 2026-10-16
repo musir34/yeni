@@ -1,0 +1,40 @@
+<div class="modal fade" id="fnMesaiModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="POST" action="{{ url_for('finans.calisan_mesai') }}">
+      <div class="modal-header"><h5 class="modal-title">⏱ Mesai — <span id="fnMsAd"></span></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <p id="fnMsDonemEtiket" class="fw-bold"></p>
+        <input type="hidden" name="kalem_id" id="fnMsKalem">
+        <input type="hidden" name="donem" id="fnMsDonem">
+        <input type="hidden" name="odeme_anahtari" id="fnMsAnahtar">
+        <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+        <div class="row g-2">
+          <div class="col-6"><label for="fnMsSaat" class="form-label">Mesai saati</label><input type="text" name="saat" id="fnMsSaat" class="form-control" inputmode="decimal" placeholder="örn. 3 veya 2,5" required></div>
+          <div class="col-6"><label for="fnMsTutar" class="form-label">Mesai tutarı (₺)</label><input type="text" name="tutar" id="fnMsTutar" class="form-control" inputmode="decimal" placeholder="0,00" required></div>
+          <div class="col-6"><label for="fnMsTarih" class="form-label">Tarih</label><input type="date" name="tarih" id="fnMsTarih" class="form-control" value="{{ bugun }}"></div>
+          <div class="col-6"><label for="fnMsAciklama" class="form-label">Not (isteğe bağlı)</label><input type="text" name="aciklama" id="fnMsAciklama" class="form-control"></div>
+        </div>
+        <div class="form-text mt-2">Tutar bu haftanın hak edişine eklenir; kasadan para düşmez. Ödemeyi yine "Ödeme ekle" ile yaparsın.</div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button><button type="submit" class="btn btn-primary">Mesaiyi Ekle</button></div>
+    </form>
+  </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var modal = document.getElementById('fnMesaiModal');
+    modal.addEventListener('show.bs.modal', function (ev) {
+      var b = ev.relatedTarget; if (!b) return;
+      modal.querySelector('form').reset();
+      document.getElementById('fnMsAd').textContent = b.dataset.kalemAd;
+      document.getElementById('fnMsKalem').value = b.dataset.kalemId;
+      document.getElementById('fnMsDonem').value = b.dataset.donem;
+      document.getElementById('fnMsDonemEtiket').textContent = b.dataset.etiket;
+      document.getElementById('fnMsAnahtar').value = b.dataset.anahtar;
+      modal.querySelector('[type="submit"]').disabled = false;
+    });
+    modal.querySelector('form').addEventListener('submit', function () {
+      modal.querySelector('[type="submit"]').disabled = true;
+    });
+  });
+</script>

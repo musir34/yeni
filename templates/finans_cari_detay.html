@@ -79,7 +79,7 @@
           <td class="fn-num {{ 'fn-neg' if cari.tur == 'sahsi' else 'fn-pos' }}">{% if h.yon < 0 %}{{ h.tutar | tl_format }}{% endif %}</td>
           <td class="fn-num">{{ h.yeni_bakiye | tl_format }}</td>
           <td class="fn-actions text-end">
-            {% if not h.iptal and (not h.hakedis_id or h.islem_id) %}
+            {% if not h.iptal and (not h.hakedis_id or h.islem_id or h.tur == 'mesai') %}
             <form method="POST" action="{{ url_for('finans.cari_hareket_iptal', hareket_id=h.id) }}" class="d-inline fn-cari-iptal">
               <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
               <button type="submit" class="btn btn-sm btn-outline-danger" title="İptal">✕</button>

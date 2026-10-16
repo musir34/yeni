@@ -77,14 +77,14 @@ def odenen_tutar(hakedis_id):
     return Decimal(str(value or 0)).quantize(fs.IKI_HANE)
 
 
-def _hak_yaz(h, cari, tutar, kullanici_id):
+def _hak_yaz(h, cari, tutar, kullanici_id, aciklama=None):
     """Hak ediş farkını cari defterine yazar; kasa hareketi oluşturmaz."""
     fark = tutar - (h.tutar or Decimal('0'))
     if fark:
         tarih = ist_to_utc(datetime.combine(date.fromisoformat(
             h.donem if len(h.donem) == 10 else h.donem + '-01'), datetime.min.time()))
         cs._cari_hareket(cari, 'hakedis' if fark > 0 else 'hakedis_azaltma', abs(fark),
-                         tarih, f'{h.kalem.ad} — {fs.donem_etiket(h.donem)} hak edişi',
+                         tarih, aciklama or f'{h.kalem.ad} — {fs.donem_etiket(h.donem)} hak edişi',
                          kullanici_id, hakedis_id=h.id)
     h.tutar = tutar
     db.session.flush()
@@ -186,10 +186,12 @@ def hakedis_ve_odeme(kalem_id, donem, hak_tutar, odeme_tutar, hesap_kodu, tarih,
         odenen = odenen_tutar(h.id)
         if hak < odenen:
             raise fs.FinansHata(f'Hak ediş, ödenen {odenen:.2f} ₺ tutarından az olamaz. Önce hatalı ödemeyi iptal edin.')
-        if odeme > hak - odenen:
-            raise fs.FinansHata(f'Ödeme kalan borcu aşamaz. Kalan: {hak - odenen:.2f} ₺.')
-        hesap = None
         mahsup = bool(odeme) and hesap_kodu == MAHSUP_HESABI
+        # Nakit ödeme kalanı aşarsa (örn. 1080 yerine 1100) hata değil: fark hak edişe yazılır, borç kalmaz.
+        fazla = max(Decimal('0'), odeme - (hak - odenen))
+        if fazla and mahsup:
+            raise fs.FinansHata(f'Hesaba yazılan tutar kalan borcu aşamaz. Kalan: {hak - odenen:.2f} ₺.')
+        hesap = None
         if odeme and not mahsup:
             fs._gider_hesabi_kontrol(hesap_kodu)
             hesap = fs.hesap_getir(hesap_kodu, kilitle=True)
@@ -201,6 +203,9 @@ def hakedis_ve_odeme(kalem_id, donem, hak_tutar, odeme_tutar, hesap_kodu, tarih,
             if cari.tur != 'sahsi':
                 raise fs.FinansHata('Hesaba yazma yalnız şahsi hesapta kullanılır.')
         _hak_yaz(h, cari, hak, kullanici_id)
+        if fazla:
+            _hak_yaz(h, cari, hak + fazla, kullanici_id,
+                     f'{k.ad} — {fs.donem_etiket(donem)} fazla ödeme (+{fazla:.2f} ₺ hak edişe eklendi)')
         islem = None
         if mahsup:
             aciklama = (aciklama or '').strip() or f'{k.ad} — {fs.donem_etiket(donem)} maaşı hesaba yazıldı'
@@ -220,14 +225,73 @@ def hakedis_ve_odeme(kalem_id, donem, hak_tutar, odeme_tutar, hesap_kodu, tarih,
         raise
 
 
+def _saat(raw):
+    s = str(raw or '').strip().replace(',', '.')
+    try:
+        saat = Decimal(s)
+    except Exception:
+        raise fs.FinansHata('Mesai saati geçersiz.')
+    if not saat.is_finite() or saat <= 0:
+        raise fs.FinansHata('Mesai saati sıfırdan büyük olmalı.')
+    return saat
+
+
+def mesai_ekle(kalem_id, donem, saat, tutar, tarih, aciklama, kullanici_id, odeme_anahtari):
+    """Mesai haftanın hak edişine eklenir; cari defterine saat bilgili ayrı 'mesai' satırı. Kasaya dokunmaz."""
+    try:
+        try:
+            token = str(uuid.UUID(str(odeme_anahtari)))
+        except (ValueError, TypeError, AttributeError):
+            raise fs.FinansHata('Mesai anahtarı geçersiz; sayfayı yenileyin.')
+        donem = fs.parse_odeme_donemi(donem)
+        saat = _saat(saat)
+        tutar = fs.parse_tutar(tutar)
+        k = (FinansAnaGiderKalem.query.filter_by(id=int(kalem_id))
+             .populate_existing().with_for_update().first())
+        if not k or not k.calisan_cari_id:
+            raise fs.FinansHata('Çalışan ödeme planı bulunamadı.')
+        tekrar = FinansCariHareket.query.filter_by(odeme_anahtari=token).first()
+        if tekrar:
+            if (tekrar.iptal or tekrar.tur != 'mesai' or tekrar.hakedis.kalem_id != k.id
+                    or tekrar.hakedis.donem != donem or tekrar.tutar != tutar):
+                raise fs.FinansHata('Bu mesai isteği daha önce kullanılmış; sayfayı yenileyin.')
+            db.session.commit()
+            return tekrar.hakedis
+        h = FinansCalisanHakedis.query.filter_by(kalem_id=k.id, donem=donem).first()
+        if h is None:
+            if not k.aktif or donem not in fs.kalem_odeme_donemleri(k, donem[:7]):
+                raise fs.FinansHata('Bu dönem çalışan planında bulunmuyor.')
+            h = _getir(k, donem)
+        cari = cs.cari_getir(k.calisan_cari_id, kilitle=True)
+        if not cari.aktif:
+            raise fs.FinansHata('Çalışanın cari hesabı kapalı.')
+        if h.tutar is None:
+            if not k.tutar_degisken and k.varsayilan_tutar:
+                _hak_yaz(h, cari, k.varsayilan_tutar, kullanici_id)
+            else:
+                raise fs.FinansHata('Önce bu dönemin hak edişini girin, sonra mesai ekleyin.')
+        not_ = (aciklama or '').strip()
+        aciklama = f'Mesai {saat.normalize():f} saat — {fs.donem_etiket(donem)}' + (f' · {not_}' if not_ else '')
+        cs._cari_hareket(cari, 'mesai', tutar, tarih, aciklama, kullanici_id,
+                         hakedis_id=h.id, odeme_anahtari=token)
+        h.tutar = h.tutar + tutar
+        db.session.commit()
+        return h
+    except Exception:
+        db.session.rollback()
+        raise
+
+
 def durum_satiri(kalem, donem, hakedis=None):
     odenen = odenen_tutar(hakedis.id) if hakedis else Decimal('0')
     tutar = hakedis.tutar if hakedis else (kalem.varsayilan_tutar or None)
     kalan = max(Decimal('0'), tutar - odenen) if tutar is not None else None
+    mesailer = sorted((m for m in hakedis.hareketler if m.tur == 'mesai' and not m.iptal),
+                      key=lambda m: m.id) if hakedis else []
     return {'kalem': kalem, 'donem': donem, 'etiket': fs.donem_etiket(donem),
             'calisan': True, 'hakedis': hakedis, 'hak_tutar': tutar,
             'odenen': odenen, 'kalan': kalan, 'belirsiz': tutar is None,
-            'bekleyen': kalan is None or kalan > 0, 'odeme': None}
+            'bekleyen': kalan is None or kalan > 0, 'odeme': None, 'mesailer': mesailer}
 
 
 def hakedis_satirlari(donem=None, cari_id=None):

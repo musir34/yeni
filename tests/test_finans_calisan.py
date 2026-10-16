@@ -112,14 +112,14 @@ class CalisanCariTest(unittest.TestCase):
         self.assertEqual(FinansCariHareket.query.count(), 0)
         self.tutarli()
 
-    def test_overpay_and_reduce_below_paid_are_rejected(self):
+    def test_overpay_rounds_up_due_and_reduce_below_paid_is_rejected(self):
         k = self.plan()
         self.ode(k, '3000')
+        h, _ = self.ode(k, '2500')   # 500 fazla: hata değil, fark hak edişe yazılır
+        self.assertEqual(h.tutar, Decimal('5500'))
         with self.assertRaises(fs.FinansHata):
-            self.ode(k, '2500')
-        with self.assertRaises(fs.FinansHata):
-            self.ode(k, hak='2000')
-        self.assertEqual(k.calisan_cari.bakiye, Decimal('2000'))
+            self.ode(k, hak='2000', expected='5500')
+        self.assertEqual(k.calisan_cari.bakiye, Decimal('0'))
         self.tutarli()
 
     def test_cancel_cash_or_cari_restores_debt_and_can_pay_again(self):
