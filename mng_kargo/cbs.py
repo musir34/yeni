@@ -132,6 +132,18 @@ def ilce_coz(il_kodu: str, *metinler: str) -> tuple[str, str] | None:
     return None
 
 
+def ilce_adlari(il_kodu) -> list[str]:
+    """İlin MNG ilçe adları (liste yoksa boş: önbellek/API erişilemedi demektir, doğrulama yapılmaz)."""
+    kod = str(il_kodu).zfill(2)           # Alici.il_kodu int (6) → MNG anahtarı "06"
+    return sorted(d["name"] for d in ((veri().get("ilceler") or {}).get(kod) or []) if d.get("name"))
+
+
+def il_ilce_haritasi() -> dict[str, list[str]]:
+    """{MNG il adı: [ilçe adları]} — Kargo Gönderileri'ndeki ilçe kutusu için öneri listesi."""
+    v = veri()
+    return {il["name"]: ilce_adlari(il["code"]) for il in (v.get("iller") or [])}
+
+
 def alici_tamamla(alici: Alici) -> Alici:
     """İl/ilçe adlarını MNG listesine oturt, kodları doldur (yeni Alici; bulunamazsa olduğu gibi)."""
     il = il_coz(alici.il) or il_coz(alici.ilce) or il_coz(il_bul(alici.adres))

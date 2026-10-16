@@ -490,3 +490,19 @@ def test_ilce_cozulemezse_api_ye_gitmeden_acik_hata(ctx):
     k = servis.gonderi_ac("shopify", "77030", "#1530", "SH1530", alici)
     assert k.durum == "hata" and "İlçe bulunamadı" in k.hata and ctx.siparisler == []
     assert servis.shopify_gonderi_bul("#1530").id == k.id and not servis.etiketi_var(k)   # klasik etiket çıkar
+
+
+def test_ilce_mng_listesinde_yoksa_api_ye_gitmeden_gecerli_ilceler_yazilir(ctx):
+    """ANKARA / '19 MAYIS' (mahalle adı) → MNG 20311; artık API'ye gitmeden geçerli ilçeleri sayan hata."""
+    from mng_kargo import cbs
+    cbs.bellek_ayarla({"zaman": 9e12, "iller": [{"code": "06", "name": "ANKARA"}],
+                       "ilceler": {"06": [{"code": "1", "name": "KEÇİÖREN"}, {"code": "2", "name": "ÇANKAYA"}]}})
+    try:
+        alici = Alici(ad_soyad="Gülşah K.", adres="Yayla mah. 1412.sokak", telefon="5345416417", il="ANKARA", ilce="19 MAYIS")
+        k = servis.gonderi_ac("shopify", "77031", "#1531", "SH1531", alici)
+        assert k.durum == "hata" and "19 MAYIS" in k.hata and "KEÇİÖREN" in k.hata and ctx.siparisler == []
+        k.ilce = "KEÇİÖREN"; k.durum = "hata"                                     # Yeniden Dene ile düzeltme
+        assert servis._api_ile_ac(k) and k.durum == "siparis_acildi" and ctx.siparisler[-1].alici.ilce_kodu == 1
+        assert cbs.il_ilce_haritasi() == {"ANKARA": ["KEÇİÖREN", "ÇANKAYA"]}
+    finally:
+        cbs.bellek_ayarla(None)

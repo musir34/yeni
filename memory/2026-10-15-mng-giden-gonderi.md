@@ -111,3 +111,7 @@
   (metinsiz) 5 deneme → hata → klasik etiket çıktı. Artık ilçe çözülemezse API'ye gidilmeden kalıcı hata +
   "Kargo Gönderileri'nden ilçeyi yazıp Yeniden Dene" mesajı (_api_ile_ac). Çözüm yolu: /kargo-gonderi → il/ilçe
   gir → Yeniden Dene → sipariş açılır → Fiş Yazdır MNG etiketi verir.
+- 2026-10-16 #1453 devam: Komutan ilçe kutusuna "19 MAYIS" yazmış (Keçiören'in mahallesi); MNG ilçe listesinde
+  yok → yine 20311. Artık il bulunup ilçe MNG listesinde yoksa API'ye gitmeden "geçerli ilçeler: …" mesajı
+  (servis._ilce_hatasi, cbs.ilce_adlari il kodu zfill(2)); Kargo Gönderileri ilçe kutusu MNG ilçe listesinden
+  datalist (cbs.il_ilce_haritasi). Doğru ilçe KEÇİÖREN (19 Mayıs Mah. ve Yayla Mah. Keçiören'de).

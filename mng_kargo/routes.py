@@ -85,9 +85,15 @@ def liste():
     for k in KargoGonderi.query.with_entities(KargoGonderi.durum, db.func.count()).group_by(KargoGonderi.durum).all():
         if k[0] in sayac:
             sayac[k[0]] = k[1]
+    try:                                  # ilçe kutusu için MNG'nin il → ilçe listesi (önbellek; yoksa boş)
+        from .cbs import il_ilce_haritasi
+        ilceler = il_ilce_haritasi()
+    except Exception:
+        logger.warning("[MNG] il/ilçe listesi okunamadı", exc_info=True)
+        ilceler = {}
     return render_template(
         "kargo_gonderi.html", kayitlar=kayitlar, sayac=sayac, rozet=rozet, etiket=etiket, kaynak_ad=KAYNAK_AD,
-        filtre={"kaynak": kaynak, "durum": durum, "q": aranan}, otomatik=otomatik_acik(),
+        filtre={"kaynak": kaynak, "durum": durum, "q": aranan}, otomatik=otomatik_acik(), ilceler=ilceler,
     )
 
 

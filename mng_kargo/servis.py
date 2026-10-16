@@ -198,6 +198,25 @@ def _hata_yaz(kayit: KargoGonderi, exc: Exception, kalici: bool = False) -> None
     kayit.durum = DURUM_HATA if (kalici or kayit.deneme >= MAX_DENEME) else DURUM_BEKLIYOR
 
 
+def _ilce_hatasi(alici: Alici, kayit: KargoGonderi) -> str | None:
+    """İlçe boşsa ya da il MNG'de bulunup ilçe MNG'nin o il listesinde yoksa (ör. mahalle adı yazılmış:
+    ANKARA / "19 MAYIS") yol gösteren mesaj; liste erişilemiyorsa doğrulama yapılmaz (None)."""
+    ilce = (alici.ilce or "").strip()
+    if not ilce:
+        return (f"İlçe bulunamadı (il: {alici.il or '?'}; adres: {(kayit.alici_adres or '')[:80]}). "
+                "Kargo Gönderileri'nden ilçeyi yazıp Yeniden Dene.")
+    if alici.il_kodu and not alici.ilce_kodu:
+        try:
+            from .cbs import ilce_adlari
+            adlar = ilce_adlari(alici.il_kodu)
+        except Exception:
+            adlar = []
+        if adlar:
+            return (f"İlçe '{ilce}' MNG'nin {alici.il} listesinde yok (mahalle adı olabilir). "
+                    f"Geçerli ilçeler: {', '.join(adlar)}. Kargo Gönderileri'nden düzeltip Yeniden Dene.")
+    return None
+
+
 def _api_ile_ac(kayit: KargoGonderi, icerik: str = "Ayakkabi", aciklama: str = "") -> bool:
     """1. aşama: createOrder. Başarı → siparis_acildi (barkod takip işinde / etikette alınır)."""
     if kayit.kapida_odeme_tutari and Decimal(kayit.kapida_odeme_tutari) < KAPIDA_ODEME_MIN:
@@ -206,11 +225,11 @@ def _api_ile_ac(kayit: KargoGonderi, icerik: str = "Ayakkabi", aciklama: str = "
         return False
     istek = _istek_kur(kayit, icerik, aciklama)
     # İlçe çözülemediyse MNG reddeder (20311, metinsiz); API'ye 5 kez gitmek yerine açık mesajla kalıcı hata.
-    if not (istek.alici.ilce or "").strip():
-        kayit.hata = (f"İlçe bulunamadı (il: {istek.alici.il or '?'}; adres: {(kayit.alici_adres or '')[:80]}). "
-                      "Kargo Gönderileri'nden ilçeyi yazıp Yeniden Dene.")
+    ilce_hatasi = _ilce_hatasi(istek.alici, kayit)
+    if ilce_hatasi:
+        kayit.hata = ilce_hatasi
         kayit.durum = DURUM_HATA
-        logger.warning("[MNG] sipariş açılmadı %s: ilçe yok", kayit.referans)
+        logger.warning("[MNG] sipariş açılmadı %s: %s", kayit.referans, ilce_hatasi)
         return False
     kayit.deneme = (kayit.deneme or 0) + 1
     try:

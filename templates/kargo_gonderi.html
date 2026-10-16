@@ -117,7 +117,9 @@
             {% if k.durum in ('bekliyor', 'hata') %}
               <form method="post" action="{{ url_for('kargo_gonderi.yeniden_dene', gonderi_id=k.id) }}" class="d-inline-flex gap-1 align-items-center">
                 <input type="text" name="il" placeholder="İl" value="{{ k.il or '' }}" class="form-control form-control-sm" style="width:7rem">
-                <input type="text" name="ilce" placeholder="İlçe" value="{{ k.ilce or '' }}" class="form-control form-control-sm" style="width:7rem">
+                <input type="text" name="ilce" placeholder="İlçe" value="{{ k.ilce or '' }}" class="form-control form-control-sm" style="width:7rem"
+                       {% if ilceler and k.il in ilceler %}list="ilce-{{ loop.index }}" title="MNG ilçe listesinden seçin"{% endif %}>
+                {% if ilceler and k.il in ilceler %}<datalist id="ilce-{{ loop.index }}">{% for ad in ilceler[k.il] %}<option value="{{ ad }}">{% endfor %}</datalist>{% endif %}
                 <button class="btn btn-sm btn-primary" type="submit" title="MNG'de yeniden aç"><i class="fas fa-redo"></i></button>
               </form>
             {% elif k.durum not in ('teslim', 'iptal') %}
