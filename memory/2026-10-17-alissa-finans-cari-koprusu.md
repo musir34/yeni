@@ -9,7 +9,7 @@
 ## Ne değişti
 - `alissa/cari.py` (yeni): cariyi açar/bulur (`alissa_ayar.cari_id`; ada göre de tanır), `esitle()` haftalık
   netleri (`hesap.hafta_netleri`) cariye yazar — **hafta başına tek açık satır**; hafta neti değişince eski satır
-  iptal + tamamı yeniden (tur `alissa_hakedis` / eksi hafta `alissa_hakedis_duzeltme`). İzleme tablosu
+  iptal + tamamı yeniden (tur `alissa_hakedis` / eksi hafta `alissa_duzeltme`). İzleme tablosu
   `alissa_cari_hafta` (hafta_basi PK, tutar, hareket_id). Bu satırlar Finans'tan elle iptal edilemez
   (`finans_cari_service.ALISSA_TURLERI`, ✕ gizli).
 - Ödemeler artık `finans_cari_service.odeme_yap` ile (kasa `cari_odeme` + cari `odeme`, tek transaction);

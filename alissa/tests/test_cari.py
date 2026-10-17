@@ -109,7 +109,7 @@ class CariKoprusuTest(unittest.TestCase):
         self.satir(3, H2, '-100', tur='iade')
         c = cari.esitle(1)
         acik = self.acik_hakedisler(c)
-        self.assertEqual([(h.tur, h.tutar) for h in acik], [('alissa_hakedis_duzeltme', Decimal('250'))])
+        self.assertEqual([(h.tur, h.tutar) for h in acik], [('alissa_duzeltme', Decimal('250'))])
         self.assertEqual(c.bakiye, Decimal('-250'))
         self.assertIsNone(AlissaCariHafta.query.get(H2).hareket_id)
         self.tutarli()
@@ -185,6 +185,11 @@ class CariKoprusuTest(unittest.TestCase):
         self.tutarli()
 
     # ── ödeme hesapları sırası ──
+    def test_hareket_turu_adlari_kolona_sigar(self):
+        # finans_cari_hareket.tur String(20): Postgres keser, SQLite kesmez (canlıda 2026-10-17 yaşandı)
+        for tur in cs.HAREKET_TURLERI:
+            self.assertLessEqual(len(tur), FinansCariHareket.tur.type.length, tur)
+
     def test_odeme_hesaplari_sirasi_nakit_banka_beyazit(self):
         self.assertEqual([h.kod for h in fs.odeme_hesaplari()], ['elde', 'banka', 'beyazit'])
         self.assertIn('beyazit', fs.GIDER_HESAPLARI)

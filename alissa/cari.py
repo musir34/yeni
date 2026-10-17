@@ -124,7 +124,7 @@ def esitle(kullanici_id=None):
                 fs.cari_hareket_geri_al(acik, uid, simdi)
             h = None
             if net != 0:
-                tur = 'alissa_hakedis' if net > 0 else 'alissa_hakedis_duzeltme'
+                tur = 'alissa_hakedis' if net > 0 else 'alissa_duzeltme'
                 h = cs._cari_hareket(cari, tur, abs(net), _hafta_tarihi(bas), _aciklama(bas), uid)
             if k is None:
                 k = AlissaCariHafta(hafta_basi=bas)
