@@ -38,13 +38,14 @@ ODEME_HESAP_SIRASI = ('elde', 'banka', 'beyazit')   # ödeme formlarındaki seç
 BORC_HESAPLARI = ('kredi_karti',)   # bakiyesi eksi olması normal (kart borcu); "emin misin?" sorulmaz
 KATEGORI_TURLERI = ('gelir', 'kucuk_gider', 'ana_gider')
 ISLEM_TURLERI = ('gelir', 'kucuk_gider', 'ana_gider', 'transfer_cikis', 'transfer_giris',
-                 'cari_odeme', 'cari_tahsilat', 'kart_sahsi', 'kart_iade', 'kart_duzeltme')
+                 'cari_odeme', 'cari_tahsilat', 'kart_sahsi', 'kart_iade', 'kart_duzeltme', 'sayim_farki')
 KATEGORI_TUR_ETIKET = {'gelir': 'Gelir', 'kucuk_gider': 'Günlük Harcamalar', 'ana_gider': 'Düzenli Ödemeler'}
 ISLEM_TUR_ETIKET = {
     'gelir': 'Gelir', 'kucuk_gider': 'Günlük Harcamalar', 'ana_gider': 'Düzenli Ödemeler',
     'transfer_cikis': 'Transfer (Çıkış)', 'transfer_giris': 'Transfer (Giriş)',
     'cari_odeme': 'Cari Ödeme', 'cari_tahsilat': 'Cari Tahsilat',
     'kart_sahsi': 'Şahsi Kart Harcaması', 'kart_iade': 'Kart İadesi', 'kart_duzeltme': 'Kart Mutabakat Düzeltmesi',
+    'sayim_farki': 'Sayım Farkı',
 }
 IKI_HANE = Decimal('0.01')
 
@@ -323,6 +324,43 @@ def ana_gider_ode(kalem_id, donem: str, hesap_kodu: str, tutar: Decimal, tarih: 
     except IntegrityError:
         db.session.rollback()
         raise FinansHata('Bu kalem bu dönem için zaten ödenmiş.')
+    except Exception:
+        db.session.rollback()
+        raise
+
+
+def parse_sayilan(raw) -> Decimal:
+    """Sayımda sayılan tutar: 0 olabilir (kasa boş), eksi olamaz."""
+    s = str(raw if raw is not None else '').strip()
+    if s in ('0', '0,00', '0.00', '0,0', '0.0'):
+        return Decimal('0.00')
+    return parse_tutar(s)
+
+
+def sayim_mutabakat(hesap_kodu: str, sayilan: Decimal, tarih: datetime, aciklama: str,
+                    kullanici_id: int, commit: bool = True) -> FinansIslem:
+    """Fiziksel sayım mutabakatı (komutan emri 2026-10-17): sayılan − defter bakiyesi farkı tek
+    'sayim_farki' satırıyla yazılır, bakiye sayılana eşitlenir. Fark gelir/gider raporlarına girmez
+    (donem_ozet yalnız gelir/kucuk_gider/ana_gider/cari türlerini toplar). Kredi kartı kendi mutabakatını kullanır."""
+    if hesap_kodu not in HESAP_KODLARI or hesap_kodu in BORC_HESAPLARI:
+        raise FinansHata('Sayım mutabakatı yalnız kasa hesaplarında (Beyazıt, Elde, Banka) yapılır.')
+    aciklama = (aciklama or '').strip()
+    if not aciklama:
+        raise FinansHata('Farkın nereden geldiğini yazın (açıklama zorunlu).')
+    if sayilan < 0:
+        raise FinansHata('Sayılan tutar eksi olamaz.')
+    try:
+        hesap = hesap_getir(hesap_kodu, kilitle=True)
+        onceki = Decimal(str(hesap.bakiye or 0)).quantize(IKI_HANE)
+        fark = (sayilan - onceki).quantize(IKI_HANE)
+        if fark == 0:
+            raise FinansHata(f'Fark yok: {hesap.ad} bakiyesi zaten {sayilan:.2f} ₺.')
+        baslik = f'Sayım {"fazlası" if fark > 0 else "eksiği"} — sayılan {sayilan:.2f} ₺, defter {onceki:.2f} ₺ · '
+        islem = _hareket(hesap, 'sayim_farki', +1 if fark > 0 else -1, abs(fark), tarih, kullanici_id,
+                         aciklama=(baslik + aciklama)[:500])
+        if commit:
+            db.session.commit()
+        return islem
     except Exception:
         db.session.rollback()
         raise

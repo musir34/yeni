@@ -177,6 +177,25 @@ def islem_meta(islem_id):
     return _geri(url_for('finans.panel'))
 
 
+@finans_bp.route('/defter/<hesap_kodu>/sayim', methods=['POST'])
+@login_required
+@roles_required('admin')
+def defter_sayim(hesap_kodu):
+    """Fiziksel sayım mutabakatı: sayılan girilir, fark tek satırla yazılır, bakiye sayılana eşitlenir."""
+    try:
+        sayilan = fs.parse_sayilan(request.form.get('sayilan'))
+        islem = fs.sayim_mutabakat(hesap_kodu, sayilan, fs.parse_tarih(request.form.get('tarih')),
+                                   request.form.get('aciklama', ''), _uid())
+        fark = islem.yon * islem.tutar
+        _log("CREATE", f"Finans sayım mutabakatı — {islem.hesap.ad}: fark {fark:+.2f}₺ ({islem.aciklama})",
+             tutar=str(fark))
+        flash(f'✅ Sayım kaydedildi: {"fazla" if fark > 0 else "eksik"} {abs(fark):.2f} ₺ yazıldı; '
+              f'{islem.hesap.ad} bakiyesi {islem.yeni_bakiye:.2f} ₺ oldu.', 'success')
+    except FinansHata as e:
+        _hata_flash(e)
+    return _geri(url_for('finans.defter', hesap_kodu=hesap_kodu))
+
+
 @finans_bp.route('/islem/<int:islem_id>/duzelt', methods=['POST'])
 @login_required
 @roles_required('admin')

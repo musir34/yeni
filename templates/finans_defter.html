@@ -5,7 +5,8 @@
 
 <div class="card fn-card fn-hesap-{{ hesap.kod }}">
   <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
-    <div><div class="fn-mini">{{ hesap.ad }} — kayıt defteri</div><div class="fn-bakiye">{{ hesap.bakiye | tl_format }} ₺</div></div>
+    <div><div class="fn-mini">{{ hesap.ad }} — kayıt defteri</div><div class="fn-bakiye">{{ hesap.bakiye | tl_format }} ₺</div>
+      {% if hesap.kod != 'kredi_karti' %}<button type="button" class="btn btn-sm btn-warning mt-1" data-bs-toggle="modal" data-bs-target="#fnSayimModal"><i class="fas fa-calculator me-1"></i>Sayım / Mutabakat</button>{% endif %}</div>
     <form method="GET" class="d-flex flex-wrap gap-2 align-items-end">
       <div><label class="fn-mini">Ay</label><input type="month" name="donem" class="form-control form-control-sm" value="{{ donem }}"></div>
       <div><label class="fn-mini">Tür</label>
@@ -66,6 +67,28 @@
   </div>
   {% endif %}
 </div>
+
+{% if hesap.kod != 'kredi_karti' %}
+{# Sayım / mutabakat: fiziksel para sayılır, defterle farkı tek satırla yazılır, bakiye sayılana eşitlenir #}
+<div class="modal fade" id="fnSayimModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="POST" action="{{ url_for('finans.defter_sayim', hesap_kodu=hesap.kod) }}">
+      <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+      <div class="modal-header"><h5 class="modal-title">🧮 Sayım / Mutabakat — {{ hesap.ad }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="fn-mini mb-2">Defterdeki bakiye <b>{{ hesap.bakiye | tl_format }} ₺</b>. Elinizdeki gerçek parayı yazın; fark hesaplanır, açıklamasıyla tek satır olarak kaydedilir ve bakiye sayılan tutara eşitlenir. Fark gelir/gider raporlarına girmez.</div>
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label fn-mini">Sayılan (₺)</label><input type="text" name="sayilan" id="fnSayilan" class="form-control" inputmode="decimal" placeholder="0,00" data-bakiye="{{ '%.2f' | format(hesap.bakiye) }}" required autocomplete="off"></div>
+          <div class="col-6"><label class="form-label fn-mini">Tarih</label><input type="date" name="tarih" class="form-control" value="{{ bugun }}"></div>
+          <div class="col-12"><div class="alert alert-light border py-2 mb-0" id="fnSayimFark">Fark: sayılan tutarı yazın.</div></div>
+          <div class="col-12"><label class="form-label fn-mini">Açıklama (zorunlu) — fark nereden geldi?</label><input type="text" name="aciklama" class="form-control" placeholder="örn. Girilmeyen harcama, bozuk para sayım farkı…" required maxlength="400"></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button><button class="btn btn-warning fw-bold" id="fnSayimKaydet">Farkı Kaydet</button></div>
+    </form>
+  </div>
+</div>
+{% endif %}
 
 {# Düzenleme modalı: açıklama/kategori yerinde; tutar/hesap/tarih değişirse eski iptal + yeni kayıt #}
 <div class="modal fade" id="fnDuzenleModal" tabindex="-1">
@@ -136,5 +159,21 @@
     if (tur === 'kucuk_gider') fnDoldurGiderAdi(katSel.value, b.getAttribute('data-gider-adi'));
   });
   document.getElementById('fnMetaKategori').addEventListener('change', function () { fnDoldurGiderAdi(this.value, null); });
+  // Sayım: yazdıkça fark (sayılan − defter). Türkçe yazım: nokta binlik, virgül ondalık.
+  var sayilanEl = document.getElementById('fnSayilan');
+  if (sayilanEl) {
+    var farkEl = document.getElementById('fnSayimFark'), kaydetEl = document.getElementById('fnSayimKaydet');
+    var bakiye = parseFloat(sayilanEl.getAttribute('data-bakiye'));
+    var tl = function (n) { return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+    sayilanEl.addEventListener('input', function () {
+      var ham = this.value.trim().replace(/\./g, '').replace(',', '.');
+      var sayilan = ham === '' ? NaN : parseFloat(ham);
+      if (isNaN(sayilan)) { farkEl.className = 'alert alert-light border py-2 mb-0'; farkEl.textContent = 'Fark: sayılan tutarı yazın.'; kaydetEl.disabled = true; return; }
+      var fark = Math.round((sayilan - bakiye) * 100) / 100;
+      if (fark === 0) { farkEl.className = 'alert alert-success py-2 mb-0'; farkEl.textContent = 'Fark yok — defter ile sayım eşit, kayıt gerekmez.'; kaydetEl.disabled = true; }
+      else if (fark > 0) { farkEl.className = 'alert alert-success py-2 mb-0'; farkEl.innerHTML = '<b>Fazla var: +' + tl(fark) + ' ₺</b> — bakiye ' + tl(sayilan) + ' ₺ olacak.'; kaydetEl.disabled = false; }
+      else { farkEl.className = 'alert alert-danger py-2 mb-0'; farkEl.innerHTML = '<b>Eksik var: ' + tl(fark) + ' ₺</b> — bakiye ' + tl(sayilan) + ' ₺ olacak.'; kaydetEl.disabled = false; }
+    });
+  }
 </script>
 {% endblock %}
