@@ -470,6 +470,46 @@ def hesaba_yazilanlar(cari_id) -> dict:
     return sonuc
 
 
+GRUP_SIRASI = ('tedarikci', 'calisan', 'diger', 'musteri', 'sahsi')
+GRUP_ETIKET = {**CARI_TUR_ETIKET, 'kapali': 'Kapalı hesaplar'}
+SIRALAMALAR = {'bakiye': 'Bakiye (büyükten küçüğe)', 'ad': 'Ad (A → Z)'}
+_TR = str.maketrans('Iİ', 'ıi')
+_TR_ALFABE = 'abcçdefgğhıijklmnoöprsştuüvyzqwx'   # Türk alfabesi sırası (Ç, C'den sonra; Ş, S'den sonra …)
+
+
+def _ad_anahtari(ad: str) -> tuple:
+    s = str(ad or '').translate(_TR).casefold()
+    return tuple(_TR_ALFABE.index(ch) if ch in _TR_ALFABE else 100 + ord(ch) for ch in s)
+
+
+def cari_gruplari(cariler: list, sira: str = 'bakiye') -> list:
+    """Cari listesi türe göre gruplanır (Düzenli Ödemeler'deki hafta grupları gibi açılır-kapanır):
+    Tedarikçi → Çalışan → Diğer → Müşteri → Şahsi, kapalı hesaplar en sonda. Boş grup listelenmez.
+    sira='bakiye': tutar büyükten küçüğe (işaretten bağımsız), 'ad': Türkçe harf duyarsız A→Z."""
+    if sira not in SIRALAMALAR:
+        sira = 'bakiye'
+    kovalar: dict = {k: [] for k in GRUP_SIRASI + ('kapali',)}
+    for c in cariler:
+        kovalar['kapali' if not c.aktif else (c.tur if c.tur in kovalar else 'diger')].append(c)
+    anahtar = ((lambda c: (-abs(Decimal(str(c.bakiye or 0))), _ad_anahtari(c.ad))) if sira == 'bakiye'
+               else (lambda c: _ad_anahtari(c.ad)))
+    gruplar = []
+    for kod, liste in kovalar.items():
+        if not liste:
+            continue
+        g = {'kod': kod, 'etiket': GRUP_ETIKET.get(kod, kod), 'cariler': sorted(liste, key=anahtar),
+             'borc': Decimal('0.00'), 'borc_usd': Decimal('0.00'), 'alacak': Decimal('0.00'), 'alacak_usd': Decimal('0.00')}
+        for c in liste:
+            b = Decimal(str(c.bakiye or 0))
+            usd = (c.para_birimi or 'TRY') == 'USD'
+            if b > 0:
+                g['borc_usd' if usd else 'borc'] += b
+            elif b < 0:
+                g['alacak_usd' if usd else 'alacak'] += -b
+        gruplar.append(g)
+    return gruplar
+
+
 def cari_ozet() -> dict:
     """Aktif hesaplar: toplam borcumuz ve toplam alacağımız; TL ve USD ayrı toplanır.
     Şahsi hesapların (kasadan alınan borç) TL bakiyesi ayrı toplanır, alacağa karışmaz."""

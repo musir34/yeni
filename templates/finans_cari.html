@@ -45,13 +45,32 @@
 
   <div class="col-lg-8">
     <div class="card fn-card">
-      <div class="card-header fw-bold">📒 Cari Hesaplar</div>
+      <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span class="fw-bold">📒 Cari Hesaplar <span class="fn-mini fw-normal">({{ cariler | length }} hesap · gruplar tıklayınca açılır/kapanır)</span></span>
+        <form method="GET" class="d-flex align-items-center gap-2">
+          <label class="fn-mini" for="fnCariSira">Sırala</label>
+          <select name="sira" id="fnCariSira" class="form-select form-select-sm" onchange="this.form.submit()">
+            {% for k, v in siralamalar.items() %}<option value="{{ k }}" {{ 'selected' if k == sira }}>{{ v }}</option>{% endfor %}
+          </select>
+        </form>
+      </div>
       <div class="card-body p-0 fn-table-wrap">
         <table class="table table-sm table-hover fn-table mb-0">
           <thead><tr><th>Hesap</th><th>Tür</th><th>Telefon</th><th class="fn-num">Bakiye</th><th>Durum</th><th></th></tr></thead>
           <tbody>
-          {% for c in cariler %}
-            <tr class="{{ 'text-muted' if not c.aktif }}">
+          {% for g in gruplar %}
+            <tr class="fn-hafta table-light fn-cari-grup" role="button" tabindex="0" data-bs-toggle="collapse" data-bs-target=".fn-cg-{{ g.kod }}" aria-expanded="true" data-grup="{{ g.kod }}" title="Aç / kapat">
+              <th colspan="3"><span class="fn-ok">▶</span> {{ g.etiket }} <span class="fn-mini fw-normal">· {{ g.cariler | length }} hesap</span></th>
+              <th class="fn-num text-nowrap">
+                {% if g.borc %}<span class="fn-neg">{{ g.borc | tl_format }} ₺</span>{% endif %}
+                {% if g.borc_usd %}<span class="fn-neg"> {{ g.borc_usd | tl_format }} $</span>{% endif %}
+                {% if g.alacak %}<span class="fn-pos"> +{{ g.alacak | tl_format }} ₺</span>{% endif %}
+                {% if g.alacak_usd %}<span class="fn-pos"> +{{ g.alacak_usd | tl_format }} $</span>{% endif %}
+              </th>
+              <th colspan="2" class="fn-mini fw-normal">{% if g.kod == 'sahsi' %}kasaya borcum{% elif g.borc or g.borc_usd %}borcumuz{% elif g.alacak or g.alacak_usd %}alacağımız{% else %}sıfır{% endif %}</th>
+            </tr>
+          {% for c in g.cariler %}
+            <tr class="collapse show fn-cg-{{ g.kod }} {{ 'text-muted' if not c.aktif }}">
               <td><a href="{{ url_for('finans.cari_detay', cari_id=c.id) }}" class="fw-semibold text-decoration-none">{{ c.ad }}</a>{% if c.notlar %}<div class="fn-mini">{{ c.notlar }}</div>{% endif %}</td>
               <td>{{ tur_etiket.get(c.tur, c.tur) }}{% if c.para_birimi == 'USD' %} <span class="badge bg-info text-dark">$</span>{% endif %}</td>
               <td class="fn-mini">{{ c.telefon or '' }}</td>
@@ -64,6 +83,7 @@
                 </form>
               </td>
             </tr>
+          {% endfor %}
           {% else %}
             <tr><td colspan="6" class="text-muted p-3">Henüz cari hesap yok. Mal aldığınız yerler için soldan hesap açın.</td></tr>
           {% endfor %}
@@ -73,4 +93,25 @@
     </div>
   </div>
 </div>
+<script>
+  // Grup açık/kapalı durumu tarayıcıda hatırlanır (localStorage, sayfa yenilense de kalır)
+  document.addEventListener('DOMContentLoaded', function () {
+    var ANAHTAR = 'fnCariGrupKapali';
+    var kapali = {};
+    try { kapali = JSON.parse(localStorage.getItem(ANAHTAR) || '{}'); } catch (e) { kapali = {}; }
+    document.querySelectorAll('.fn-cari-grup').forEach(function (tr) {
+      var kod = tr.getAttribute('data-grup');
+      if (kapali[kod]) {
+        tr.setAttribute('aria-expanded', 'false');
+        document.querySelectorAll('.fn-cg-' + kod).forEach(function (r) { r.classList.remove('show'); });
+      }
+      tr.addEventListener('click', function () {
+        setTimeout(function () {
+          kapali[kod] = tr.getAttribute('aria-expanded') !== 'true';
+          try { localStorage.setItem(ANAHTAR, JSON.stringify(kapali)); } catch (e) {}
+        }, 0);
+      });
+    });
+  });
+</script>
 {% endblock %}

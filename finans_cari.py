@@ -21,7 +21,11 @@ from finans_service import FinansHata
 def cari_liste():
     from finans_calisan_service import hakedisleri_isle
     hakedisleri_isle()
-    return render_template('finans_cari.html', cariler=cs.cariler(sadece_aktif=False),
+    sira = request.args.get('sira', '')
+    sira = sira if sira in cs.SIRALAMALAR else 'bakiye'
+    cariler = cs.cariler(sadece_aktif=False)
+    return render_template('finans_cari.html', cariler=cariler, gruplar=cs.cari_gruplari(cariler, sira),
+                           sira=sira, siralamalar=cs.SIRALAMALAR,
                            ozet=cs.cari_ozet(), tur_etiket=cs.CARI_TUR_ETIKET,
                            para_etiket=cs.PARA_ETIKET, para_sembol=cs.PARA_SEMBOL,
                            tutarsizlik=cs.cari_tutarlilik_kontrol())
