@@ -39,18 +39,13 @@
   <span class="fn-mini">Toplam nakit: <b class="{{ 'text-danger' if nakit.toplam < 0 else 'text-body' }}">{{ nakit.toplam | tl_format }} ₺</b></span>
 </div>
 <div class="row g-3 mb-4">
-  {% for h in fn_hesaplar %}
-  <div class="col-6 col-xl-3">
+  {# Kredi kartı burada gösterilmez (komutan emri 2026-10-17): borç hesabıdır, nakit değil; Kredi Kartı sekmesinden izlenir #}
+  {% for h in fn_hesaplar if h.kod != 'kredi_karti' %}
+  <div class="col-6 col-xl-4">
     <a href="{{ url_for('finans.defter', hesap_kodu=h.kod) }}" class="fnp-hesap fn-hesap-{{ h.kod }}">
-      {% if h.kod == 'kredi_karti' %}
-        <div class="fnp-ad"><i class="fas fa-credit-card me-1"></i>{{ h.ad }}</div>
-        <div class="fnp-tutar {{ 'text-danger' if h.bakiye < 0 }}">{{ (h.bakiye | abs) | tl_format }} ₺</div>
-        <div class="fnp-alt">{{ 'kart borcu' if h.bakiye < 0 else 'borç yok' }} · defter ›</div>
-      {% else %}
-        <div class="fnp-ad">{{ h.ad }}</div>
-        <div class="fnp-tutar {{ 'text-danger' if h.bakiye < 0 }}">{{ h.bakiye | tl_format }} ₺</div>
-        <div class="fnp-alt">defter ›</div>
-      {% endif %}
+      <div class="fnp-ad">{{ h.ad }}</div>
+      <div class="fnp-tutar {{ 'text-danger' if h.bakiye < 0 }}">{{ h.bakiye | tl_format }} ₺</div>
+      <div class="fnp-alt">defter ›</div>
     </a>
   </div>
   {% endfor %}
