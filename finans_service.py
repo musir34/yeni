@@ -33,7 +33,8 @@ logger = logging.getLogger(__name__)
 
 HESAP_KODLARI = ('beyazit', 'elde', 'banka', 'kredi_karti')
 GELIR_HESABI = 'beyazit'
-GIDER_HESAPLARI = ('elde', 'banka', 'kredi_karti')
+GIDER_HESAPLARI = ('elde', 'banka', 'beyazit', 'kredi_karti')   # komutan emri 2026-10-17: Beyazıt'tan da doğrudan ödeme çıkar
+ODEME_HESAP_SIRASI = ('elde', 'banka', 'beyazit')   # ödeme formlarındaki seçenek sırası (üstten alta); varsayılan seçili YOK
 BORC_HESAPLARI = ('kredi_karti',)   # bakiyesi eksi olması normal (kart borcu); "emin misin?" sorulmaz
 KATEGORI_TURLERI = ('gelir', 'kucuk_gider', 'ana_gider')
 ISLEM_TURLERI = ('gelir', 'kucuk_gider', 'ana_gider', 'transfer_cikis', 'transfer_giris',
@@ -212,8 +213,13 @@ def hesaplar() -> list:
 
 def _gider_hesabi_kontrol(hesap_kodu: str) -> None:
     if hesap_kodu not in GIDER_HESAPLARI:
-        raise FinansHata('Beyazıt (Ana Bakiye) hesabından doğrudan gider çıkılamaz; '
-                         'önce Elde veya Banka hesabına transfer yapın.')
+        raise FinansHata('Paranın çıkacağı hesabı seçin (Nakit, Banka veya Beyazıt).')
+
+
+def odeme_hesaplari() -> list:
+    """Ödeme formlarında sunulan hesaplar, ODEME_HESAP_SIRASI sırasıyla (kredi kartı ayrı akış)."""
+    sira = {kod: i for i, kod in enumerate(ODEME_HESAP_SIRASI)}
+    return sorted((h for h in hesaplar() if h.kod in sira), key=lambda h: sira[h.kod])
 
 
 # ============================== #

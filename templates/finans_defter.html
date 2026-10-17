@@ -89,7 +89,8 @@
           <div class="row g-2">
             <div class="col-4"><input type="text" name="tutar" id="fnDuzeltTutar" class="form-control form-control-sm" inputmode="decimal" placeholder="Tutar"></div>
             <div class="col-4"><select name="hesap" id="fnDuzeltHesap" class="form-select form-select-sm">
-              {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}
+              <option value="">Hesap değişmesin</option>
+              {% for h in fn_odeme_hesaplari %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}
             </select></div>
             <div class="col-4"><input type="datetime-local" name="tarih" id="fnDuzeltTarih" class="form-control form-control-sm"></div>
           </div>

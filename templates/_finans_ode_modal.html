@@ -12,9 +12,9 @@
         <div class="mb-2">
           <label class="form-label fn-mini">Hangi hesaptan?</label>
           <div>
-            {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}
-            <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" name="hesap" id="fnOdeHesap_{{ h.kod }}" value="{{ h.kod }}">
+            {% for h in fn_odeme_hesaplari %}
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="hesap" id="fnOdeHesap_{{ h.kod }}" value="{{ h.kod }}" required>
               <label class="form-check-label" for="fnOdeHesap_{{ h.kod }}">{{ h.ad }} <span class="fn-mini">({{ h.bakiye | tl_format }} ₺)</span></label>
             </div>
             {% endfor %}
@@ -47,7 +47,9 @@
       document.getElementById('fnOdeDonem').value = b.getAttribute('data-donem');
       document.getElementById('fnOdeDonemEtiket').textContent = b.getAttribute('data-donem-etiket');
       document.getElementById('fnOdeTutar').value = (b.getAttribute('data-tutar') || '').replace('.', ',');
-      var r = document.getElementById('fnOdeHesap_' + (b.getAttribute('data-hesap') || 'elde'));
+      // Hesap otomatik seçilmez; yalnız planın varsayılan hesabı varsa işaretlenir (önceki açılıştan kalan seçim temizlenir).
+      m.querySelectorAll('input[name="hesap"]').forEach(function (x) { x.checked = false; });
+      var r = document.getElementById('fnOdeHesap_' + (b.getAttribute('data-hesap') || ''));
       if (r) r.checked = true;
     });
   });

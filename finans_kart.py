@@ -32,6 +32,7 @@ from time_utils import ist_to_utc, to_ist
 logger = logging.getLogger(__name__)
 
 KART_HESABI = 'kredi_karti'
+VARSAYILAN_KATEGORI = 'Diğer / Bilinmeyen'   # kategorisiz işletme gideri buraya düşer (komutan emri 2026-10-17)
 HAFIZA_PLATFORM = 'finans_kart'
 ESLESME_GUN = 3          # ekstre tarihi ile kayıt tarihi arasındaki tolerans (gün)
 EN_COK_SATIR = 400
@@ -273,6 +274,21 @@ def _mukerrer_mi(kart_id: int, tarih_utc: datetime, tutar: Decimal, yon: int, ac
     ).first() is not None
 
 
+def _varsayilan_kategori_id(kullanici_id: int) -> int:
+    """Kategorisiz işletme gideri için "Diğer / Bilinmeyen" günlük harcama kategorisi; yoksa açar,
+    pasifse açar. COMMIT ETMEZ (ekstre kaydıyla aynı transaction)."""
+    from models import FinansKategori
+    kat = next((k for k in FinansKategori.query.filter_by(tur='kucuk_gider').all()
+                if fs._ad_esit(k.ad, VARSAYILAN_KATEGORI)), None)
+    if kat is None:
+        kat = FinansKategori(tur='kucuk_gider', ad=VARSAYILAN_KATEGORI, olusturan_kullanici_id=kullanici_id)
+        db.session.add(kat)
+        db.session.flush()
+    elif not kat.aktif:
+        kat.aktif = True
+    return kat.id
+
+
 def satirlari_kaydet(satirlar: list[dict], kullanici_id: int) -> dict:
     """Seçili satırları kart hesabına yazar. COMMIT ETMEZ; hata → FinansHata (çağıran rollback eder)."""
     kart = fs.hesap_getir(KART_HESABI, kilitle=True)
@@ -290,7 +306,7 @@ def satirlari_kaydet(satirlar: list[dict], kullanici_id: int) -> dict:
             continue
         if tur == TUR_GIDER:
             if not s['kategori_id']:
-                raise FinansHata(f"{s['kaynak']} ({s['aciklama'][:30]}): işletme gideri için kategori seçin.")
+                s['kategori_id'] = _varsayilan_kategori_id(kullanici_id)   # hata değil: Diğer / Bilinmeyen
             fs.kucuk_gider_ekle(KART_HESABI, s['kategori_id'], None, s['aciklama'], tutar, tarih, kullanici_id, commit=False)
         elif tur == TUR_SAHSI:
             cari = _sahsi_cari_getir(s['cari_id'], s['kaynak']) if s.get('cari_id') else None

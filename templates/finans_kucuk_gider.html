@@ -28,9 +28,9 @@
           </div>
           <fieldset class="mb-3">
             <legend class="form-label fs-6">Nereden ödedin?</legend>
-            {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}
-            <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" name="hesap" id="fnKgHesap_{{ h.kod }}" value="{{ h.kod }}" {{ 'checked' if h.kod == 'elde' }} required>
+            {% for h in fn_odeme_hesaplari %}
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="hesap" id="fnKgHesap_{{ h.kod }}" value="{{ h.kod }}" required>
               <label class="form-check-label" for="fnKgHesap_{{ h.kod }}">{{ h.ad }} <span class="fn-mini">({{ h.bakiye | tl_format }} ₺)</span></label>
             </div>
             {% endfor %}
@@ -77,7 +77,7 @@
           <input type="hidden" name="donem" value="{{ donem }}">
           <select name="hesap" class="form-select form-select-sm" onchange="this.form.submit()">
             <option value="">Tüm hesaplar</option>
-            {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}<option value="{{ h.kod }}" {{ 'selected' if h.kod == hesap_f }}>{{ h.ad }}</option>{% endfor %}
+            {% for h in fn_odeme_hesaplari %}<option value="{{ h.kod }}" {{ 'selected' if h.kod == hesap_f }}>{{ h.ad }}</option>{% endfor %}
           </select>
           <select name="kategori_id" class="form-select form-select-sm" onchange="this.form.submit()">
             <option value="">Tüm kategoriler</option>

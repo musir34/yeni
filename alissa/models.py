@@ -2,6 +2,10 @@
 """Alissa hesabı tabloları. Hepsi yeni (alissa_*); panelin mevcut tablolarına dokunmaz.
 
 Tarih kuralı: bu tablolardaki tüm tarih-saatler İSTANBUL duvar saatidir (naive).
+İstisna: AlissaCariHafta.guncellendi finans tablolarıyla uyumlu olsun diye UTC.
+
+AlissaOdeme (2026-10-17 sonrası): ödemeler artık Finans cari defterine yazılır (alissa/cari.py);
+tablo yalnız bağlantı öncesi geçmiş kayıtlar için durur, yeni satır eklenmez.
 """
 from datetime import datetime
 
@@ -88,6 +92,22 @@ class AlissaOdeme(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 
+class AlissaCariHafta(db.Model):
+    """Finans cari köprüsü: hangi hafta, hangi net tutarla, hangi cari satırıyla yazıldı (alissa/cari.py).
+
+    Her hafta için en fazla bir açık cari satırı vardır; haftanın neti değişince eski satır iptal
+    edilir, yenisi yazılır ve bu kayıt güncellenir. tutar = o an yazılan haftalık net (işaretli).
+    """
+    __tablename__ = 'alissa_cari_hafta'
+
+    hafta_basi = db.Column(db.Date, primary_key=True)
+    tutar = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    hareket_id = db.Column(db.Integer, db.ForeignKey('finans_cari_hareket.id'))
+    guncellendi = db.Column(db.DateTime, default=datetime.utcnow)       # finans tablolarıyla aynı: naive UTC
+
+    hareket = db.relationship('FinansCariHareket')
+
+
 class AlissaAyar(db.Model):
     """Anahtar-değer: tutar ayarları + senkron durumu."""
     __tablename__ = 'alissa_ayar'
@@ -96,4 +116,4 @@ class AlissaAyar(db.Model):
     deger = db.Column(db.Text)
 
 
-TABLOLAR = (AlissaHareket, AlissaKargoKalem, AlissaSiparis, AlissaOdeme, AlissaAyar)
+TABLOLAR = (AlissaHareket, AlissaKargoKalem, AlissaSiparis, AlissaOdeme, AlissaAyar, AlissaCariHafta)

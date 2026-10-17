@@ -19,7 +19,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy.exc import IntegrityError
 
 from models import db, Product
-from . import ayar
+from . import ayar, cari
 from .models import (AlissaAyar, AlissaHareket, AlissaKargoKalem, AlissaSiparis,
                      FINANS_TURLERI, KARGO_GONDERI, KARGO_IADE)
 from .trendyol import Istemci, KARGO_TIPLERI, utc_ms_ist, duvar_ms_ist
@@ -408,6 +408,7 @@ def _calistir(app):
         hata = ''
         try:
             senkronla(nabiz=_nabiz)
+            cari.esitle()          # haftalık netler Finans carisine (oturum yok: carinin açan kullanıcısı)
         except Exception as e:
             db.session.rollback()
             logger.exception('Alissa senkron hatası')

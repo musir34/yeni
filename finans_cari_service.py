@@ -40,12 +40,16 @@ CARI_TUR_ETIKET = {'tedarikci': 'Tedarikçi', 'musteri': 'Müşteri', 'diger': '
                   'sahsi': 'Şahsi (kasadan borç)'}
 HAREKET_TURLERI = {'alim': +1, 'odeme': -1, 'satis': -1, 'tahsilat': +1,
                   'hakedis': +1, 'hakedis_azaltma': -1, 'borc_alma': -1, 'borc_odeme': +1,
-                  'calisan_borc': +1, 'calisan_borc_odeme': -1, 'mahsup': +1, 'mesai': +1}
+                  'calisan_borc': +1, 'calisan_borc_odeme': -1, 'mahsup': +1, 'mesai': +1,
+                  'alissa_hakedis': +1, 'alissa_hakedis_duzeltme': -1}
 HAREKET_ETIKET = {'alim': 'Mal Girişi', 'odeme': 'Ödeme', 'satis': 'Satış', 'tahsilat': 'Tahsilat',
                  'hakedis': 'Hak ediş', 'hakedis_azaltma': 'Hak ediş düzeltmesi',
                  'borc_alma': 'Kasadan borç aldım', 'borc_odeme': 'Borç geri ödemesi',
                  'calisan_borc': 'Cebinden verdi', 'calisan_borc_odeme': 'Geri ödeme',
-                 'mahsup': 'Maaş hesaba yazıldı', 'mesai': 'Mesai'}
+                 'mahsup': 'Maaş hesaba yazıldı', 'mesai': 'Mesai',
+                 'alissa_hakedis': 'Alissa hak edişi', 'alissa_hakedis_duzeltme': 'Alissa hak ediş düzeltmesi'}
+# Alissa haftalık hak edişi alissa/cari.py tarafından defterden hesaplanıp yazılır; elle iptal edilmez.
+ALISSA_TURLERI = ('alissa_hakedis', 'alissa_hakedis_duzeltme')
 SAHSI_BORC_TURLERI = ('borc_alma', 'borc_odeme', 'mahsup')
 CALISAN_BORC_TURLERI = ('calisan_borc', 'calisan_borc_odeme')
 PARA_BIRIMLERI = ('TRY', 'USD')
@@ -415,6 +419,9 @@ def hareket_iptal(hareket_id, kullanici_id: int, neden: str = None) -> FinansCar
             raise FinansHata('Hareket bulunamadı.')
         if h.iptal:
             raise FinansHata('Bu hareket zaten iptal edilmiş.')
+        if h.tur in ALISSA_TURLERI:
+            raise FinansHata('Alissa hak edişi Trendyol verisinden hesaplanır; Alissa sayfasındaki haftalık hesap '
+                             'değişince kendiliğinden düzelir, elle iptal edilemez.')
         if h.hakedis_id and not h.islem_id and h.tur in ('odeme', 'mahsup'):
             _mahsup_ciftini_iptal(h, kullanici_id)
             db.session.commit()

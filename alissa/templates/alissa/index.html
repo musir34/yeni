@@ -27,14 +27,7 @@
   </form>
 </div>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% for cat, msg in messages %}
-    <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
-      {{ msg }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-  {% endfor %}
-{% endwith %}
+{% include '_finans_flash.html' %}
 {% if durum.hata and not durum.calisiyor %}
   <div class="alert alert-danger">Son güncelleme başarısız oldu; rakamlar eski olabilir. Hata: {{ durum.hata }}</div>
 {% endif %}
@@ -58,7 +51,7 @@
     <div class="card al-card"><div class="card-body">
       <div class="text-muted">{% if ozet.bakiye >= 0 %}Ödenecek bakiye{% else %}Fazla ödenen (sonraki haftadan düşülecek){% endif %}</div>
       <div class="num {% if ozet.bakiye < 0 %}al-eksi{% endif %}">{{ ozet.bakiye | tl_format }} ₺</div>
-      <div class="small text-muted">Toplam hakediş − ödenen</div>
+      <div class="small text-muted">Toplam hakediş − ödenen{% if cari %} · Finans carisi: <a href="{{ url_for('finans.cari_detay', cari_id=cari.id) }}">{{ cari.ad }}</a> ({{ cari.bakiye | tl_format }} ₺){% endif %}</div>
     </div></div>
   </div>
 </div>
@@ -186,29 +179,40 @@
             <label class="form-label small mb-1" for="alOdemeNot">Not</label>
             <input type="text" class="form-control form-control-sm" id="alOdemeNot" name="aciklama" maxlength="255">
           </div>
-          <div class="col-12"><button type="submit" class="btn btn-sm btn-success">Ödemeyi Kaydet</button></div>
+          <div class="col-12">
+            <div class="small text-muted mb-1">Hangi hesaptan?</div>
+            {% for h in hesaplar %}
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="hesap" id="alOdemeHesap_{{ h.kod }}" value="{{ h.kod }}" required>
+              <label class="form-check-label" for="alOdemeHesap_{{ h.kod }}">{{ h.ad }} <span class="small text-muted">({{ h.bakiye | tl_format }} ₺)</span></label>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="col-12"><button type="submit" class="btn btn-sm btn-success" {% if not cari %}disabled{% endif %}>Ödemeyi Kaydet</button>
+            <span class="small text-muted ms-2">Finans kasasından düşer, "{{ cari.ad if cari else 'Muhammet Alissa' }}" carisine işlenir.</span></div>
         </form>
         <div class="al-table-wrap">
           <table class="table table-sm al-table mb-0">
-            <thead><tr><th>Tarih</th><th>Tutar</th><th>Not</th><th>Kaydeden</th><th></th></tr></thead>
+            <thead><tr><th>Tarih</th><th>Tutar</th><th>Hesap</th><th>Not</th><th>Kaydeden</th><th></th></tr></thead>
             <tbody>
               {% for o in odemeler %}
               <tr class="{% if o.iptal %}text-muted text-decoration-line-through{% endif %}">
-                <td>{{ o.tarih.strftime('%d.%m.%Y') }}</td>
+                <td>{{ o.tarih | ist('%d.%m.%Y') }}</td>
                 <td>{{ o.tutar | tl_format }}</td>
+                <td>{{ o.islem.hesap.ad if o.islem else 'kasasız (devir)' }}</td>
                 <td>{{ o.aciklama or '' }}</td>
-                <td>{{ o.kullanici or '' }}</td>
+                <td>{{ o.kullanici.username if o.kullanici else '' }}</td>
                 <td>
                   {% if not o.iptal %}
                   <form method="POST" action="{{ url_for('alissa.odeme_iptal', odeme_id=o.id) }}"
-                        onsubmit="return confirm('Bu ödeme iptal edilsin mi?');">
+                        onsubmit="return confirm('Bu ödeme iptal edilsin mi? Kasa ve cari bakiyesi geri alınır.');">
                     <button type="submit" class="btn btn-sm btn-outline-danger">İptal</button>
                   </form>
                   {% else %}iptal{% endif %}
                 </td>
               </tr>
               {% else %}
-              <tr><td colspan="5" class="text-center text-muted">Henüz ödeme kaydı yok.</td></tr>
+              <tr><td colspan="6" class="text-center text-muted">Henüz ödeme kaydı yok.</td></tr>
               {% endfor %}
             </tbody>
           </table>

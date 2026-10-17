@@ -125,11 +125,23 @@ class KartKayitTest(unittest.TestCase):
         self.assertEqual(fk.hafiza_oku()['UBER EATS/TRENDYOL']['tur'], 'sahsi')
         self.assertEqual(fs.tutarlilik_kontrol(), [])
 
-    def test_gider_kategorisiz_hata_ve_rollback(self):
-        with self.assertRaises(fs.FinansHata):
-            fk.satirlari_kaydet([self.satir(5, 'X', '10.00', TUR_GIDER, None)], 1)
-        db.session.rollback()
-        self.assertEqual(self.bakiye('kredi_karti'), Decimal('0'))
+    def test_gider_kategorisiz_diger_bilinmeyene_yazilir(self):
+        # Komutan emri 2026-10-17: kategori seçilmeyen işletme gideri hata değil, otomatik "Diğer / Bilinmeyen"
+        fk.satirlari_kaydet([self.satir(5, 'X', '10.00', TUR_GIDER, None),
+                             self.satir(6, 'Y', '5.00', TUR_GIDER, None)], 1)
+        db.session.commit()
+        kat = FinansKategori.query.filter_by(tur='kucuk_gider', ad=fk.VARSAYILAN_KATEGORI).one()   # bir kez açılır
+        self.assertTrue(kat.aktif)
+        self.assertEqual([i.kategori_id for i in FinansIslem.query.filter_by(tur='kucuk_gider')], [kat.id, kat.id])
+        self.assertEqual(self.bakiye('kredi_karti'), Decimal('-15.00'))
+        self.assertEqual(fk.hafiza_oku()['X'], {'tur': 'gider', 'kategori_id': kat.id})
+        # Pasife alınmış "diğer / bilinmeyen" (farklı yazım) yeniden açılır, ikinci kategori açılmaz
+        kat.aktif = False; kat.ad = 'DİĞER / bilinmeyen'; db.session.commit()
+        fk.satirlari_kaydet([self.satir(7, 'Z', '1.00', TUR_GIDER, None)], 1)
+        db.session.commit()
+        self.assertEqual(FinansKategori.query.filter_by(tur='kucuk_gider').count(), 2)   # Reklam + Diğer
+        self.assertTrue(FinansKategori.query.get(kat.id).aktif)
+        self.assertEqual(fs.tutarlilik_kontrol(), [])
 
     def test_ayni_ekstre_ikinci_kez_yazilmaz(self):
         satirlar = [self.satir(5, 'FACEBK *X FACEBOOK.COM IE', '2124.28', TUR_GIDER, self.kat)]

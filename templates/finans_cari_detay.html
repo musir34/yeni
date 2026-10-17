@@ -79,7 +79,7 @@
           <td class="fn-num {{ 'fn-neg' if cari.tur == 'sahsi' else 'fn-pos' }}">{% if h.yon < 0 %}{{ h.tutar | tl_format }}{% endif %}</td>
           <td class="fn-num">{{ h.yeni_bakiye | tl_format }}</td>
           <td class="fn-actions text-end">
-            {% if not h.iptal and (not h.hakedis_id or h.islem_id or h.tur == 'mesai') %}
+            {% if not h.iptal and h.tur not in ('alissa_hakedis', 'alissa_hakedis_duzeltme') and (not h.hakedis_id or h.islem_id or h.tur == 'mesai') %}
             <form method="POST" action="{{ url_for('finans.cari_hareket_iptal', hareket_id=h.id) }}" class="d-inline fn-cari-iptal">
               <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
               <button type="submit" class="btn btn-sm btn-outline-danger" title="İptal">✕</button>
@@ -150,11 +150,11 @@
     <form class="modal-content" method="POST" action="{{ url_for('finans.cari_odeme', cari_id=cari.id) }}">
       <div class="modal-header"><h5 class="modal-title">💸 Ödeme Yap — {{ cari.ad }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
-        <div class="fn-mini mb-2">Para Elde veya Banka hesabından düşer, bu hesabın borcu azalır.{% if cari.para_birimi == 'USD' %} Dolar hesabı: tutarı dolar girin, kasadan tutar × kur kadar TL düşer.{% endif %}</div>
+        <div class="fn-mini mb-2">Para seçtiğiniz hesaptan düşer, bu hesabın borcu azalır.{% if cari.para_birimi == 'USD' %} Dolar hesabı: tutarı dolar girin, kasadan tutar × kur kadar TL düşer.{% endif %}</div>
         <div class="mb-2">
-          {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="hesap" id="fnOdHesap_{{ h.kod }}" value="{{ h.kod }}" {{ 'checked' if h.kod == 'elde' }} required>
+          {% for h in fn_odeme_hesaplari %}
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="hesap" id="fnOdHesap_{{ h.kod }}" value="{{ h.kod }}" required>
             <label class="form-check-label" for="fnOdHesap_{{ h.kod }}">{{ h.ad }} <span class="fn-mini">({{ h.bakiye | tl_format }} ₺)</span></label>
           </div>
           {% endfor %}
@@ -203,11 +203,11 @@
     <form class="modal-content" method="POST" action="{{ url_for('finans.cari_borc_alma', cari_id=cari.id) }}">
       <div class="modal-header"><h5 class="modal-title">🫱 Kasadan Borç Aldım — {{ cari.ad }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
-        <div class="fn-mini mb-2">Dükkânın parasından aldığınız tutar Elde veya Banka hesabından düşer, bu hesapta borcunuz olarak birikir.{% if cari.para_birimi == 'USD' %} Dolar hesabı: tutarı dolar girin, kasadan tutar × kur kadar TL düşer.{% endif %}</div>
+        <div class="fn-mini mb-2">Dükkânın parasından aldığınız tutar seçtiğiniz hesaptan düşer, bu hesapta borcunuz olarak birikir.{% if cari.para_birimi == 'USD' %} Dolar hesabı: tutarı dolar girin, kasadan tutar × kur kadar TL düşer.{% endif %}</div>
         <div class="mb-2">
-          {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="hesap" id="fnBaHesap_{{ h.kod }}" value="{{ h.kod }}" {{ 'checked' if h.kod == 'elde' }} required>
+          {% for h in fn_odeme_hesaplari %}
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="hesap" id="fnBaHesap_{{ h.kod }}" value="{{ h.kod }}" required>
             <label class="form-check-label" for="fnBaHesap_{{ h.kod }}">{{ h.ad }} <span class="fn-mini">({{ h.bakiye | tl_format }} ₺)</span></label>
           </div>
           {% endfor %}
@@ -258,9 +258,9 @@
       <div class="modal-body">
         <div class="fn-mini mb-2">Çalışanın dükkân için cebinden verdiği para seçtiğiniz hesaba girer, ona borcunuz artar. Parayla yapılan harcamayı Günlük Harcamalar'dan ayrıca girin. Maaş hak edişini etkilemez.</div>
         <div class="mb-2">
-          {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="hesap" id="fnCbHesap_{{ h.kod }}" value="{{ h.kod }}" {{ 'checked' if h.kod == 'elde' }} required>
+          {% for h in fn_odeme_hesaplari %}
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="hesap" id="fnCbHesap_{{ h.kod }}" value="{{ h.kod }}" required>
             <label class="form-check-label" for="fnCbHesap_{{ h.kod }}">{{ h.ad }} <span class="fn-mini">({{ h.bakiye | tl_format }} ₺)</span></label>
           </div>
           {% endfor %}
@@ -281,11 +281,11 @@
     <form class="modal-content" method="POST" action="{{ url_for('finans.cari_calisan_borc_odeme', cari_id=cari.id) }}">
       <div class="modal-header"><h5 class="modal-title">💸 Geri Öde — {{ cari.ad }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
-        <div class="fn-mini mb-2">Cebinden verdiği paranın geri ödemesi Elde veya Banka hesabından düşer. Geri ödenecek: <b>{{ calisan_borc_kalan | tl_format }} ₺</b>. Maaş ödemesi için yukarıdaki dönem satırını kullanın.</div>
+        <div class="fn-mini mb-2">Cebinden verdiği paranın geri ödemesi seçtiğiniz hesaptan düşer. Geri ödenecek: <b>{{ calisan_borc_kalan | tl_format }} ₺</b>. Maaş ödemesi için yukarıdaki dönem satırını kullanın.</div>
         <div class="mb-2">
-          {% for h in fn_hesaplar if h.kod in ('elde', 'banka') %}
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="hesap" id="fnCboHesap_{{ h.kod }}" value="{{ h.kod }}" {{ 'checked' if h.kod == 'elde' }} required>
+          {% for h in fn_odeme_hesaplari %}
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="hesap" id="fnCboHesap_{{ h.kod }}" value="{{ h.kod }}" required>
             <label class="form-check-label" for="fnCboHesap_{{ h.kod }}">{{ h.ad }} <span class="fn-mini">({{ h.bakiye | tl_format }} ₺)</span></label>
           </div>
           {% endfor %}

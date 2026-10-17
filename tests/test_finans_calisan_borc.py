@@ -59,14 +59,16 @@ class CalisanBorcTest(unittest.TestCase):
         self.assertEqual(cs.calisan_borc_kalan(c.id), Decimal('300'))
         self.tutarli()
 
-    def test_para_alma_bankaya_da_girebilir_beyazita_giremez(self):
+    def test_para_alma_bankaya_ve_beyazita_da_girebilir_hesapsiz_giremez(self):
         c = self.calisan()
         self.al(c, '100', hesap='banka')
         self.assertEqual(fs.hesap_getir('banka').bakiye, Decimal('100'))
-        for kotu in ('beyazit', '', None):
+        self.al(c, '50', hesap='beyazit')   # komutan emri 2026-10-17: Beyazıt da seçilebilir
+        self.assertEqual(fs.hesap_getir('beyazit').bakiye, Decimal('50'))
+        for kotu in ('', None, 'kredi_karti_yok'):
             with self.assertRaises(FinansHata):
                 self.al(c, '100', hesap=kotu)
-        self.assertEqual(c.bakiye, Decimal('100'))
+        self.assertEqual(c.bakiye, Decimal('150'))
 
     def test_geri_odeme_kasadan_duser_ve_borcu_azaltir(self):
         c = self.calisan()

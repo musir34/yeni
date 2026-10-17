@@ -35,6 +35,7 @@ def _api_csrf_kalkani():
 def _finans_ctx():
     return {
         'fn_hesaplar': fs.hesaplar(),
+        'fn_odeme_hesaplari': fs.odeme_hesaplari(),
         'fn_tur_etiket': fs.ISLEM_TUR_ETIKET,
         'fn_kat_tur_etiket': fs.KATEGORI_TUR_ETIKET,
         'fn_bugun_donem': fs.bugun_donem(),

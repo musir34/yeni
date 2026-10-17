@@ -33,7 +33,7 @@
               <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#fnOdeModal"
                       data-kalem-id="{{ k.id }}" data-kalem-ad="{{ k.ad }}" data-donem="{{ d.donem }}" data-donem-etiket="{{ d.etiket }}"
                       data-tutar="{{ '%.2f' | format(k.varsayilan_tutar) if k.varsayilan_tutar else '' }}"
-                      data-hesap="{{ k.varsayilan_hesap_kodu or 'elde' }}">Öde</button>
+                      data-hesap="{{ k.varsayilan_hesap_kodu or '' }}">Öde</button>
             {% endif %}
           </td>
         </tr>
@@ -84,7 +84,7 @@
             <div class="col-12" data-haftalik-alan hidden><label for="fnYeniIlkOdeme" class="form-label fn-mini">İlk haftalık ödeme günü</label><input type="date" name="ilk_odeme_tarihi" id="fnYeniIlkOdeme" class="form-control" value="{{ bugun }}"><div class="form-text">Bu tarihten başlayarak her 7 günde bir ödeme görünür.</div></div>
             <div class="col-6"><select name="kategori_id" class="form-select"><option value="">Kategori (isteğe bağlı)</option>{% for k in kategoriler %}<option value="{{ k.id }}">{{ k.ad }}</option>{% endfor %}</select></div>
             <div class="col-6" data-sabit-tutar><label for="fnYeniTutar" class="form-label fn-mini" data-tutar-etiket>Aylık tutar (₺)</label><input type="text" name="varsayilan_tutar" id="fnYeniTutar" class="form-control" inputmode="decimal" placeholder="0,00"></div>
-            <div class="col-6"><select name="varsayilan_hesap_kodu" class="form-select"><option value="">Varsayılan hesap</option>{% for h in fn_hesaplar if h.kod in ('elde','banka') %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}</select></div>
+            <div class="col-6"><select name="varsayilan_hesap_kodu" class="form-select"><option value="">Varsayılan hesap</option>{% for h in fn_odeme_hesaplari %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}</select></div>
             <div class="col-6" data-aylik-alan><label for="fnYeniBas" class="form-label fn-mini">Başlangıç ayı</label><input type="month" name="baslangic_donem" id="fnYeniBas" class="form-control" value="{{ donem }}" required></div>
             <div class="col-12"><input type="month" name="bitis_donem" class="form-control" title="Bitiş ayı (boş = süresiz)"><div class="fn-mini">Bitiş ayı (boş = süresiz)</div></div>
             <div class="col-12"><input type="text" name="notlar" class="form-control" placeholder="Not (isteğe bağlı)"></div>
@@ -149,7 +149,7 @@
           <div class="col-12" data-haftalik-alan hidden><label for="fnKlIlkOdeme" class="form-label fn-mini">İlk haftalık ödeme günü</label><input type="date" name="ilk_odeme_tarihi" id="fnKlIlkOdeme" class="form-control"><div class="form-text">Her 7 günde bir tekrarlanır. Aylıktan geçişte ödenmiş son aydan sonraki bir tarihi seçin.</div></div>
           <div class="col-6"><select name="kategori_id" id="fnKlKat" class="form-select"><option value="">Kategori yok</option>{% for k in kategoriler %}<option value="{{ k.id }}">{{ k.ad }}</option>{% endfor %}</select></div>
           <div class="col-6" data-sabit-tutar><label for="fnKlTutar" class="form-label fn-mini" data-tutar-etiket>Aylık tutar (₺)</label><input type="text" name="varsayilan_tutar" id="fnKlTutar" class="form-control" inputmode="decimal" placeholder="0,00"></div>
-          <div class="col-6"><select name="varsayilan_hesap_kodu" id="fnKlHesap" class="form-select"><option value="">Varsayılan hesap</option>{% for h in fn_hesaplar if h.kod in ('elde','banka') %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}</select></div>
+          <div class="col-6"><select name="varsayilan_hesap_kodu" id="fnKlHesap" class="form-select"><option value="">Varsayılan hesap</option>{% for h in fn_odeme_hesaplari %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}</select></div>
           <div class="col-6" data-aylik-alan><label for="fnKlBas" class="form-label fn-mini">Başlangıç ayı</label><input type="month" name="baslangic_donem" id="fnKlBas" class="form-control" required></div>
           <div class="col-12"><input type="month" name="bitis_donem" id="fnKlBit" class="form-control"><div class="fn-mini">Bitiş ayı (boş = süresiz)</div></div>
           <div class="col-12"><input type="text" name="notlar" id="fnKlNot" class="form-control" placeholder="Not"></div>

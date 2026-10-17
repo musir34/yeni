@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from models import db
-from .models import AlissaHareket, AlissaOdeme, AlissaSiparis, KARGO_GONDERI, KARGO_IADE
+from .models import AlissaHareket, AlissaSiparis, KARGO_GONDERI, KARGO_IADE
 
 INDIRIM_TURLERI = ('indirim', 'indirim_iptal', 'kupon', 'kupon_iptal')
 KARGO_TURLERI = KARGO_GONDERI + KARGO_IADE
@@ -58,8 +58,11 @@ def _bitir(ozet):
     return ozet
 
 
-def haftalik(bugun):
-    """Haftalar (yeniden eskiye) + genel toplam + ödeme bakiyesi."""
+def haftalik(bugun, odenen=SIFIR):
+    """Haftalar (yeniden eskiye) + genel toplam + ödeme bakiyesi.
+
+    odenen: Finans carisindeki ödemeler (alissa.cari.odenen); bakiye = toplam net − odenen.
+    """
     haftalar = defaultdict(_bos)
     toplam = _bos()
     for h in AlissaHareket.query:
@@ -86,9 +89,6 @@ def haftalik(bugun):
                     gelen=len(gelen[bas]['gelen']), iptal=len(gelen[bas]['iptal']))
         liste.append(ozet)
 
-    odenen = (db.session.query(db.func.coalesce(db.func.sum(AlissaOdeme.tutar), 0))
-              .filter(AlissaOdeme.iptal.is_(False)).scalar())
-    odenen = Decimal(str(odenen))
     toplam = _bitir(toplam)
     return {'haftalar': liste, 'toplam': toplam, 'odenen': odenen,
             'bakiye': toplam['net'] - odenen, 'yolda': len(yolda)}
@@ -132,5 +132,9 @@ def model_ozet():
     return liste
 
 
-def odemeler():
-    return AlissaOdeme.query.order_by(AlissaOdeme.tarih.desc(), AlissaOdeme.id.desc()).all()
+def hafta_netleri():
+    """{hafta_basi: net} — cariye yazılacak haftalık net hak ediş (işaretli; iadeli hafta eksi olabilir)."""
+    netler = defaultdict(lambda: SIFIR)
+    for h in AlissaHareket.query:
+        netler[hafta_basi(h.islem_tarihi)] += h.tutar
+    return dict(netler)

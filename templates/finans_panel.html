@@ -140,7 +140,7 @@
                 <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#fnOdeModal"
                         data-donem="{{ d.donem }}" data-donem-etiket="{{ d.etiket }}" data-kalem-id="{{ d.kalem.id }}" data-kalem-ad="{{ d.kalem.ad }}"
                         data-tutar="{{ '%.2f' | format(d.kalem.varsayilan_tutar) if d.kalem.varsayilan_tutar else '' }}"
-                        data-hesap="{{ d.kalem.varsayilan_hesap_kodu or 'elde' }}">Öde</button>{% endif %}
+                        data-hesap="{{ d.kalem.varsayilan_hesap_kodu or '' }}">Öde</button>{% endif %}
               </td>
             </tr>
           {% endfor %}

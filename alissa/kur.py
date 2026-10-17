@@ -46,6 +46,8 @@ def main():
             from alissa.senkron import senkronla
             print("⏳ Trendyol'dan ilk veri çekiliyor (birkaç dakika sürer)...")
             print(f"✅ Senkron tamam: {senkronla()}")
+            from alissa.cari import esitle
+            print(f"✅ Finans carisi eşitlendi: {esitle().ad}")
 
 
 if __name__ == "__main__":

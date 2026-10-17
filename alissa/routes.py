@@ -2,17 +2,19 @@
 """/alissa — Muhammet ALİSSA haftalık hesap sayfası (yalnız admin)."""
 import logging
 import re
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from flask import (Blueprint, current_app, flash, jsonify, redirect, render_template,
                    request, session, url_for)
 
+from finans import _hata_flash          # yetersiz bakiye → "Emin misiniz?" kutusu (_finans_flash.html)
+import finans_service as fs
+from finans_service import FinansHata
 from login_logout import login_required, roles_required
 from models import db
 from user_logs import log_user_action
-from . import ayar, hesap, senkron
-from .models import AlissaOdeme
+from . import ayar, cari, hesap, senkron
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +40,18 @@ def _tutar_oku(metin):
     return deger.quantize(Decimal('0.01'))
 
 
-def _kullanici():
-    return f"{session.get('first_name', '')} {session.get('last_name', '')}".strip() or str(session.get('user_id'))
+def _uid():
+    return int(session['user_id'])
+
+
+def _cari():
+    """Finans carisini haftalık netlerle eşitleyip döner; Finans tarafı kurulu değilse None (sayfa yine açılır)."""
+    try:
+        return cari.esitle(_uid())
+    except Exception as e:  # noqa: BLE001 — sayfa Finans hatasıyla kapanmasın
+        logger.exception('Alissa: Finans cari eşitleme hatası')
+        flash(f'Finans cari bağlantısı kurulamadı; ödemeler görüntülenemiyor. Hata: {e}', 'danger')
+        return None
 
 
 @alissa_bp.route('/', methods=['GET'])
@@ -51,7 +63,8 @@ def index():
         senkron.arka_planda_baslat(current_app._get_current_object())
 
     bugun = senkron.simdi_ist().date()
-    ozet = hesap.haftalik(bugun)
+    c = _cari()
+    ozet = hesap.haftalik(bugun, odenen=cari.odenen(c) if c else hesap.SIFIR)
     secili, detay = None, []
     if request.args.get('hafta'):
         try:
@@ -61,7 +74,8 @@ def index():
             flash('Geçersiz hafta.', 'warning')
     return render_template(
         'alissa/index.html', ozet=ozet, secili=secili, detay=detay, bugun=bugun,
-        modeller=hesap.model_ozet(), odemeler=hesap.odemeler(), durum=senkron.durum(),
+        modeller=hesap.model_ozet(), odemeler=cari.odemeler(c) if c else [], cari=c,
+        hesaplar=fs.odeme_hesaplari(), durum=senkron.durum(),
         tutarlar=ayar.tutarlar(), etiketler=ayar.ETIKET)
 
 
@@ -88,6 +102,7 @@ def senkron_durum():
 @login_required
 @roles_required('admin')
 def odeme_ekle():
+    """Finans ile aynı yol: seçilen kasa hesabından düşer, Alissa carisinin borcu azalır (tek transaction)."""
     tutar = _tutar_oku(request.form.get('tutar'))
     try:
         tarih = date.fromisoformat(request.form.get('tarih') or '')
@@ -97,11 +112,15 @@ def odeme_ekle():
         flash('Ödeme kaydedilmedi: tarih ve sıfırdan büyük bir tutar girin.', 'danger')
         return redirect(url_for('alissa.index'))
     aciklama = (request.form.get('aciklama') or '').strip()[:255]
-    db.session.add(AlissaOdeme(tarih=tarih, tutar=tutar, aciklama=aciklama, kullanici=_kullanici()))
-    db.session.commit()
-    log_user_action('CREATE', {'işlem_açıklaması': f'Alissa ödemesi — {tutar} TL ({tarih}) {aciklama}',
-                               'sayfa': SAYFA})
-    flash(f'{tutar} TL ödeme kaydedildi.', 'success')
+    try:
+        c = cari.cari_getir(_uid())
+        h = cari.odeme_yap(c, request.form.get('hesap', ''), tutar, fs.parse_tarih(tarih.isoformat()),
+                           aciklama, _uid())
+        log_user_action('CREATE', {'işlem_açıklaması': f'Alissa ödemesi — {tutar} TL ({tarih}) '
+                                                        f'{h.islem.hesap.ad} {aciklama}', 'sayfa': SAYFA})
+        flash(f'{tutar} TL ödeme kaydedildi; {h.islem.hesap.ad} hesabından düştü.', 'success')
+    except FinansHata as e:
+        _hata_flash(e)
     return redirect(url_for('alissa.index'))
 
 
@@ -109,16 +128,15 @@ def odeme_ekle():
 @login_required
 @roles_required('admin')
 def odeme_iptal(odeme_id):
-    odeme = db.session.get(AlissaOdeme, odeme_id)
-    if odeme is None or odeme.iptal:
-        flash('Ödeme bulunamadı veya zaten iptal.', 'warning')
-        return redirect(url_for('alissa.index'))
-    odeme.iptal = True
-    odeme.iptal_at = datetime.now()
-    db.session.commit()
-    log_user_action('DELETE', {'işlem_açıklaması': f'Alissa ödemesi iptal — {odeme.tutar} TL ({odeme.tarih})',
-                               'sayfa': SAYFA})
-    flash('Ödeme iptal edildi.', 'success')
+    """Cari + kasa hareketi birlikte geri alınır (finans_cari_service.hareket_iptal)."""
+    try:
+        c = cari.cari_getir(_uid())
+        h = cari.odeme_iptal(c, odeme_id, _uid())
+        log_user_action('DELETE', {'işlem_açıklaması': f'Alissa ödemesi iptal — {h.tutar} TL ({h.tarih:%Y-%m-%d})',
+                                   'sayfa': SAYFA})
+        flash('Ödeme iptal edildi; kasa ve cari bakiyesi geri alındı.', 'success')
+    except FinansHata as e:
+        _hata_flash(e)
     return redirect(url_for('alissa.index'))
 
 

@@ -64,7 +64,7 @@
       <div class="card-header fw-bold">Nasıl çalışır?</div>
       <div class="card-body fn-mini">
         <ul class="mb-0 ps-3">
-          <li>Ekstredeki her satır önizlenir: <b>işletme gideri</b> (kategorili, raporlara girer), <b>şahsi</b> (kart borcunu artırır, raporlara girmez), <b>ödeme</b> (Banka/Elde → Kart), <b>iade</b>, <b>nakit avans</b> (Kart → Elde).</li>
+          <li>Ekstredeki her satır önizlenir: <b>işletme gideri</b> (kategorili, raporlara girer; kategori seçilmezse "Diğer / Bilinmeyen"), <b>şahsi</b> (kart borcunu artırır, raporlara girmez), <b>ödeme</b> (Banka/Elde → Kart), <b>iade</b>, <b>nakit avans</b> (Kart → Elde).</li>
           <li>Sistemde zaten olan kayıt (aynı tutar, ±3 gün) "kayıtlı" gelir ve tiki kapalıdır; cariden kartla ödediğiniz tedarikçi böyle tanınır.</li>
           <li>Satıcı bir kez sınıflanınca sonraki aylarda kendiliğinden gelir.</li>
           <li>Taksitli alışveriş ekstredeki aylık dilimiyle yazılır; kartla taksitli alınan şeyi elle girmeyin.</li>
@@ -124,7 +124,7 @@
             <td><select name="tur_{{ s.sira }}" class="form-select form-select-sm fn-tur">
               {% for t in turler %}<option value="{{ t }}" {{ 'selected' if t == s.tur }}>{{ tur_etiket[t] }}</option>{% endfor %}</select></td>
             <td><select name="kategori_{{ s.sira }}" class="form-select form-select-sm fn-kat" {{ 'disabled' if s.tur != 'gider' }} {{ 'hidden' if s.tur == 'sahsi' }}>
-              <option value="">— kategori —</option>
+              <option value="">— kategori (boş: Diğer / Bilinmeyen) —</option>
               {% for k in kategoriler %}<option value="{{ k.id }}" {{ 'selected' if k.id == s.kategori_id }}>{{ k.ad }}</option>{% endfor %}</select>
               <select name="cari_{{ s.sira }}" class="form-select form-select-sm fn-cari" {{ 'hidden disabled' if s.tur != 'sahsi' }}>
               <option value="">— cari yok —</option>
@@ -236,7 +236,7 @@
   document.getElementById('fnEkEkle').addEventListener('click', function () {
     var tr = document.createElement('tr'); tr.className = 'fn-ek-satir';
     var turOpts = TURLER.map(function (t) { return '<option value="' + t + '"' + (t === 'gider' ? ' selected' : '') + '>' + TUR_ETIKET[t] + '</option>'; }).join('');
-    var katOpts = '<option value="">— kategori —</option>' + KATEGORILER.map(function (id, i) { return '<option value="' + id + '">' + KATEGORI_AD[i].replace(/</g, '&lt;') + '</option>'; }).join('');
+    var katOpts = '<option value="">— kategori (boş: Diğer / Bilinmeyen) —</option>' + KATEGORILER.map(function (id, i) { return '<option value="' + id + '">' + KATEGORI_AD[i].replace(/</g, '&lt;') + '</option>'; }).join('');
     var cariOpts = '<option value="">— cari yok —</option>' + CARILER.map(function (id, i) { return '<option value="' + id + '">' + CARI_AD[i].replace(/</g, '&lt;') + '</option>'; }).join('');
     tr.innerHTML = '<td><button type="button" class="btn btn-sm btn-outline-danger fn-ek-sil" title="Satırı kaldır">×</button></td>'
       + '<td><input type="date" name="ek_tarih" class="form-control form-control-sm" required></td>'

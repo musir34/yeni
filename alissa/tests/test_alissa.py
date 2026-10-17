@@ -11,7 +11,7 @@ from flask import Flask
 
 from models import db
 from alissa import hesap, senkron
-from alissa.models import TABLOLAR, AlissaHareket, AlissaOdeme
+from alissa.models import TABLOLAR, AlissaHareket
 from alissa.routes import _tutar_oku
 from alissa.trendyol import utc_ms_ist
 
@@ -143,16 +143,15 @@ class AlissaTest(unittest.TestCase):
         self.assertEqual(h['kargo'], Decimal('111.59'))
         self.assertFalse(h['tahmin'])
 
-    def test_bakiye_odemeyle_azalir_iptal_odeme_sayilmaz(self):
+    def test_bakiye_odenenle_azalir(self):
+        # Ödemeler Finans carisinden gelir (alissa.cari.odenen, test_cari.py); hesap yalnız düşer.
         self.istemci.finans = [kayit(1, 'satis', 'S1', 'B1', PZT, 1000, 200)]
         self.senkron()
         net = hesap.haftalik(date(2026, 9, 30))['toplam']['net']
-        db.session.add(AlissaOdeme(tarih=date(2026, 9, 14), tutar=Decimal('500')))
-        db.session.add(AlissaOdeme(tarih=date(2026, 9, 14), tutar=Decimal('999'), iptal=True))
-        db.session.commit()
-        ozet = hesap.haftalik(date(2026, 9, 30))
+        ozet = hesap.haftalik(date(2026, 9, 30), odenen=Decimal('500'))
         self.assertEqual(ozet['odenen'], Decimal('500'))
         self.assertEqual(ozet['bakiye'], net - 500)
+        self.assertEqual(hesap.hafta_netleri(), {HAFTA1: net})
 
     def test_siparis_satirlari_gelen_ve_iptal_sayilir(self):
         paket = lambda no, durum: {                                            # noqa: E731
