@@ -19,3 +19,6 @@
   yedek server.js.bak-20261019-kurtarma). Otomatik mod canlı dosyayı yazdırmadı → Komutan koşturur.
 - Uygulama: `node ~/tmp/iade_kopru_kurtar_20261019.js --uygula && node ~/tmp/iade_kopru_server_patch_20261019.js --uygula
   && ~/shopify-uygulamalari/dhl-kargo/start.sh && sleep 3 && curl -s localhost:3434/api/saglik` (sudo gerekmez).
+- UYGULANDI 2026-10-19 ~09:00 UTC (Komutan koşturdu): iadeler.json 71 kayıt, server.js yamalı, köprü ayakta
+  (/api/saglik ok). İlk senkron MNG'den durumları çekti: kurtarılan 19 kaydın 10'u "Teslim Edildi"
+  (kaynaksız 154808457 dahil, 13/10 teslim), 9'u "İade Gönderi İşlemi Yapılmadı" (müşteri henüz vermemiş).
