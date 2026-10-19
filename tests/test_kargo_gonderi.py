@@ -545,3 +545,17 @@ def test_yeniden_dene_barkodlu_kaydi_mngde_yeniden_acmaz(ctx):
     siparis_sayisi = len(ctx.siparisler)
     assert servis._api_ile_ac(k) is True
     assert k.durum == "hazirlandi" and k.hata is None and len(ctx.siparisler) == siparis_sayisi
+
+
+def test_il_merkezi_ilcesi_mng_kodu_00_gecerli_sayilir(ctx):
+    """#1455/#1456 (19.10): MNG MERKEZ ilçesine "00" kodu verir; int("00") = 0 'çözülmedi' sanılıp
+    'listede yok' hatası veriliyordu. Doğrulama ada göre yapılır, sipariş açılır."""
+    from mng_kargo import cbs
+    cbs.bellek_ayarla({"zaman": 9e12, "iller": [{"code": "68", "name": "AKSARAY"}],
+                       "ilceler": {"68": [{"code": "00", "name": "MERKEZ"}, {"code": "1", "name": "ORTAKÖY"}]}})
+    try:
+        alici = Alici(ad_soyad="Fati A.", adres="Taspazar mah. Atatürk bulvarı", telefon="5534706163", il="AKSARAY", ilce="MERKEZ")
+        k = servis.gonderi_ac("shopify", "77050", "#1550", "SH1550", alici)
+        assert k.durum == "siparis_acildi" and ctx.siparisler[-1].alici.ilce == "MERKEZ" and ctx.siparisler[-1].alici.ilce_kodu == 0
+    finally:
+        cbs.bellek_ayarla(None)

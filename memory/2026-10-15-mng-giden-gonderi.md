@@ -124,3 +124,6 @@
   FOR UPDATE ile kilitler + durumu yeniden okur; "kesilmiş" → _kesilmis_barkodu_kurtar (takip no varsa
   hazırlandı, yoksa getorder shipmentId); _api_ile_ac barkodlu kaydı yeniden açmaz; routes.sorgula hata+takip
   nolu kaydı takibe geri alır. 95 test.
+- 2026-10-19 #1455/#1456 "İlçe 'MERKEZ' listede yok": MNG il merkezi ilçesine kod "00" veriyor, int("00")=0 →
+  _ilce_hatasi ilce_kodu'na bakıp 'çözülmedi' sanıyordu. Doğrulama artık ada göre (sadelestir eşleşmesi).
+  govde districtCode 0 + districtName MERKEZ MNG'nin beklediği biçim. Malatya "PÜTÜRGE " MNG verisinde boşluklu.

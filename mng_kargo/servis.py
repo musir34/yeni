@@ -205,13 +205,15 @@ def _ilce_hatasi(alici: Alici, kayit: KargoGonderi) -> str | None:
     if not ilce:
         return (f"İlçe bulunamadı (il: {alici.il or '?'}; adres: {(kayit.alici_adres or '')[:80]}). "
                 "Kargo Gönderileri'nden ilçeyi yazıp Yeniden Dene.")
-    if alici.il_kodu and not alici.ilce_kodu:
+    if alici.il_kodu:
+        # Ada göre bakılır, koda değil: MNG il merkezi ilçesine (MERKEZ) "00" kodu verir, int("00") = 0.
         try:
+            from .adres import sadelestir
             from .cbs import ilce_adlari
             adlar = ilce_adlari(alici.il_kodu)
         except Exception:
             adlar = []
-        if adlar:
+        if adlar and sadelestir(ilce) not in {sadelestir(a) for a in adlar}:
             return (f"İlçe '{ilce}' MNG'nin {alici.il} listesinde yok (mahalle adı olabilir). "
                     f"Geçerli ilçeler: {', '.join(adlar)}. Kargo Gönderileri'nden düzeltip Yeniden Dene.")
     return None
