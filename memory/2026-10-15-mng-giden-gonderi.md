@@ -129,3 +129,9 @@
   govde districtCode 0 + districtName MERKEZ MNG'nin beklediği biçim. Malatya "PÜTÜRGE " MNG verisinde boşluklu.
 - 2026-10-19 #1456 MNG 26048 "Recipient.Address 200 karakterden küçük veya eşit olmalıdır": govde.adres_kisalt
   (boşluk sıkıştır + 200'de kes). Kayıt 'bekliyor'da kaldığından takip işi 5 dk'da kendisi yeniden dener.
+- 2026-10-19 #1464 "varış şubesini henüz çözmedi" 1 gündür: Shopify adresi "…denizli sarayköy" yazarken
+  province Mersin + zip 33110 → il/ilçe MERSİN/YENİŞEHİR; MNG çelişkili adreste şube bulamıyor (20001 kalıcı).
+  Eklenen: SUBE_DENEME_SINIRI=6 sonrası hata + sebep; servis.yeniden_ac (il/ilçe/ADRES düzeltme; barkodsuz
+  kayıtta MNG siparişi cancelorder ile iptal edilip aynı referansla yeniden createOrder — canlıda GSTEST ile
+  doğrulandı: cancel sonrası aynı referenceId yeni adresle kabul ediliyor); Kargo Gönderileri formuna adres kutusu.
+  MNG 20311 = ilçe adı/kodu uyumsuz (örn. KADIKÖY'e districtCode 0 verince de 20311).

@@ -120,6 +120,7 @@
                 <input type="text" name="ilce" placeholder="İlçe" value="{{ k.ilce or '' }}" class="form-control form-control-sm" style="width:7rem"
                        {% if ilceler and k.il in ilceler %}list="ilce-{{ loop.index }}" title="MNG ilçe listesinden seçin"{% endif %}>
                 {% if ilceler and k.il in ilceler %}<datalist id="ilce-{{ loop.index }}">{% for ad in ilceler[k.il] %}<option value="{{ ad }}">{% endfor %}</datalist>{% endif %}
+                <input type="text" name="adres" placeholder="Adres" value="{{ k.alici_adres or '' }}" class="form-control form-control-sm" style="width:16rem" title="Adres metni (MNG en çok 200 karakter)">
                 <button class="btn btn-sm btn-primary" type="submit" title="MNG'de yeniden aç"><i class="fas fa-redo"></i></button>
               </form>
             {% elif k.durum not in ('teslim', 'iptal') %}

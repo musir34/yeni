@@ -49,6 +49,7 @@ DURUM_HATA = "hata"             # deneme sınırı doldu ya da kalıcı hata, in
 MAX_DENEME = 5
 YENIDEN_DENEME_PENCERESI = timedelta(days=3)
 SORGU_ARALIGI = timedelta(minutes=20)       # aynı gönderi bu süreden sık sorulmaz
+SUBE_DENEME_SINIRI = 6     # 'varış şubesi bulunamadı' bu kadar denemede geçmezse insan baksın (adres/il/ilçe çelişkisi)
 KAPIDA_ODEME_MIN = Decimal("20")            # MNG: "Tahsilatlı Kapıda Gönderi Tutar en az 20 TL"
 TAKIP_URL_SABLON = os.getenv("MNG_TAKIP_URL_SABLON") or "https://kargotakip.dhlecommerce.com.tr/?takipNo={shipment_id}"
 
@@ -275,7 +276,17 @@ def barkod_al(kayit: KargoGonderi, bekle: bool = False) -> bool:
         cevap = client().barkod_olustur(_istek_kur(kayit), tekrar=bekle)
     except (MngHata, ValueError) as exc:
         if isinstance(exc, MngHata) and sube_cozulmedi(exc):
-            kayit.hata = "MNG varış şubesini henüz çözmedi; barkod sonraki turda alınacak"
+            # Geçici olabilir (sipariş MNG'de yeni), ama defalarca geçmiyorsa adres ile il/ilçe çelişiyordur
+            # (#1464: adres metni "denizli sarayköy", seçilen il/ilçe MERSİN/YENİŞEHİR) → hata + yol gösterme.
+            kayit.deneme = (kayit.deneme or 0) + 1
+            if kayit.deneme >= SUBE_DENEME_SINIRI:
+                kayit.durum = DURUM_HATA
+                kayit.hata = (f"MNG {kayit.deneme} denemede varış şubesini bulamadı; adres ile il/ilçe uyuşmuyor olabilir "
+                              f"(il/ilçe: {kayit.il}/{kayit.ilce}; adres: {(kayit.alici_adres or '')[:120]}). "
+                              "İl/ilçe/adresi düzeltip Yeniden Dene (MNG'deki sipariş iptal edilip yeniden açılır).")
+                logger.warning("[MNG] %s: varış şubesi %s denemede çözülmedi → hata", kayit.referans, kayit.deneme)
+                return False
+            kayit.hata = f"MNG varış şubesini henüz çözmedi ({kayit.deneme}. deneme); barkod sonraki turda alınacak"
             return False
         if isinstance(exc, MngHata) and daha_once_kesilmis(exc):
             return _kesilmis_barkodu_kurtar(kayit, exc)
@@ -316,6 +327,30 @@ def _kesilmis_barkodu_kurtar(kayit: KargoGonderi, exc: MngHata) -> bool:
     kayit.hata = None if kayit.zpl else "MNG barkodu daha önce kesilmiş; etiket (ZPL) bu kayıtta yok"
     logger.info("[MNG] %s: barkod zaten kesilmiş, takip %s ile hazırlandı sayıldı", kayit.referans, kayit.shipment_id)
     return True
+
+
+def yeniden_ac(kayit: KargoGonderi, il: str = "", ilce: str = "", adres: str = "") -> bool:
+    """Kargo Gönderileri 'Yeniden Dene': il/ilçe/adres düzeltmesiyle MNG'de yeniden açar. Barkodsuz sipariş
+    MNG'de açık kalmışsa (varış şubesi çözülemeyen) önce iptal edilir; aynı referansla yeni adresle açılır
+    (canlıda doğrulandı: cancelorder → createOrder aynı referenceId'yi kabul eder). Sipariş MNG'de hiç
+    açılmadıysa iptal 20305 döner, yutulur."""
+    from .adres import tr_upper
+    if il:
+        kayit.il = tr_upper(il)[:40]
+    if ilce:
+        kayit.ilce = tr_upper(ilce)[:40]
+    if adres and adres.strip():
+        kayit.alici_adres = re.sub(r"\s+", " ", adres).strip()
+    if kayit.durum not in (DURUM_BEKLIYOR, DURUM_HATA):
+        return False
+    if not (kayit.shipment_id or kayit.barkod):
+        try:
+            client().iptal(kayit.referans)
+            logger.info("[MNG] %s: yeniden açma öncesi MNG siparişi iptal edildi", kayit.referans)
+        except MngHata as exc:
+            logger.info("[MNG] %s: iptal edilecek açık sipariş yok (%s)", kayit.referans, str(exc)[:120])
+    kayit.deneme = 0
+    return _api_ile_ac(kayit)
 
 
 def barkod_iste(kaynak: str, kaynak_ref: str, commit: bool = True, bekle: bool = False) -> bool:

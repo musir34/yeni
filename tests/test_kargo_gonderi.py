@@ -559,3 +559,31 @@ def test_il_merkezi_ilcesi_mng_kodu_00_gecerli_sayilir(ctx):
         assert k.durum == "siparis_acildi" and ctx.siparisler[-1].alici.ilce == "MERKEZ" and ctx.siparisler[-1].alici.ilce_kodu == 0
     finally:
         cbs.bellek_ayarla(None)
+
+
+def test_varis_subesi_defalarca_cozulmezse_hata_ve_yol_gosterme(ctx):
+    """#1464: adres 'denizli sarayköy' derken il/ilçe MERSİN/YENİŞEHİR; MNG her turda 'varış şubesi bulunamadı'.
+    Sonsuza dek 'sonraki turda' yerine sınırda hata + sebep."""
+    ctx.barkod_hatasi = SUBE_YOK
+    k = _ac_ve_barkodla("shopify", "77060", "#1560", "SH1560")
+    assert k.durum == "siparis_acildi" and "(1. deneme)" in k.hata
+    for _ in range(servis.SUBE_DENEME_SINIRI - 1):
+        servis.barkod_al(k)
+    assert k.durum == "hata" and "varış şubesini bulamadı" in k.hata and "Yeniden Dene" in k.hata
+
+
+def test_yeniden_ac_adres_duzeltir_mng_siparisini_iptal_edip_yeniden_acar(ctx):
+    ctx.barkod_hatasi = SUBE_YOK
+    k = _ac_ve_barkodla("shopify", "77061", "#1561", "SH1561")
+    k.durum = "hata"; db.session.commit()
+    acilan = len(ctx.siparisler)
+    assert servis.yeniden_ac(k, il="denizli", ilce="sarayköy", adres="Cumhuriyet  Mah. GMK Bulvarı No 242") is True
+    assert ctx.iptaller[-1] == "SH1561"                                   # MNG'deki eski (yanlış adresli) sipariş iptal
+    assert len(ctx.siparisler) == acilan + 1 and ctx.siparisler[-1].alici.adres == "Cumhuriyet Mah. GMK Bulvarı No 242"
+    assert k.il == "DENİZLİ" and k.ilce == "SARAYKÖY" and k.durum == "siparis_acildi" and k.deneme == 0 and k.hata is None
+
+
+def test_yeniden_ac_barkodlu_kaydi_iptal_etmez(ctx):
+    k = _ac_ve_barkodla("shopify", "77062", "#1562", "SH1562")
+    k.durum = "hata"; db.session.commit()
+    assert servis.yeniden_ac(k) is True and k.durum == "hazirlandi" and "SH1562" not in ctx.iptaller

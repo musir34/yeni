@@ -16,12 +16,11 @@ from login_logout import login_required, roles_required
 from models import KargoGonderi, db
 from user_logs import log_user_action
 
-from .adres import tr_upper
 from .durum import ETIKETLER, HAZIRLANDI, SIPARIS_ACILDI
 from .etiket import png_kirp, zpl_png
 from .zpl_svg import zpl_to_svg
 from .servis import (
-    DURUM_BEKLIYOR, DURUM_HATA, _api_ile_ac, barkod_al, gonderi_haritasi, kaydi_sorgula, kayit_iptal,
+    DURUM_BEKLIYOR, DURUM_HATA, barkod_al, gonderi_haritasi, kaydi_sorgula, kayit_iptal, yeniden_ac,
     otomatik_acik,
 )
 
@@ -159,17 +158,11 @@ def etiket_sayfasi(gonderi_id):
 @roles_required("admin", "manager")
 def yeniden_dene(gonderi_id):
     kayit = _kayit(gonderi_id)
-    il = (request.form.get("il") or "").strip()
-    ilce = (request.form.get("ilce") or "").strip()
-    if il:
-        kayit.il = tr_upper(il)[:40]
-    if ilce:
-        kayit.ilce = tr_upper(ilce)[:40]
     if kayit.durum not in (DURUM_BEKLIYOR, DURUM_HATA):
         flash("Yalnız bekleyen/hatalı gönderi yeniden denenir.", "warning")
         return redirect(url_for("kargo_gonderi.liste"))
-    kayit.deneme = 0
-    basarili = _api_ile_ac(kayit)
+    basarili = yeniden_ac(kayit, il=(request.form.get("il") or "").strip(), ilce=(request.form.get("ilce") or "").strip(),
+                          adres=(request.form.get("adres") or "").strip())
     db.session.commit()
     log_user_action("UPDATE", {"işlem_açıklaması": f"MNG gönderi yeniden denendi — {kayit.referans} ({'açıldı' if basarili else 'hata'})",
                                "sayfa": "Kargo Gönderileri", "referans": kayit.referans})
