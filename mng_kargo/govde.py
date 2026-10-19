@@ -129,6 +129,15 @@ def parca_listesi(referans: str, parcalar: tuple[Parca, ...]) -> list[dict]:
     ]
 
 
+ADRES_AZAMI = 200          # MNG 26048: Recipient.Address 200 karakterden uzun olamaz
+
+
+def adres_kisalt(adres: str | None) -> str:
+    """Fazla boşlukları sıkıştır, 200'ü aşarsa kes (müşteri serbest metni bazen çok uzun)."""
+    duz = re.sub(r"\s+", " ", (adres or "")).strip()
+    return duz if len(duz) <= ADRES_AZAMI else duz[:ADRES_AZAMI].rstrip()
+
+
 def alici_govdesi(alici: Alici) -> dict:
     """recipient — customerId GÖNDERİLMEZ (fullName ile birlikte verilince MNG reddediyor).
 
@@ -141,7 +150,7 @@ def alici_govdesi(alici: Alici) -> dict:
         "cityName": (alici.il or "").strip(),
         "districtCode": int(alici.ilce_kodu or 0),
         "districtName": (alici.ilce or "").strip(),
-        "address": (alici.adres or "").strip(),
+        "address": adres_kisalt(alici.adres),
         "bussinessPhoneNumber": "",
         "email": email_normalize(alici.email),
         "taxOffice": "" if alici.tc_vergi_no else "SAHIS",

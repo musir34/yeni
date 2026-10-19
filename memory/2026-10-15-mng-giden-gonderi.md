@@ -127,3 +127,5 @@
 - 2026-10-19 #1455/#1456 "İlçe 'MERKEZ' listede yok": MNG il merkezi ilçesine kod "00" veriyor, int("00")=0 →
   _ilce_hatasi ilce_kodu'na bakıp 'çözülmedi' sanıyordu. Doğrulama artık ada göre (sadelestir eşleşmesi).
   govde districtCode 0 + districtName MERKEZ MNG'nin beklediği biçim. Malatya "PÜTÜRGE " MNG verisinde boşluklu.
+- 2026-10-19 #1456 MNG 26048 "Recipient.Address 200 karakterden küçük veya eşit olmalıdır": govde.adres_kisalt
+  (boşluk sıkıştır + 200'de kes). Kayıt 'bekliyor'da kaldığından takip işi 5 dk'da kendisi yeniden dener.

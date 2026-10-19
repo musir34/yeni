@@ -170,3 +170,11 @@ def test_parca_adetle():
     assert (parca_adetle(1).desi, parca_adetle(1).kg) == (2, 1)
     assert (parca_adetle(3).desi, parca_adetle(3).kg) == (6, 3)
     assert parca_adetle(0).desi == 2
+
+
+def test_alici_adresi_200_karakterde_kesilir():
+    """#1456 (19.10): MNG 26048 'Recipient.Address 200 karakterden küçük veya eşit olmalıdır'."""
+    from mng_kargo.govde import adres_kisalt
+    uzun = "Taspazar mahallesi,  Atatürk bulvarı, 40mt yol üzeri, " * 6
+    assert len(adres_kisalt(uzun)) <= 200 and "  " not in adres_kisalt(uzun)
+    assert adres_kisalt("  Moda  Cad. 3 ") == "Moda Cad. 3"
