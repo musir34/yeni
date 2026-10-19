@@ -71,6 +71,12 @@ SAYFALAR: tuple[Sayfa, ...] = (
           ebeveynler=("degisim", "yeni_siparis", "siparis_hazirla", "siparis_listesi"), menude=False),
     Sayfa("arsiv", "Arşiv", "Siparişler", blueprints=("archive",)),
     Sayfa("siparis_takip", "Sipariş Takip", "Siparişler", blueprints=("siparis_zaman",), roller=YONETIM),
+    # Otomatik gönderim izi: sipariş hazırla / üretim ekranı kargo kodunu gösterirken Sipariş Takip'e
+    # "Etiket / Kargo kodu" adımını yazar. Depo bilgisayarı worker rolünde; sayfanın kendisi YONETIM kalır,
+    # yalnız bu eylem ebeveynlerine (sipariş hazırla, üretim) girebilen herkese açıktır.
+    Sayfa("siparis_takip_oto_gonderim", "Sipariş Takip — Otomatik Gönderim İzi", "Siparişler", roller=YONETIM,
+          endpoints=("siparis_zaman.kargo_kodu_verildi",),
+          ebeveynler=("siparis_hazirla", "uretim"), menude=False),
     Sayfa("siparis_iz", "Sipariş İz Sürme", "Siparişler", blueprints=("order_audit",), roller=YONETIM),
     # ── Ürünler & Stok ──
     Sayfa("urun_yukleme", "Ürün Yükleme (AI)", "Ürünler & Stok", blueprints=("urun_yukleme",), roller=SADECE_ADMIN),

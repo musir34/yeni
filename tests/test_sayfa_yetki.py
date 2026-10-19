@@ -121,3 +121,16 @@ def test_finans_grubu_menu_rotalari_tanimli():
         if s.grup == "Finans" and s.menude:
             assert s.menu_endpoint, s.kod
             assert s.menu_etiketi
+
+
+def test_otomatik_gonderim_izi_worker_icin_acik_sayfa_kapali():
+    # Sipariş hazırla / üretim ekranı otomatik gönderimde bu rotaya POST atar; depo bilgisayarı worker.
+    # Sayfanın kendisi (Sipariş Takip) yönetimde kalır, yalnız iz bırakan eylem ebeveynlerini izler.
+    assert sayfa_bul("siparis_zaman.kargo_kodu_verildi", "/siparis-zaman/kargo-kodu-verildi").kod == "siparis_takip_oto_gonderim"
+    assert sayfa_bul("siparis_zaman.page", "/siparis-zaman").kod == "siparis_takip"
+    assert erisebilir("siparis_takip_oto_gonderim", "worker")
+    assert not erisebilir("siparis_takip", "worker")
+    assert erisebilir("siparis_takip_oto_gonderim", "worker", {"siparis_hazirla": False})      # üretim hâlâ açık
+    assert not erisebilir("siparis_takip_oto_gonderim", "worker", {"siparis_hazirla": False, "uretim": False})
+    gorunen = {s.kod for _, sayfalar in gruplu_sayfalar() for s in sayfalar}
+    assert "siparis_takip_oto_gonderim" not in gorunen

@@ -61,3 +61,20 @@ render (normal sipariş 11680029013, üretim siparişi 11678528052, bulunamayan)
   GraphQL ile (`SHOPIFY_SORGU`, run_graphql); API hatasında panel izleri yine gösterilir.
 - Site siparişinde "Panele düştü" adımı gizlenir (canlıdan okunur, düşme anı yok). user_log eşlemesine
   "→ Hazirlaniyor" ve "karşılandı"(=kargoda) eklendi. 14 test geçiyor; 1428 canlıda doğrulandı (6 kayıt, iki biçim birleşti).
+
+## Ek — 2026-10-19: otomatik gönderimde Etiket adımı yine boştu + kalemler model/renk/beden + görsel (komutan emri)
+- **Kök neden (Etiket boş):** 2026-10-09'da gelen sayfa yetkisi kataloğu (`sayfa_yetki.py`) `siparis_zaman`
+  blueprint'ini bütünüyle YONETIM'e kapattı; sipariş hazırla / üretim ekranının otomatik gönderimde attığı
+  `POST /siparis-zaman/kargo-kodu-verildi` depo (worker) hesabında 403 alıyor, JS `.catch` sessizce yutuyordu →
+  12 Ekim'den beri worker'ın otomatik gönderimle çıkardığı siparişlerde "Etiket / Kargo kodu" yok (geri kazanılamaz).
+- **Çözüm:** kataloğa `siparis_takip_oto_gonderim` eylem girişi (endpoint `siparis_zaman.kargo_kodu_verildi`,
+  ebeveynler `siparis_hazirla` + `uretim`, menude=False) — kargo_gonderi_etiket deseni; sayfa YONETIM'de kalır.
+- **Kalemler:** ürün adı kaldırıldı; model kodu · renk · beden numara · adet + 64px görsel (tıklayınca büyük).
+  Kalem ayrıştırma ve barkod→(model, görsel) çözümü Soru-Cevap'taki `trendyol_qna.siparis_musteri`
+  `_satir_kalemleri` / `_urun_bilgileri` ile ortak (model kodu products.product_main_id'den; sipariş satırındaki
+  product_main_id contentId'dir, kullanılmaz). Çok kalemli sipariş details JSON'undan açılır; aynı paket iki
+  tabloda (arşiv kopyası) bir kez listelenir.
+- **Shopify:** GraphQL'e `image { url }` + `variant.selectedOptions` eklendi; renk/beden seçenek adından
+  (renk/color ↔ beden/size/numara), model kodu barkodla panelden (yoksa SKU), görsel panelden yoksa Shopify'dan.
+- Testler: tests/test_siparis_zaman.py (+2) ve tests/test_sayfa_yetki.py (+1), 25 geçiyor (sandbox sarmalayıcıyla).
+  Şema değişikliği yok; deploy: git pull + restart.

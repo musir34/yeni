@@ -168,3 +168,48 @@ def test_shopify_user_log_metinleri_eslenir():
 def test_ozet_gizle_panel_adimi():
     ozet = {a["anahtar"] for a in ozet_adimlar([Olay(T0, "siparis", "x")], gizle={"panel"})}
     assert "panel" not in ozet and "siparis" in ozet
+
+
+def test_kalemler_model_renk_beden_gorsel(monkeypatch):
+    """Ürün adı yerine model kodu · renk · beden + görsel; çok kalemli sipariş details JSON'undan açılır,
+    aynı paket iki tabloda (arşiv kopyası) bir kez listelenir."""
+    import json
+    from types import SimpleNamespace
+
+    import siparis_zaman as sz
+
+    monkeypatch.setattr(sz, "urun_bilgileri", lambda barkodlar: {
+        "8690000000011": ("0121", "https://cdn/0121.jpg"),
+        "8690000000028": ("0088", ""),
+    })
+    detay = json.dumps([
+        {"barcode": "8690000000011", "color": "Kırmızı", "size": "37", "productName": "Güllü Kırmızı Sandalet", "quantity": 1},
+        {"barcode": "8690000000028", "color": "Siyah", "size": "38", "productName": "Güllü Siyah Bot", "quantity": 2},
+    ])
+    satir = SimpleNamespace(order_number="1168", package_number="P1", details=detay, cargo_provider_name="DHL",
+                            customer_name="A", customer_surname="B", agreed_delivery_date=None, cargo_tracking_number="")
+    arsiv_kopya = SimpleNamespace(order_number="1168", package_number="P1", details=detay, cargo_provider_name="DHL")
+    ozet = sz._siparis_ozeti([(satir, "Teslim Edildi"), (arsiv_kopya, "Arşiv")])
+    assert [k["model"] for k in ozet["kalemler"]] == ["0121", "0088"]
+    assert ozet["kalemler"][0]["renk"] == "Kırmızı" and ozet["kalemler"][0]["beden"] == "37"
+    assert ozet["kalemler"][0]["gorsel"] == "https://cdn/0121.jpg" and ozet["kalemler"][1]["gorsel"] == ""
+    assert ozet["kalemler"][1]["adet"] == 2
+    assert ozet["kalemler"][0]["tablo"] == "Teslim Edildi"
+
+
+def test_shopify_kalemi_varyant_secenekleri_ve_gorsel(monkeypatch):
+    import siparis_zaman as sz
+    from siparis_zaman import shopify_kalemi
+
+    node = {"title": "Güllü Bej Topuklu", "sku": "0150-39 Bej", "quantity": 1,
+            "image": {"url": "https://cdn.shopify.com/x.jpg"},
+            "variant": {"barcode": "8690000000035",
+                        "selectedOptions": [{"name": "Beden", "value": "39"}, {"name": "Renk", "value": "Bej"}]}}
+    k = shopify_kalemi(node)
+    assert (k["renk"], k["beden"], k["barkod"], k["gorsel"]) == ("Bej", "39", "8690000000035", "https://cdn.shopify.com/x.jpg")
+    # Panelde ürün yoksa model SKU olarak kalır, görsel Shopify'dan; varsa panel görseli/model kodu öne geçer
+    monkeypatch.setattr(sz, "urun_bilgileri", lambda b: {})
+    assert sz._kalemleri_zenginlestir([dict(k)])[0]["model"] == "0150-39 Bej"
+    monkeypatch.setattr(sz, "urun_bilgileri", lambda b: {"8690000000035": ("0150", "/static/images/8690000000035.jpg")})
+    z = sz._kalemleri_zenginlestir([dict(k)])[0]
+    assert z["model"] == "0150" and z["gorsel"] == "/static/images/8690000000035.jpg"

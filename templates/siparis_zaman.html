@@ -30,6 +30,14 @@
   .sz-ev.stok .sz-title, .sz-ev.raf .sz-title, .sz-ev.diger .sz-title { font-weight:400; color:#6c757d; }
   .sz-kim { font-size:.75rem; background:#e7f1ff; color:#0d6efd; border-radius:6px; padding:1px 6px; }
 
+  /* Sipariş kalemleri: görsel + model kodu · renk · beden */
+  .sz-kalemler { display:flex; flex-direction:column; gap:.5rem; }
+  .sz-kalem { display:flex; align-items:center; gap:.8rem; }
+  .sz-kalem img, .sz-kalem-bos { width:64px; height:64px; border-radius:8px; object-fit:cover; border:1px solid var(--bs-border-color, #dee2e6); flex:0 0 64px; background:#fff; }
+  .sz-kalem-bos { display:flex; align-items:center; justify-content:center; color:#adb5bd; font-size:1.3rem; }
+  .sz-kalem-ayrac { color:#adb5bd; margin:0 .15rem; }
+  html.gs-dark .sz-kalem img, html.gs-dark .sz-kalem-bos { background:#2a2a2a; }
+
   .kargo-tyex { color:#f27a1a; font-weight:700; }
   .kargo-dhl  { color:#1565c0; font-weight:700; }
 
@@ -94,13 +102,23 @@
         </div>
         <div class="col-md-4"><div class="text-muted small">Son kargo tarihi</div><div class="fw-semibold">{{ s.son_teslim or '-' }}</div></div>
       </div>
-      <div class="mt-3">
+      <div class="mt-3 sz-kalemler">
         {% for k in s.kalemler %}
-        <div class="small">
-          <span class="fw-semibold">{{ k.urun }}</span>
-          {% if k.beden %}· {{ k.beden }}{% endif %}{% if k.renk %} {{ k.renk }}{% endif %}
-          {% if k.adet %}· {{ k.adet }} adet{% endif %}
-          <span class="text-muted">· {{ k.barkod }} · {{ k.tablo }}</span>
+        <div class="sz-kalem">
+          {% if k.gorsel %}
+            <a href="{{ k.gorsel }}" target="_blank" rel="noopener"><img src="{{ k.gorsel }}" alt="{{ k.model or k.urun or 'Ürün' }}" loading="lazy"></a>
+          {% else %}
+            <div class="sz-kalem-bos" title="Görsel yok"><i class="fas fa-image"></i></div>
+          {% endif %}
+          <div>
+            <div class="fw-semibold">
+              {{ k.model or '—' }}
+              {% if k.renk %}<span class="sz-kalem-ayrac">·</span> {{ k.renk }}{% endif %}
+              {% if k.beden %}<span class="sz-kalem-ayrac">·</span> {{ k.beden }} numara{% endif %}
+              {% if k.adet %}<span class="badge bg-secondary ms-2">{{ k.adet }} adet</span>{% endif %}
+            </div>
+            <div class="small text-muted">{{ k.barkod }}{% if k.tablo %} · {{ k.tablo }}{% endif %}</div>
+          </div>
         </div>
         {% endfor %}
       </div>

@@ -40,6 +40,9 @@ from models import (
     db,
 )
 from time_utils import fmt_ist, to_ist
+# Kalem ayrıştırma (details JSON / virgüllü kolonlar) ve barkod → (model kodu, görsel) çözümü
+# Soru-Cevap kartıyla ortak: model kodu sipariş satırından değil products.product_main_id'den okunur.
+from trendyol_qna.siparis_musteri import _satir_kalemleri as satir_kalemleri, _urun_bilgileri as urun_bilgileri
 from user_logs import log_user_action
 
 logger = logging.getLogger(__name__)
@@ -484,21 +487,32 @@ def _ledger_olaylari(needles: list[str]) -> list[Olay]:
     ]
 
 
+def _kalemleri_zenginlestir(kalemler: list[dict]) -> list[dict]:
+    """Her kaleme products tablosundan model kodu ve görsel ekler (barkod bulunamazsa boş kalır)."""
+    urunler = urun_bilgileri({k["barkod"] for k in kalemler if k.get("barkod")})
+    for k in kalemler:
+        model, gorsel = urunler.get(k.get("barkod") or "", ("", ""))
+        k["model"] = model or k.get("model") or ""
+        k["gorsel"] = gorsel or k.get("gorsel") or ""
+    return kalemler
+
+
 def _siparis_ozeti(satirlar: list[tuple[object, str]]) -> dict | None:
     if not satirlar:
         return None
     ilk, _ = satirlar[0]
-    kalemler = [
-        {
-            "urun": getattr(r, "product_name", "") or getattr(r, "merchant_sku", "") or "",
-            "beden": getattr(r, "product_size", "") or "",
-            "renk": getattr(r, "product_color", "") or "",
-            "barkod": getattr(r, "product_barcode", "") or "",
-            "adet": getattr(r, "quantity", None),
-            "tablo": etiket,
-        }
-        for r, etiket in satirlar
-    ]
+    # Çok kalemli sipariş tek satırda details JSON'u taşır → kalemler oradan açılır;
+    # aynı paket iki tabloda (ör. arşiv kopyası) ise kalemleri bir kez listelenir.
+    kalemler: list[dict] = []
+    gorulen_paketler: set[str] = set()
+    for r, etiket in satirlar:
+        paket = getattr(r, "package_number", None) or r.order_number
+        if paket in gorulen_paketler:
+            continue
+        gorulen_paketler.add(paket)
+        for k in satir_kalemleri(r):
+            kalemler.append({**k, "tablo": etiket})
+    kalemler = _kalemleri_zenginlestir(kalemler)
     kargo = getattr(ilk, "cargo_provider_name", "") or ""
     kargo_l = kucuk(kargo)
     return {
@@ -550,8 +564,34 @@ query($id: ID!) { order(id: $id) {
   customer { firstName lastName phone }
   shippingAddress { name address1 address2 city province phone }
   fulfillments { createdAt status trackingInfo { company number } }
-  lineItems(first: 50) { edges { node { title sku quantity variant { barcode } } } }
+  lineItems(first: 50) { edges { node { title sku quantity image { url }
+    variant { barcode selectedOptions { name value } } } } }
 } }"""
+
+
+def shopify_kalemi(node: dict) -> dict:
+    """Shopify sipariş kalemi → panel kalem biçimi. Renk/beden varyant seçeneklerinden
+    (adı 'renk'/'color' ↔ 'beden'/'size' olan), görsel kalem görselinden; model kodu
+    barkodla products tablosundan tamamlanır (bulunamazsa SKU)."""
+    varyant = node.get("variant") or {}
+    renk = beden = ""
+    for secenek in varyant.get("selectedOptions") or []:
+        ad = kucuk((secenek or {}).get("name") or "")
+        deger = (secenek or {}).get("value") or ""
+        if "renk" in ad or "color" in ad or "colour" in ad:
+            renk = renk or deger
+        elif "beden" in ad or "size" in ad or "numara" in ad:
+            beden = beden or deger
+    return {
+        "urun": node.get("title") or node.get("sku") or "",
+        "model": node.get("sku") or "",
+        "renk": renk,
+        "beden": beden,
+        "barkod": varyant.get("barcode") or node.get("sku") or "",
+        "adet": node.get("quantity"),
+        "gorsel": ((node.get("image") or {}).get("url")) or "",
+        "tablo": "Site",
+    }
 
 
 def _shopify_siparis(shopify_id: str) -> dict | None:
@@ -570,16 +610,9 @@ def _shopify_ozeti(order: dict, shopify_id: str) -> dict:
     musteri = order.get("customer") or {}
     adres = order.get("shippingAddress") or {}
     ad = f"{musteri.get('firstName') or ''} {musteri.get('lastName') or ''}".strip() or (adres.get("name") or "")
-    kalemler = []
-    for e in ((order.get("lineItems") or {}).get("edges") or []):
-        n = e.get("node") or {}
-        kalemler.append({
-            "urun": n.get("title") or n.get("sku") or "",
-            "beden": "", "renk": "",
-            "barkod": ((n.get("variant") or {}).get("barcode")) or n.get("sku") or "",
-            "adet": n.get("quantity"),
-            "tablo": "Site",
-        })
+    kalemler = _kalemleri_zenginlestir([
+        shopify_kalemi(e.get("node") or {}) for e in ((order.get("lineItems") or {}).get("edges") or [])
+    ])
     takip = next((t for f in (order.get("fulfillments") or []) for t in (f.get("trackingInfo") or []) if t), {})
     kargo = takip.get("company") or ""
     kargo_l = kucuk(kargo)
