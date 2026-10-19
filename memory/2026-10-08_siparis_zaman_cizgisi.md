@@ -78,3 +78,5 @@ render (normal sipariş 11680029013, üretim siparişi 11678528052, bulunamayan)
   (renk/color ↔ beden/size/numara), model kodu barkodla panelden (yoksa SKU), görsel panelden yoksa Shopify'dan.
 - Testler: tests/test_siparis_zaman.py (+2) ve tests/test_sayfa_yetki.py (+1), 25 geçiyor (sandbox sarmalayıcıyla).
   Şema değişikliği yok; deploy: git pull + restart.
+- 2026-10-19 (devam): görsel yeni sekmede açılıyordu, komutan karartmalı pencere istedi → sipariş listesindeki
+  imageZoomModal deseni (szImageZoom): zemin/×/görsel tıklaması ve Esc kapatır; jQuery'siz.

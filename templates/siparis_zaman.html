@@ -36,6 +36,12 @@
   .sz-kalem img, .sz-kalem-bos { width:64px; height:64px; border-radius:8px; object-fit:cover; border:1px solid var(--bs-border-color, #dee2e6); flex:0 0 64px; background:#fff; }
   .sz-kalem-bos { display:flex; align-items:center; justify-content:center; color:#adb5bd; font-size:1.3rem; }
   .sz-kalem-ayrac { color:#adb5bd; margin:0 .15rem; }
+  .sz-kalem img.sz-zoom { cursor:zoom-in; }
+  /* Büyük görsel: karartılmış zemine ya da × işaretine basınca kapanır (sipariş listesi deseni) */
+  #szImageZoom { display:none; position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:1060; justify-content:center; align-items:center; cursor:pointer; }
+  #szImageZoom.show { display:flex; }
+  #szImageZoom img { max-width:90vw; max-height:90vh; object-fit:contain; border-radius:10px; }
+  #szImageZoom .sz-zoom-close { position:absolute; top:20px; right:30px; color:#fff; font-size:40px; font-weight:bold; line-height:1; background:none; border:none; cursor:pointer; }
   html.gs-dark .sz-kalem img, html.gs-dark .sz-kalem-bos { background:#2a2a2a; }
 
   .kargo-tyex { color:#f27a1a; font-weight:700; }
@@ -106,7 +112,7 @@
         {% for k in s.kalemler %}
         <div class="sz-kalem">
           {% if k.gorsel %}
-            <a href="{{ k.gorsel }}" target="_blank" rel="noopener"><img src="{{ k.gorsel }}" alt="{{ k.model or k.urun or 'Ürün' }}" loading="lazy"></a>
+            <img src="{{ k.gorsel }}" alt="{{ k.model or k.urun or 'Ürün' }}" loading="lazy" class="sz-zoom" data-image-src="{{ k.gorsel }}" title="Büyütmek için tıkla">
           {% else %}
             <div class="sz-kalem-bos" title="Görsel yok"><i class="fas fa-image"></i></div>
           {% endif %}
@@ -189,5 +195,33 @@
       {% endif %}
     </div>
   </div>
+
+  <div id="szImageZoom" aria-hidden="true">
+    <button type="button" class="sz-zoom-close" aria-label="Kapat">&times;</button>
+    <img src="" alt="Büyük görsel" />
+  </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var modal = document.getElementById('szImageZoom');
+    if (!modal) return;
+    var img = modal.querySelector('img');
+    function kapat() { modal.classList.remove('show'); img.src = ''; }
+    document.querySelectorAll('.sz-kalem img.sz-zoom').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        var src = el.dataset.imageSrc || el.src;
+        if (!src) return;
+        img.src = src;
+        modal.classList.add('show');
+      });
+    });
+    // Zemin, × ya da görselin kendisi: nereye basılırsa basılsın kapanır
+    modal.addEventListener('click', kapat);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') kapat(); });
+  })();
+</script>
 {% endblock %}
