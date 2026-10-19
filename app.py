@@ -665,6 +665,21 @@ def schedule_jobs():
         minute=10
     )
 
+    # >>> sync_details gece temizliği: her gece 03:40 (SYNC_DETAY_SAKLAMA_GUN, varsayılan 7 günden eskiler)
+    # 17 Ekim 2026: temizliksiz tablo 41 GB'a çıkıp diski doldurdu (panel + iade köprüsü düştü).
+    def _sync_detay_temizlik_job():
+        with app.app_context():
+            from stock_sync.temizlik import temizlik_isi
+            temizlik_isi()
+
+    _add_job_safe(
+        _sync_detay_temizlik_job,
+        trigger='cron',
+        id="sync_detay_temizlik",
+        hour=3,
+        minute=40
+    )
+
     # >>> Stok Sync: 3 dakikada bir (Idefix hariç)
     # Önceden 15 dk idi — overselling penceresini küçültmek için 3 dk'ya indirildi.
     from stock_sync.service import auto_sync_platforms_except_idefix
