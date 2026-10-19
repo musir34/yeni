@@ -65,12 +65,16 @@ class SahteClient:
         self.hata = None                 # MngHata → siparis_olustur fırlatır
         self.barkod_hatasi = None        # MngHata → barkod_olustur fırlatır
         self.durumlar = {}               # referans → GonderiDurumu
+        self.siparis_kaydi = None        # siparis_getir cevabı (getorder)
 
     def siparis_olustur(self, istek):
         if self.hata:
             raise self.hata
         self.siparisler.append(istek)
         return {"orderInvoiceId": "1816638341", "shipperBranchCode": "03412900", "referenceId": istek.referans}
+
+    def siparis_getir(self, referans):
+        return self.siparis_kaydi
 
     def barkod_olustur(self, istek, tekrar=True):
         if self.barkod_hatasi:
@@ -506,3 +510,38 @@ def test_ilce_mng_listesinde_yoksa_api_ye_gitmeden_gecerli_ilceler_yazilir(ctx):
         assert cbs.il_ilce_haritasi() == {"ANKARA": ["KEÇİÖREN", "ÇANKAYA"]}
     finally:
         cbs.bellek_ayarla(None)
+
+
+KESILMIS = MngHata("MNG POST /barcodecmdapi/createbarcode HTTP 500 [20001] <WERR>SİPARİŞ 16.10.26 17:05:40 Tarihinde SA-509509 NO İLE DAHA ÖNCE KESİLMİŞ ! </WERR>", kod="20001", http=500)
+
+
+def test_barkod_daha_once_kesilmisse_takip_no_varsa_hazirlandi(ctx):
+    """#1454 (16.10): etiket basımı + Shopify tetiklemesi aynı anda barkod istedi; ikinci istek 'DAHA ÖNCE
+    KESİLMİŞ' alıp kaydı hataya düşürüyordu. Takip no kayıttaysa barkod vardır → hazırlandı."""
+    k = servis.gonderi_ac("shopify", "77040", "#1540", "SH1540", _alici())
+    k.shipment_id = "588538089696"; k.barkod = "DBDV@X"; k.zpl = "^XA^XZ"; db.session.commit()   # diğer işçi almış
+    ctx.barkod_hatasi = KESILMIS
+    assert servis.barkod_al(k) is True
+    assert k.durum == "hazirlandi" and k.hata is None and k.shipment_id == "588538089696"
+
+
+def test_barkod_kesilmis_takip_no_yoksa_getorderdan_alinir(ctx):
+    k = servis.gonderi_ac("shopify", "77041", "#1541", "SH1541", _alici())
+    ctx.barkod_hatasi = KESILMIS
+    ctx.siparis_kaydi = {"order": {"shipmentId": "588538089697", "referenceId": "SH1541"}}
+    assert servis.barkod_al(k) is True
+    assert k.durum == "hazirlandi" and k.shipment_id == "588538089697" and "588538089697" in k.takip_url
+    assert k.zpl is None and "ZPL" in k.hata                                     # etiket yeniden alınamaz, bilgi notu
+    ctx.siparis_kaydi = None
+    k2 = servis.gonderi_ac("shopify", "77042", "#1542", "SH1542", _alici())
+    assert servis.barkod_al(k2) is False and k2.durum == "hata"                   # takip no hiç bulunamadı → insan baksın
+
+
+def test_yeniden_dene_barkodlu_kaydi_mngde_yeniden_acmaz(ctx):
+    """19.10: #1454'te Yeniden Dene createOrder'a gitti (MNG 'zaten var'), ardından createbarcode yine
+    'kesilmiş' verdi. Barkodlu kayıt yeniden açılmaz, doğrudan takibe döner."""
+    k = _ac_ve_barkodla("shopify", "77043", "#1543", "SH1543")
+    k.durum = "hata"; k.hata = "eski hata"; db.session.commit()
+    siparis_sayisi = len(ctx.siparisler)
+    assert servis._api_ile_ac(k) is True
+    assert k.durum == "hazirlandi" and k.hata is None and len(ctx.siparisler) == siparis_sayisi

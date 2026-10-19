@@ -67,6 +67,12 @@ def _hata_ayikla(govde) -> tuple[str, str]:
     return "", str(govde)[:300] if govde else ""
 
 
+def daha_once_kesilmis(exc: MngHata) -> bool:
+    """20001 'SİPARİŞ … Tarihinde SA-… NO İLE DAHA ÖNCE KESİLMİŞ' — barkod bu sipariş için zaten üretilmiş
+    (eşzamanlı ikinci istek ya da kaydı 'hata'dan yeniden açma). Hata değil, barkod vardır."""
+    return exc.kod == HATA_SUBE_BULUNAMADI and "DAHA ÖNCE KESİLMİŞ" in str(exc).upper()
+
+
 def sube_cozulmedi(exc: MngHata) -> bool:
     """20001 'VARIŞ ŞUBESİ BULUNAMADI ... DAHA SONRA TEKRAR DENEYİN' — geçici, tekrar denenir.
     (MNG aynı 20001 kodunu kalıcı doğrulama hatalarında da kullanıyor, metne bakılır.)"""

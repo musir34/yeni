@@ -17,7 +17,7 @@ from models import KargoGonderi, db
 from user_logs import log_user_action
 
 from .adres import tr_upper
-from .durum import ETIKETLER, SIPARIS_ACILDI
+from .durum import ETIKETLER, HAZIRLANDI, SIPARIS_ACILDI
 from .etiket import png_kirp, zpl_png
 from .zpl_svg import zpl_to_svg
 from .servis import (
@@ -102,6 +102,11 @@ def liste():
 @roles_required("admin", "manager")
 def sorgula(gonderi_id):
     kayit = _kayit(gonderi_id)
+    if kayit.durum in (DURUM_BEKLIYOR, DURUM_HATA) and kayit.shipment_id:
+        # Barkodu kesilmiş kayıt 'hata'da kalmış (eşzamanlı barkod isteği): takibe geri al, durumu sor
+        kayit.durum = HAZIRLANDI
+        kayit.hata = None
+        db.session.commit()
     if kayit.durum in (DURUM_BEKLIYOR, DURUM_HATA, "iptal"):
         flash("Bu gönderi MNG'de açık değil; önce Yeniden Dene.", "warning")
     elif kayit.durum == SIPARIS_ACILDI:

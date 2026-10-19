@@ -115,3 +115,12 @@
   yok → yine 20311. Artık il bulunup ilçe MNG listesinde yoksa API'ye gitmeden "geçerli ilçeler: …" mesajı
   (servis._ilce_hatasi, cbs.ilce_adlari il kodu zfill(2)); Kargo Gönderileri ilçe kutusu MNG ilçe listesinden
   datalist (cbs.il_ilce_haritasi). Doğru ilçe KEÇİÖREN (19 Mayıs Mah. ve Yayla Mah. Keçiören'de).
+- 2026-10-19 #1454 "Hata" kökü: 16.10 17:05 etiket basımı (etiket_sayfasi barkod_al) ile Shopify 'Hazirlaniyor'
+  tetiklemesi (barkod_iste) ayrı gunicorn işçilerinde aynı anda createbarcode gönderdi; ikincisi 20001
+  "DAHA ÖNCE KESİLMİŞ" aldı → kalıcı hata yazıp durumu ezdi (takip no/ZPL ilk işçiden kaldı). Hata'daki
+  kayıt takip sorgusuna girmediğinden Shopify'a hiç yazılmadı (MNG: teslim edilmiş; Shopify: REFUNDED,
+  UNFULFILLED). 19.10 12:23 ekip Yeniden Dene'ye bastı → createOrder "zaten var" → siparis_acildi →
+  sorgula → createbarcode yine "kesilmiş" → hata. Düzeltme: client.daha_once_kesilmis; barkod_al satırı
+  FOR UPDATE ile kilitler + durumu yeniden okur; "kesilmiş" → _kesilmis_barkodu_kurtar (takip no varsa
+  hazırlandı, yoksa getorder shipmentId); _api_ile_ac barkodlu kaydı yeniden açmaz; routes.sorgula hata+takip
+  nolu kaydı takibe geri alır. 95 test.

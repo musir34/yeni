@@ -33,7 +33,7 @@ from decimal import Decimal
 from models import KargoGonderi, db
 
 from .ayar import MngAyar
-from .client import MngClient, MngHata, sube_cozulmedi
+from .client import MngClient, MngHata, daha_once_kesilmis, sube_cozulmedi
 from .durum import (
     BILINMIYOR, HAZIRLANDI, IPTAL, KAPANMIS, SIPARIS_ACILDI, TESLIM, YOLDA, GonderiDurumu, geri_mi,
 )
@@ -231,6 +231,14 @@ def _api_ile_ac(kayit: KargoGonderi, icerik: str = "Ayakkabi", aciklama: str = "
         kayit.durum = DURUM_HATA
         logger.warning("[MNG] sipariş açılmadı %s: %s", kayit.referans, ilce_hatasi)
         return False
+    if kayit.shipment_id or kayit.barkod:
+        # Barkodu zaten kesilmiş kayıt (eşzamanlı istek sonrası 'hata'da kalmış): MNG'de yeniden açılmaz,
+        # ikinci createbarcode da "DAHA ÖNCE KESİLMİŞ" verir → takibe geri alınır.
+        kayit.durum = HAZIRLANDI
+        kayit.hata = None
+        kayit.deneme = 0
+        logger.info("[MNG] %s: barkod zaten var (takip %s), yeniden açılmadı; takibe alındı", kayit.referans, kayit.shipment_id)
+        return True
     kayit.deneme = (kayit.deneme or 0) + 1
     try:
         client().siparis_olustur(istek)
@@ -251,12 +259,24 @@ def barkod_al(kayit: KargoGonderi, bekle: bool = False) -> bool:
     etiket basımı gibi anlık ihtiyaçta)."""
     if kayit.durum != SIPARIS_ACILDI:
         return False
+    # Aynı kayda eşzamanlı iki istek (etiket basımı + Shopify 'Hazirlaniyor' tetiklemesi, ayrı işçilerde)
+    # MNG'ye iki createbarcode göndermesin: satır kilitlenir, kilit alınınca durum yeniden okunur
+    # (diğer işçi barkodu aldıysa burada bitmiştir). SQLite'ta kilit yok, yalnız yeniden okur.
+    try:
+        db.session.flush()
+        db.session.refresh(kayit, with_for_update=True)
+    except Exception:
+        logger.debug("[MNG] satır kilidi alınamadı (%s), devam", kayit.referans, exc_info=True)
+    if kayit.durum != SIPARIS_ACILDI:
+        return kayit.durum == HAZIRLANDI
     try:
         cevap = client().barkod_olustur(_istek_kur(kayit), tekrar=bekle)
     except (MngHata, ValueError) as exc:
         if isinstance(exc, MngHata) and sube_cozulmedi(exc):
             kayit.hata = "MNG varış şubesini henüz çözmedi; barkod sonraki turda alınacak"
             return False
+        if isinstance(exc, MngHata) and daha_once_kesilmis(exc):
+            return _kesilmis_barkodu_kurtar(kayit, exc)
         kayit.deneme = (kayit.deneme or 0) + 1
         _hata_yaz(kayit, exc, kalici=True)       # 20 TL sınırı, adres hatası vb. → insan baksın
         kayit.durum = DURUM_HATA
@@ -271,6 +291,28 @@ def barkod_al(kayit: KargoGonderi, bekle: bool = False) -> bool:
     kayit.hata = None
     kayit.takip_url = TAKIP_URL_SABLON.format(shipment_id=sonuc.shipment_id) if sonuc.shipment_id else None
     logger.info("[MNG] barkod alındı %s → takip %s", kayit.referans, kayit.shipment_id)
+    return True
+
+
+def _kesilmis_barkodu_kurtar(kayit: KargoGonderi, exc: MngHata) -> bool:
+    """MNG 'barkod daha önce kesilmiş' dedi: kayıtta takip no varsa hazırlandı; yoksa getorder'dan
+    shipmentId alınır (ZPL yeniden alınamaz, etiket ilk basımdan/şubeden). Takip no da yoksa hata."""
+    if not kayit.shipment_id:
+        try:
+            siparis = client().siparis_getir(kayit.referans) or {}
+        except MngHata:
+            siparis = {}
+        sid = str((siparis.get("order") or {}).get("shipmentId") or siparis.get("shipmentId") or "").strip()
+        if not sid:
+            kayit.hata = f"MNG barkodu daha önce kesilmiş ama takip no bulunamadı: {exc}"[:2000]
+            kayit.durum = DURUM_HATA
+            logger.warning("[MNG] %s: barkod kesilmiş, takip no alınamadı", kayit.referans)
+            return False
+        kayit.shipment_id = sid
+        kayit.takip_url = TAKIP_URL_SABLON.format(shipment_id=sid)
+    kayit.durum = HAZIRLANDI
+    kayit.hata = None if kayit.zpl else "MNG barkodu daha önce kesilmiş; etiket (ZPL) bu kayıtta yok"
+    logger.info("[MNG] %s: barkod zaten kesilmiş, takip %s ile hazırlandı sayıldı", kayit.referans, kayit.shipment_id)
     return True
 
 
