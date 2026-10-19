@@ -546,6 +546,10 @@ def handle_stock_update_from_frontend():
     affected_barcodes = set()  # 🔥 Etkilenen barkodları takip et
 
     try:
+        # before_request'teki sayfa-yetki okuması (sayfa_yetki._istisnalari_oku) session'da
+        # transaction'ı otomatik açmış olur; SQLAlchemy 2.0'da üstüne begin() "A transaction
+        # is already begun" fırlatır. Salt-okuma transaction'ını kapatıp temiz başla.
+        db.session.rollback()
         with db.session.begin():  # Tek transaction
             logger.info(f"📦 Transaction başlatıldı - Raf: {raf_kodu}")
             
@@ -671,6 +675,9 @@ def handle_stock_update_from_frontend():
                        results=results)
 
     except Exception as e:
+        db.session.rollback()
+        # Hiçbir şey yazılmadı; önbellekte kalırsa 60 sn içindeki tekrar "zaten yapıldı" ile sahte başarı döner
+        _request_cache.pop(request_hash, None)
         logger.error(f"❌ HATA - Raf: {raf_kodu}, Mod: {update_type}, Ürün Sayısı: {len(items)}")
         logger.error("Stok ekleme/güncelleme hatası: %s", e, exc_info=True)
         return jsonify(success=False, message=f"Sunucu hatası: {str(e)}"), 500
