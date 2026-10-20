@@ -81,6 +81,24 @@ def _ctx_clean():
         db.session.rollback()
 
 
+class _Istemci:
+    """test_client sarmalayıcısı: cihaz anahtarını (QR üretince / bağlanınca) her POST'a ekler."""
+    def __init__(self, c):
+        self.c, self.anahtar = c, None
+
+    def post(self, url, json=None, headers=None):
+        body = dict(json or {})
+        if self.anahtar and "anahtar" not in body:
+            body["anahtar"] = self.anahtar
+        return self.c.post(url, json=body, headers=headers)
+
+    def get(self, *a, **k):
+        return self.c.get(*a, **k)
+
+    def session_transaction(self):
+        return self.c.session_transaction()
+
+
 def _login(client, uid, role):
     with client.session_transaction() as s:
         s["_user_id"] = str(uid)
@@ -91,21 +109,23 @@ def _login(client, uid, role):
 
 
 def _pc(ids, kim="worker1", rol="worker"):
-    c = app.test_client()
+    c = _Istemci(app.test_client())
     _login(c, ids[kim], rol)
     return c
 
 
 def _tel(ids, kim, rol):
-    c = app.test_client()
+    c = _Istemci(app.test_client())
     _login(c, ids[kim], rol)
     return c
 
 
 def _baslat(pc):
-    r = pc.post("/hazirla-telefon/pc/baslat", json={}, headers=FETCH)
+    r = pc.post("/hazirla-telefon/pc/baslat", json={"eski_eslesme_id": None}, headers=FETCH)
     assert r.status_code == 200, r.data
-    return r.get_json()
+    j = r.get_json()
+    pc.anahtar = j["anahtar"]
+    return j
 
 
 # ─────────────────────────── Saf kural ───────────────────────────
@@ -136,6 +156,7 @@ def test_worker_ayni_hesapla_baglanir(_ctx_clean):
     assert r.status_code == 200, r.data
     j = r.get_json()
     assert j["durum"] == "bagli" and j["pc_kullanici"] == "Worker1 Test"
+    assert j["anahtar"] and j["anahtar"] != b["anahtar"]   # telefon anahtarı PC anahtarından ayrı
 
 
 def test_worker_farkli_hesapla_reddedilir(_ctx_clean):
@@ -181,10 +202,16 @@ def test_yeni_qr_eski_oturumu_kapatir(_ctx_clean):
     ids = _ctx_clean
     pc = _pc(ids)
     b1 = _baslat(pc)
-    r = pc.post("/hazirla-telefon/pc/baslat", json={"eski_eslesme_id": b1["eslesme_id"]}, headers=FETCH)
+    r = pc.post("/hazirla-telefon/pc/baslat", json={"eski_eslesme_id": b1["eslesme_id"], "eski_anahtar": b1["anahtar"]}, headers=FETCH)
     assert r.status_code == 200
     with app.app_context():
         assert HazirlaEslesme.query.get(b1["eslesme_id"]).kapanma_sebebi == "yeni_qr"
+    # Aynı hesabın BAŞKA sekmesi (anahtarsız) eski oturumu kapatamaz
+    b2 = r.get_json()
+    r = _pc(ids).post("/hazirla-telefon/pc/baslat", json={"eski_eslesme_id": b2["eslesme_id"]}, headers=FETCH)
+    assert r.status_code == 200
+    with app.app_context():
+        assert HazirlaEslesme.query.get(b2["eslesme_id"]).durum == "bekliyor"
 
 
 def test_baskasinin_eslesmesine_erisilemez(_ctx_clean):
@@ -198,6 +225,29 @@ def test_baskasinin_eslesmesine_erisilemez(_ctx_clean):
     assert r.status_code == 403
 
 
+def test_ayni_hesabin_baska_cihazi_anahtarsiz_erisemez(_ctx_clean):
+    """Eşleşme yalnız QR'ı üreten sekme + okutan telefona ait: hesap aynı olsa da anahtar yoksa 404."""
+    ids = _ctx_clean
+    pc, tel, eid = _bagli_cift(ids)
+    # Aynı hesabın ikinci PC'si / sekmesi (anahtarsız ya da yanlış anahtarlı)
+    for govde in ({"eslesme_id": eid}, {"eslesme_id": eid, "anahtar": "yanlis"}, {"eslesme_id": eid, "anahtar": tel.anahtar}):
+        r = _pc(ids).post("/hazirla-telefon/pc/senkron", json=govde, headers=FETCH)
+        assert r.status_code == 404, govde
+    # Aynı hesabın ikinci telefonu
+    for govde in ({"eslesme_id": eid}, {"eslesme_id": eid, "anahtar": pc.anahtar}):
+        r = _tel(ids, "worker1", "worker").post("/hazirla-telefon/telefon/okut",
+                                                json=dict(govde, tip="raf", kalem=0, adet=0, deger="A-1"), headers=FETCH)
+        assert r.status_code == 404, govde
+        r = _tel(ids, "worker1", "worker").post("/hazirla-telefon/telefon/kes", json=govde, headers=FETCH)
+        assert r.status_code == 200   # kes sessiz geçer ama...
+    with app.app_context():
+        assert HazirlaEslesme.query.get(eid).durum == "bagli"   # ...eşleşmeye dokunmaz, okutma düşmez
+        assert HazirlaOkutma.query.count() == 0
+    # Doğru cihazlar çalışmaya devam eder
+    assert pc.post("/hazirla-telefon/pc/senkron", json={"eslesme_id": eid, "son_okutma_id": 0}, headers=FETCH).get_json()["durum"] == "bagli"
+    assert tel.post("/hazirla-telefon/telefon/senkron", json={"eslesme_id": eid}, headers=FETCH).get_json()["durum"] == "bagli"
+
+
 # ─────────────────────────── Senkron akışı ───────────────────────────
 
 def _bagli_cift(ids, tel_kim="worker1", tel_rol="worker"):
@@ -206,6 +256,7 @@ def _bagli_cift(ids, tel_kim="worker1", tel_rol="worker"):
     tel = _tel(ids, tel_kim, tel_rol)
     r = tel.post("/hazirla-telefon/bagla", json={"token": b["token"]}, headers=FETCH)
     assert r.status_code == 200
+    tel.anahtar = r.get_json()["anahtar"]
     return pc, tel, b["eslesme_id"]
 
 

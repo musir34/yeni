@@ -36,6 +36,12 @@ otomatik kopma, worker yalnız kendi hesabına, yönetim herkese bağlanabilsin.
   sipariş hazırlaya giren herkes sayfaya girer; KİME bağlanacağı eşleşme kuralı.
 - `routes/__init__.py`: blueprint kaydı. `tests/test_hazirla_telefon.py` (15 test, izole sqlite).
 
+## Cihaz anahtarı (aynı gün ek)
+Komutan: "QR yalnız okuyan ve okutulan cihazları etkilesin." Hesap bazlı denetim aynı hesabın
+başka sekmesine/telefonuna açıktı → `pc_anahtar` (QR üretilirken PC'ye) ve `telefon_anahtar`
+(QR okutulurken telefona) rastgele 24 bayt; her istek hesap + anahtar (compare_digest) ister,
+yeni QR'ın eski oturumu kapatması da anahtar ister. Anahtar sessionStorage'da (sekmeye özel).
+
 ## Tuzaklar
 - Testte app context'i test boyunca açık tutma: test_client istekleri paylaşır, flask-login
   current_user'ı g'de önbellekler (ilk isteğin kullanıcısı sonrakilere sızar).

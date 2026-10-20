@@ -22,11 +22,17 @@ os.environ.setdefault("WERKZEUG_RUN_MAIN", "false")
 def main():
     from app import app
     from models import db, HazirlaEslesme, HazirlaOkutma
+    from sqlalchemy import text
 
     with app.app_context():
         for model in (HazirlaEslesme, HazirlaOkutma):
             model.__table__.create(bind=db.engine, checkfirst=True)
             print(f"OK: {model.__tablename__} tablosu hazır.")
+        # Cihaz anahtarı kolonları (tablo daha önce açıldıysa additive ekle)
+        for kolon in ("pc_anahtar", "telefon_anahtar"):
+            db.session.execute(text(f"ALTER TABLE hazirla_eslesme ADD COLUMN IF NOT EXISTS {kolon} VARCHAR(64)"))
+        db.session.commit()
+        print("OK: hazirla_eslesme.pc_anahtar / telefon_anahtar kolonları hazır.")
 
 
 if __name__ == "__main__":

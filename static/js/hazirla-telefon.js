@@ -12,10 +12,10 @@
 
   var URL_BAGLA = app.dataset.urlBagla, URL_SENKRON = app.dataset.urlSenkron,
       URL_OKUT = app.dataset.urlOkut, URL_KES = app.dataset.urlKes;
-  var DEPO_ANAHTAR = 'hazirlaTelefonEslesme';
+  var DEPO_ANAHTAR = 'hazirlaTelefonEslesme', DEPO_CIHAZ = 'hazirlaTelefonCihaz';
   var ARALIK_MS = 1000, ARALIK_ARKA_MS = 3000;
 
-  var eslesmeId = null, surum = -1, yapiAnahtari = '', kalanSn = 0, tur = null, sayacTimer = null;
+  var eslesmeId = null, cihazAnahtar = null, surum = -1, yapiAnahtari = '', kalanSn = 0, tur = null, sayacTimer = null;
   var gonderilen = {};   // "tip:kalem:adet" → PC'ye gittiği an (onay bekleniyor)
   var qrTarayici = null, barkodTarayici = null;
 
@@ -57,7 +57,8 @@
 
   function bagliBaslat(durum) {
     eslesmeId = durum.eslesme_id;
-    try { sessionStorage.setItem(DEPO_ANAHTAR, String(eslesmeId)); } catch (e) {}
+    if (durum.anahtar) cihazAnahtar = durum.anahtar;
+    try { sessionStorage.setItem(DEPO_ANAHTAR, String(eslesmeId)); sessionStorage.setItem(DEPO_CIHAZ, cihazAnahtar || ''); } catch (e) {}
     surum = -1; yapiAnahtari = ''; gonderilen = {};
     $('pcAd').textContent = 'PC: ' + (durum.pc_kullanici || '—');
     ekran('ekranBagli');
@@ -76,7 +77,7 @@
   }
   function turCalistir() {
     if (!eslesmeId) return;
-    post(URL_SENKRON, { eslesme_id: eslesmeId }).then(function (j) {
+    post(URL_SENKRON, { eslesme_id: eslesmeId, anahtar: cihazAnahtar }).then(function (j) {
       if (!j.success) { kapandi('yok'); return; }
       uygula(j);
       turPlanla();
@@ -92,9 +93,9 @@
 
   // ── Kapanış ──
   function kapandi(durum, sebep) {
-    eslesmeId = null; if (tur) clearTimeout(tur); tur = null;
+    eslesmeId = null; cihazAnahtar = null; if (tur) clearTimeout(tur); tur = null;
     if (sayacTimer) clearInterval(sayacTimer); sayacTimer = null;
-    try { sessionStorage.removeItem(DEPO_ANAHTAR); } catch (e) {}
+    try { sessionStorage.removeItem(DEPO_ANAHTAR); sessionStorage.removeItem(DEPO_CIHAZ); } catch (e) {}
     var baslik = 'Bağlantı kapandı', metin = 'Bilgisayarda yeni QR üretip tekrar bağlan.';
     if (durum === 'suresi_doldu') { baslik = 'Süre doldu'; metin = '10 dakika işlem yapılmadı, güvenlik için bağlantı kapatıldı.'; }
     else if (sebep === 'pc_kapandi') { metin = 'Bilgisayardaki sipariş hazırla sayfası kapandı.'; }
@@ -263,7 +264,7 @@
     var key = alanAnahtar(a);
     gonderilen[key] = Date.now();
     a.classList.remove('yanlis'); a.classList.add('bekliyor'); a.querySelector('.durum').textContent = '⏳ Bilgisayara gönderildi…';
-    post(URL_OKUT, { eslesme_id: eslesmeId, tip: a.dataset.tip, kalem: +a.dataset.kalem, adet: +a.dataset.adet, deger: deger })
+    post(URL_OKUT, { eslesme_id: eslesmeId, anahtar: cihazAnahtar, tip: a.dataset.tip, kalem: +a.dataset.kalem, adet: +a.dataset.adet, deger: deger })
       .then(function (j) {
         if (!j.success) {
           delete gonderilen[key]; a.classList.remove('bekliyor');
@@ -314,8 +315,7 @@
   // ── Çık ──
   function cik() {
     if (!eslesmeId) { yenidenBagla(); return; }
-    var id = eslesmeId;
-    post(URL_KES, { eslesme_id: id }).catch(function () {});
+    post(URL_KES, { eslesme_id: eslesmeId, anahtar: cihazAnahtar }).catch(function () {});
     kapandi('kapandi', 'telefon_kes');
   }
 
@@ -330,13 +330,15 @@
   document.addEventListener('visibilitychange', function () { if (!document.hidden && eslesmeId) turPlanla(0); });
 
   var otoToken = app.dataset.otoToken;
-  var eskiId = null; try { eskiId = sessionStorage.getItem(DEPO_ANAHTAR); } catch (e) {}
+  var eskiId = null, eskiCihaz = null;
+  try { eskiId = sessionStorage.getItem(DEPO_ANAHTAR); eskiCihaz = sessionStorage.getItem(DEPO_CIHAZ); } catch (e) {}
   if (otoToken) { bagla(otoToken); }
-  else if (eskiId) {
+  else if (eskiId && eskiCihaz) {
     // Sayfa yenilendi: eşleşme hâlâ bağlıysa kaldığı yerden devam
-    post(URL_SENKRON, { eslesme_id: +eskiId }).then(function (j) {
+    cihazAnahtar = eskiCihaz;
+    post(URL_SENKRON, { eslesme_id: +eskiId, anahtar: eskiCihaz }).then(function (j) {
       if (j.success && j.durum === 'bagli') bagliBaslat(j);
-      else { try { sessionStorage.removeItem(DEPO_ANAHTAR); } catch (e) {} $('tokenInput').focus(); }
+      else { try { sessionStorage.removeItem(DEPO_ANAHTAR); sessionStorage.removeItem(DEPO_CIHAZ); } catch (e) {} $('tokenInput').focus(); }
     }).catch(function () {});
   } else { setTimeout(function () { $('tokenInput').focus(); }, 100); }
 })();

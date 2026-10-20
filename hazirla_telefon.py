@@ -16,6 +16,8 @@ Kurallar:
     (admin/manager) ve sahip bağlanır — worker başkasının ekranına bağlanamaz.
   * HAREKETSIZLIK_SN boyunca okutma/sipariş değişimi olmazsa eşleşme sunucuda kapanır,
     sonraki okutmalar reddedilir. PC sayfası PC_KAYIP_SN boyunca sormazsa (sekme kapandı) kapanır.
+  * Cihaz anahtarı: QR üretilirken PC'ye, QR okutulurken telefona rastgele anahtar verilir; her
+    istek hesap + anahtar ile doğrulanır → eşleşme yalnız QR'ı üreten sekme ve okutan telefona aittir.
 
 Zaman damgaları naive UTC (datetime.utcnow) — modeller ile aynı konvansiyon.
 """
@@ -82,15 +84,19 @@ def baglanabilir_mi(pc_user, telefon_user) -> tuple[bool, str]:
 
 # ─────────────────────────── Eşleşme servisi ───────────────────────────
 
-def eslesme_olustur(pc_user_id: int, eski_eslesme_id: int | None = None) -> HazirlaEslesme:
-    """Yeni QR oturumu. Aynı PC'nin önceki oturumu (varsa) 'yeni_qr' sebebiyle kapanır."""
+def eslesme_olustur(pc_user_id: int, eski_eslesme_id: int | None = None,
+                    eski_anahtar: str | None = None) -> HazirlaEslesme:
+    """Yeni QR oturumu. Aynı sekmenin önceki oturumu (kimlik + anahtar tutarsa) 'yeni_qr' ile kapanır."""
     if eski_eslesme_id:
         eski = HazirlaEslesme.query.get(eski_eslesme_id)
-        if eski and eski.pc_user_id == pc_user_id and eski.durum in AKTIF_DURUMLAR:
+        if (eski and eski.pc_user_id == pc_user_id and eski.durum in AKTIF_DURUMLAR
+                and eski.pc_anahtar and eski_anahtar
+                and secrets.compare_digest(str(eski.pc_anahtar), str(eski_anahtar))):
             _kapat(eski, "yeni_qr")
     e = HazirlaEslesme(
         token=secrets.token_urlsafe(8),
         pc_user_id=pc_user_id,
+        pc_anahtar=secrets.token_urlsafe(24),
         durum="bekliyor",
         created_at=_simdi(),
         pc_son_gorulme_at=_simdi(),
@@ -150,6 +156,7 @@ def eslesme_bagla(token: str, telefon_user) -> tuple[HazirlaEslesme | None, str]
     now = _simdi()
     e.durum = "bagli"
     e.telefon_user_id = telefon_user.id
+    e.telefon_anahtar = secrets.token_urlsafe(24)
     e.bagli_at = now
     e.son_islem_at = now
     db.session.commit()
@@ -251,8 +258,9 @@ def _json() -> dict:
     return request.get_json(silent=True) or {}
 
 
-def _eslesme_getir(eslesme_id, taraf: str) -> HazirlaEslesme | None:
-    """Eşleşme + sahiplik: PC rotaları PC kullanıcısını, telefon rotaları telefon kullanıcısını ister."""
+def _eslesme_getir(eslesme_id, taraf: str, anahtar) -> HazirlaEslesme | None:
+    """Eşleşme + sahiplik: hesap VE cihaz anahtarı birlikte tutmalı.
+    PC rotaları PC kullanıcısı + pc_anahtar, telefon rotaları telefon kullanıcısı + telefon_anahtar."""
     try:
         e = HazirlaEslesme.query.get(int(eslesme_id or 0))
     except (TypeError, ValueError):
@@ -260,7 +268,10 @@ def _eslesme_getir(eslesme_id, taraf: str) -> HazirlaEslesme | None:
     if not e:
         return None
     sahip_id = e.pc_user_id if taraf == "pc" else e.telefon_user_id
+    beklenen = e.pc_anahtar if taraf == "pc" else e.telefon_anahtar
     if sahip_id != current_user.id:
+        return None
+    if not beklenen or not anahtar or not secrets.compare_digest(str(beklenen), str(anahtar)):
         return None
     return zaman_asimi_denetle(e)
 
@@ -280,12 +291,13 @@ def bagla():
         return jsonify({"success": False, "error": hata}), 400
     _log("LOGIN: hazirla_telefon", {"sonuc": "bağlandı", "eslesme": e.id,
                                      "pc_kullanici": _kullanici_adi(e.pc_user)})
-    return jsonify({"success": True, **telefon_durum(e)})
+    return jsonify({"success": True, "anahtar": e.telefon_anahtar, **telefon_durum(e)})
 
 
 @hazirla_telefon_bp.route("/telefon/senkron", methods=["POST"])
 def telefon_senkron():
-    e = _eslesme_getir(_json().get("eslesme_id"), "telefon")
+    d = _json()
+    e = _eslesme_getir(d.get("eslesme_id"), "telefon", d.get("anahtar"))
     if not e:
         return jsonify({"success": False, "durum": "yok", "error": "Eşleşme bulunamadı."}), 404
     return jsonify({"success": True, **telefon_durum(e)})
@@ -294,7 +306,7 @@ def telefon_senkron():
 @hazirla_telefon_bp.route("/telefon/okut", methods=["POST"])
 def telefon_okut_rota():
     d = _json()
-    e = _eslesme_getir(d.get("eslesme_id"), "telefon")
+    e = _eslesme_getir(d.get("eslesme_id"), "telefon", d.get("anahtar"))
     if not e:
         return jsonify({"success": False, "durum": "yok", "error": "Eşleşme bulunamadı."}), 404
     o, hata = telefon_okut(e, d.get("tip"), d.get("kalem"), d.get("adet"), d.get("deger"))
@@ -305,7 +317,8 @@ def telefon_okut_rota():
 
 @hazirla_telefon_bp.route("/telefon/kes", methods=["POST"])
 def telefon_kes():
-    e = _eslesme_getir(_json().get("eslesme_id"), "telefon")
+    d = _json()
+    e = _eslesme_getir(d.get("eslesme_id"), "telefon", d.get("anahtar"))
     if e and e.durum in AKTIF_DURUMLAR:
         eslesme_kapat(e, "telefon_kes")
         _log("LOGOUT: hazirla_telefon", {"eslesme": e.id, "taraf": "telefon"})
@@ -315,19 +328,19 @@ def telefon_kes():
 @hazirla_telefon_bp.route("/pc/baslat", methods=["POST"])
 def pc_baslat():
     d = _json()
-    e = eslesme_olustur(current_user.id, d.get("eski_eslesme_id"))
+    e = eslesme_olustur(current_user.id, d.get("eski_eslesme_id"), d.get("eski_anahtar"))
     url = url_for("hazirla_telefon.sayfa", t=e.token, _external=True)
     if request.headers.get("X-Forwarded-Proto", "").lower() == "https" and url.startswith("http://"):
         url = "https://" + url[len("http://"):]   # ters vekil arkasında QR adresi https kalsın
     _log("CREATE: hazirla_telefon", {"eslesme": e.id, "islem": "QR üretildi"})
-    return jsonify({"success": True, "eslesme_id": e.id, "token": e.token, "url": url,
-                    "qr": qr_data_uri(url), "gecerlilik_sn": QR_GECERLILIK_SN})
+    return jsonify({"success": True, "eslesme_id": e.id, "anahtar": e.pc_anahtar, "token": e.token,
+                    "url": url, "qr": qr_data_uri(url), "gecerlilik_sn": QR_GECERLILIK_SN})
 
 
 @hazirla_telefon_bp.route("/pc/senkron", methods=["POST"])
 def pc_senkron_rota():
     d = _json()
-    e = _eslesme_getir(d.get("eslesme_id"), "pc")
+    e = _eslesme_getir(d.get("eslesme_id"), "pc", d.get("anahtar"))
     if not e:
         return jsonify({"success": False, "durum": "yok"}), 404
     payload = d.get("payload") if isinstance(d.get("payload"), dict) else None
@@ -345,7 +358,8 @@ def pc_senkron_rota():
 
 @hazirla_telefon_bp.route("/pc/kes", methods=["POST"])
 def pc_kes():
-    e = _eslesme_getir(_json().get("eslesme_id"), "pc")
+    d = _json()
+    e = _eslesme_getir(d.get("eslesme_id"), "pc", d.get("anahtar"))
     if e and e.durum in AKTIF_DURUMLAR:
         eslesme_kapat(e, "pc_kes")
         _log("LOGOUT: hazirla_telefon", {"eslesme": e.id, "taraf": "pc"})

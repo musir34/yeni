@@ -2080,6 +2080,10 @@ class HazirlaEslesme(db.Model):
     token = db.Column(db.String(32), unique=True, nullable=False, index=True)
     pc_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     telefon_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    # Cihaz anahtarları: QR üretilirken PC'ye, QR okutulurken telefona verilir; her istek bununla
+    # doğrulanır → aynı hesabın başka cihazı/sekmesi eşleşme kimliğini bilse de erişemez.
+    pc_anahtar = db.Column(db.String(64), nullable=True)
+    telefon_anahtar = db.Column(db.String(64), nullable=True)
     durum = db.Column(db.String(16), nullable=False, default='bekliyor', index=True)
     kapanma_sebebi = db.Column(db.String(32), nullable=True)   # pc_kes | telefon_kes | pc_kapandi | yeni_qr | hareketsizlik
     aktif_order_number = db.Column(db.String(50), nullable=True)
