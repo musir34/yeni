@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Telefon Eşlik - Sipariş Hazırla{% endblock %}
+{% block extra_css %}
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<style>
+  /* base.html'in dış .container.mt-5 sarmalayıcısını nötrle — tam ekran telefon düzeni */
+  .container.mt-5 { max-width: none; margin: 0; padding: 0; }
+  body { background: #f3f4f6; margin: 0; font-family: "Inter", "Roboto", sans-serif; }
+
+  .tel-ekran { display: none; min-height: 100vh; }
+  .tel-ekran.aktif { display: block; }
+
+  /* ── Bağlan ekranı ── */
+  .tel-bagla { max-width: 480px; margin: 0 auto; padding: 24px 16px; text-align: center; }
+  .tel-bagla h1 { font-size: 1.35rem; font-weight: 700; margin: 8px 0 4px; }
+  .tel-bagla p.ipucu { color: #6b7280; font-size: .95rem; }
+  #qrReader { width: 100%; max-width: 360px; margin: 12px auto; border-radius: 12px; overflow: hidden; background: #000; min-height: 0; }
+  #qrReader:empty { display: none; }
+  .tel-token-satir { display: flex; gap: 8px; margin-top: 12px; }
+  .tel-token-satir input { flex: 1; font-size: 16px; min-height: 48px; border: 2px solid #B76E79; border-radius: 10px; padding: 8px 12px; }
+  .tel-btn { min-height: 48px; border: none; border-radius: 10px; font-weight: 600; font-size: 1rem; padding: 10px 18px; color: #fff; background: #B76E79; }
+  .tel-btn.ikincil { background: #374151; }
+  .tel-btn.buyuk { width: 100%; margin-top: 10px; font-size: 1.1rem; }
+  .tel-btn:disabled { opacity: .6; }
+  .tel-mesaj { margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-weight: 600; display: none; }
+  .tel-mesaj.hata { display: block; background: #fee2e2; color: #991b1b; }
+  .tel-mesaj.bilgi { display: block; background: #e0f2fe; color: #075985; }
+
+  /* ── Bağlı ekranı ── */
+  .tel-ust { position: sticky; top: 0; z-index: 20; background: #111827; color: #fff; padding: 8px 12px; display: flex; align-items: center; gap: 10px; font-size: .85rem; }
+  .tel-ust .nokta { width: 10px; height: 10px; border-radius: 50%; background: #22c55e; flex: none; box-shadow: 0 0 0 3px rgba(34,197,94,.25); }
+  .tel-ust .nokta.kopuk { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.25); }
+  .tel-ust .pc-ad { font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tel-ust .sayac { font-variant-numeric: tabular-nums; color: #d1d5db; }
+  .tel-ust .sayac.az { color: #fbbf24; font-weight: 700; }
+  .tel-ust button { background: #374151; color: #fff; border: none; border-radius: 8px; padding: 6px 10px; font-size: .85rem; }
+
+  .tel-baslik { padding: 12px 14px 4px; }
+  .tel-baslik .no { font-size: 1.35rem; font-weight: 800; letter-spacing: .3px; }
+  .tel-baslik .rozetler { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .tel-rozet { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: .78rem; font-weight: 700; color: #fff; background: #6b7280; }
+  .tel-rozet.trendyol { background: #f27a1a; }
+  .tel-rozet.shopify { background: #96bf48; }
+  .tel-rozet.dhl { background: #1565c0; }
+  .tel-rozet.tyex { background: #f27a1a; }
+  .tel-rozet.kapida { background: #dc2626; }
+  .tel-musteri { color: #4b5563; font-size: .9rem; margin-top: 4px; }
+  .tel-not { margin: 8px 14px 0; padding: 10px 12px; background: #fff3cd; color: #664d03; border-left: 4px solid #b78116; border-radius: 8px; font-size: .95rem; }
+
+  .tel-bos { padding: 48px 20px; text-align: center; color: #6b7280; font-size: 1.05rem; }
+  .tel-tamam { margin: 10px 14px 0; padding: 12px; background: #dcfce7; color: #166534; border-radius: 10px; font-weight: 700; text-align: center; display: none; }
+  .tel-tamam.goster { display: block; }
+
+  .tel-kartlar { padding: 10px 10px 90px; display: grid; gap: 12px; }
+  .tel-kart { background: #fff; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.08); overflow: hidden; border: 3px solid transparent; }
+  .tel-kart.tamam { border-color: #22c55e; }
+  .tel-kart.aktif-kart { border-color: #B76E79; }
+  .tel-gorsel { width: 100%; max-height: 46vh; object-fit: contain; background: #f9fafb; display: block; }
+  .tel-govde { padding: 12px 14px 14px; }
+  .tel-sku { font-size: 1.5rem; font-weight: 800; line-height: 1.2; }
+  .tel-meta { color: #4b5563; font-size: .95rem; margin-top: 4px; }
+  .tel-meta .adet { display: inline-block; background: #111827; color: #fff; border-radius: 6px; padding: 1px 8px; font-weight: 700; }
+  .tel-meta .adet.coklu { background: #dc2626; }
+  .tel-raflar { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .tel-raf-chip { font-size: 1.15rem; font-weight: 800; padding: 6px 12px; border-radius: 10px; border: 2px solid #d1d5db; background: #f9fafb; }
+  .tel-raf-chip.onerilen { border-color: #16a34a; background: #dcfce7; color: #166534; }
+  .tel-raf-chip small { font-weight: 600; color: #6b7280; }
+  .tel-uyari { margin-top: 8px; padding: 8px 10px; border-radius: 8px; font-size: .9rem; font-weight: 600; }
+  .tel-uyari.sari { background: #fef3c7; color: #92400e; }
+  .tel-uyari.kirmizi { background: #fee2e2; color: #991b1b; }
+
+  .tel-alan { margin-top: 10px; }
+  .tel-alan label { display: block; font-size: .8rem; font-weight: 700; color: #6b7280; margin-bottom: 3px; }
+  .tel-alan input { width: 100%; font-size: 16px; min-height: 50px; border: 2px solid #9ca3af; border-radius: 10px; padding: 8px 12px; }
+  .tel-alan.raf input { border-color: #B76E79; }
+  .tel-alan.ok input { border-color: #16a34a; background: #ecfdf5; color: #166534; font-weight: 700; }
+  .tel-alan.bekliyor input { border-color: #f59e0b; background: #fffbeb; }
+  .tel-alan.yanlis input { border-color: #dc2626; background: #fef2f2; }
+  .tel-alan .durum { font-size: .85rem; font-weight: 700; margin-top: 3px; min-height: 1.1em; }
+  .tel-alan.ok .durum { color: #166534; }
+  .tel-alan.bekliyor .durum { color: #b45309; }
+  .tel-alan.yanlis .durum { color: #991b1b; }
+
+  .tel-alt { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e5e7eb; padding: 10px 14px; display: flex; gap: 10px; z-index: 20; }
+  .tel-alt .tel-btn { flex: 1; }
+
+  /* Kapandı kaplaması */
+  .tel-kapli { position: fixed; inset: 0; background: rgba(17,24,39,.92); color: #fff; z-index: 50; display: none; align-items: center; justify-content: center; text-align: center; padding: 24px; }
+  .tel-kapli.goster { display: flex; }
+  .tel-kapli h2 { font-size: 1.4rem; font-weight: 800; }
+  .tel-kapli p { color: #d1d5db; }
+
+  /* Kamera kaplaması (barkod) */
+  .tel-kamera { position: fixed; inset: 0; background: #000; z-index: 60; display: none; flex-direction: column; }
+  .tel-kamera.goster { display: flex; }
+  .tel-kamera .ust { color: #fff; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+  #barkodReader { flex: 1; }
+
+  html.gs-dark body { background: #0f1115; }
+  html.gs-dark .tel-kart, html.gs-dark .tel-alt { background: #1e1e1e; color: #ddd; }
+  html.gs-dark .tel-sku { color: #f3f4f6; }
+  html.gs-dark .tel-alan input, html.gs-dark .tel-token-satir input { background: #111; color: #eee; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="telefonApp"
+     data-oto-token="{{ oto_token }}"
+     data-url-bagla="{{ url_for('hazirla_telefon.bagla') }}"
+     data-url-senkron="{{ url_for('hazirla_telefon.telefon_senkron') }}"
+     data-url-okut="{{ url_for('hazirla_telefon.telefon_okut_rota') }}"
+     data-url-kes="{{ url_for('hazirla_telefon.telefon_kes') }}">
+
+  <!-- ── 1) Bağlan ── -->
+  <section id="ekranBagla" class="tel-ekran aktif">
+    <div class="tel-bagla">
+      <div style="font-size:2.4rem">📱</div>
+      <h1>Sipariş Hazırla — Telefon</h1>
+      <p class="ipucu">Bilgisayarda <strong>Sipariş Hazırla → 📱 Telefon</strong> düğmesine bas, çıkan QR kodu buradan okut.</p>
+
+      <button type="button" class="tel-btn buyuk" id="qrKameraBtn">📷 Kamerayla QR Okut</button>
+      <div id="qrReader"></div>
+
+      <div class="tel-token-satir">
+        <input type="text" id="tokenInput" placeholder="QR kodu / eşleşme kodu" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button type="button" class="tel-btn" id="baglaBtn">Bağlan</button>
+      </div>
+      <p class="ipucu" style="margin-top:8px;font-size:.8rem;">Zebra el terminalinde QR'ı yukarıdaki kutuya okut.</p>
+      <div id="baglaMesaj" class="tel-mesaj"></div>
+    </div>
+  </section>
+
+  <!-- ── 2) Bağlı: PC ekranının aynası ── -->
+  <section id="ekranBagli" class="tel-ekran">
+    <div class="tel-ust">
+      <span class="nokta" id="pcNokta" title="PC bağlantısı"></span>
+      <span class="pc-ad" id="pcAd">PC</span>
+      <span class="sayac" id="kalanSure">10:00</span>
+      <button type="button" id="cikBtn">Çık</button>
+    </div>
+
+    <div id="siparisBaslik" class="tel-baslik" style="display:none">
+      <div class="no" id="sipNo"></div>
+      <div class="rozetler" id="sipRozetler"></div>
+      <div class="tel-musteri" id="sipMusteri"></div>
+    </div>
+    <div id="sipNot" class="tel-not" style="display:none"></div>
+    <div id="sipTamam" class="tel-tamam">✅ Tüm kutular okutuldu — bilgisayar paketliyor, sıradaki sipariş geliyor…</div>
+
+    <div id="sipBos" class="tel-bos">Bilgisayardaki sipariş bekleniyor…</div>
+    <div id="kalemler" class="tel-kartlar"></div>
+
+    <div class="tel-alt">
+      <button type="button" class="tel-btn ikincil" id="barkodKameraBtn">📷 Kamerayla Barkod Okut</button>
+    </div>
+  </section>
+
+  <!-- ── Kapandı ── -->
+  <div id="ekranKapandi" class="tel-kapli">
+    <div>
+      <div style="font-size:2.4rem">🔌</div>
+      <h2 id="kapandiBaslik">Bağlantı kapandı</h2>
+      <p id="kapandiMetin"></p>
+      <button type="button" class="tel-btn buyuk" id="yenidenBtn">Yeniden Bağlan</button>
+    </div>
+  </div>
+
+  <!-- ── Kamera (barkod) ── -->
+  <div id="ekranKamera" class="tel-kamera">
+    <div class="ust">
+      <span id="kameraHedef">Barkod okut</span>
+      <button type="button" class="tel-btn ikincil" id="kameraKapatBtn">Kapat</button>
+    </div>
+    <div id="barkodReader"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="{{ url_for('static', filename='js/hazirla-telefon.js') }}"></script>
+{% endblock %}

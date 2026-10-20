@@ -2062,3 +2062,54 @@ class FinansCariKalem(db.Model):
 
     def __repr__(self):
         return f'<FinansCariKalem {self.ad} x{self.adet}>'
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Sipariş Hazırla — Telefon Eşlik (QR ile eşleşen telefon, PC ekranının canlı aynası)
+# Mantık hazirla_telefon.py'de. Tablolar additive; scripts/add_hazirla_telefon.py ile açılır.
+# ──────────────────────────────────────────────────────────────────────────────
+class HazirlaEslesme(db.Model):
+    """PC'deki sipariş hazırla ekranı ile telefon arasındaki eşleşme (QR oturumu).
+
+    durum: bekliyor (QR üretildi, okutulmadı) → bagli → kapandi | suresi_doldu
+    aktif_payload: PC'nin yazdığı anlık ekran görüntüsü (JSON; sipariş + kalemler + okutma durumları)
+    surum: payload her değiştiğinde artar; telefon yalnız sürüm değişince yeniden çizer.
+    """
+    __tablename__ = 'hazirla_eslesme'
+    id = db.Column(db.Integer, primary_key=True)
+    token = db.Column(db.String(32), unique=True, nullable=False, index=True)
+    pc_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    telefon_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    durum = db.Column(db.String(16), nullable=False, default='bekliyor', index=True)
+    kapanma_sebebi = db.Column(db.String(32), nullable=True)   # pc_kes | telefon_kes | pc_kapandi | yeni_qr | hareketsizlik
+    aktif_order_number = db.Column(db.String(50), nullable=True)
+    aktif_payload = db.Column(db.Text, nullable=True)
+    surum = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)   # naive=UTC
+    bagli_at = db.Column(db.DateTime, nullable=True)
+    son_islem_at = db.Column(db.DateTime, nullable=True)        # hareketsizlik sayacı (okutma / sipariş değişimi)
+    pc_son_gorulme_at = db.Column(db.DateTime, nullable=True)   # PC sayfası son ne zaman sordu
+    kapandi_at = db.Column(db.DateTime, nullable=True)
+
+    pc_user = db.relationship('User', foreign_keys=[pc_user_id])
+    telefon_user = db.relationship('User', foreign_keys=[telefon_user_id])
+
+    def __repr__(self):
+        return f"<HazirlaEslesme {self.id} {self.durum} pc={self.pc_user_id} tel={self.telefon_user_id}>"
+
+
+class HazirlaOkutma(db.Model):
+    """Telefondan gelen okutma olayı; PC sayfası sırayla çeker ve kendi kutusuna yazar."""
+    __tablename__ = 'hazirla_okutma'
+    id = db.Column(db.Integer, primary_key=True)
+    eslesme_id = db.Column(db.Integer, db.ForeignKey('hazirla_eslesme.id', ondelete='CASCADE'),
+                           nullable=False, index=True)
+    tip = db.Column(db.String(8), nullable=False)        # raf | urun
+    kalem = db.Column(db.Integer, nullable=False, default=0)   # ürün kartı sırası (loop.index0)
+    adet = db.Column(db.Integer, nullable=False, default=0)    # kutu barkodu sırası (q)
+    deger = db.Column(db.String(128), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    islendi_at = db.Column(db.DateTime, nullable=True)
+
+    def __repr__(self):
+        return f"<HazirlaOkutma {self.id} {self.tip} {self.deger}>"

@@ -110,6 +110,15 @@
     .kargo-firma.kargo-dhl{color:#1565c0}
     .badge.kargo-tyex{background:#f27a1a;color:#fff}
     .badge.kargo-dhl{background:#1565c0;color:#fff}
+    /* 📱 Telefon eşlik: üst çubuk düğmesi + durum rozeti; telefondan okutulan kutu mavi çerçeveli */
+    #telefonBtn{background:linear-gradient(135deg,#0d6efd,#0a58ca);display:inline-flex;align-items:center;gap:8px;padding:8px 14px;font-size:.85rem}
+    #telefonBtn.bagli{background:linear-gradient(135deg,#198754,#146c43)}
+    .telefon-rozet{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:700;background:rgba(255,255,255,.25);color:#fff;font-variant-numeric:tabular-nums}
+    .telefon-rozet.bekliyor{background:#ffc107;color:#000}
+    .telefon-rozet.bagli{background:#fff;color:#146c43}
+    .tel-okutma{outline:2px solid #0d6efd;outline-offset:1px}
+    #telefonModal .modal-dialog{margin:1.75rem auto}
+    #telefonQr{width:260px;height:260px;image-rendering:pixelated;border:6px solid #fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 
     .modal-content{border-radius:12px;padding:15px}
     .modal-header{border-bottom:none;justify-content:center}
@@ -615,6 +624,7 @@
         <a class="dropdown-item" href="{{ url_for('degisim_talep') }}"><i class="fas fa-exchange-alt me-2"></i>Değişim Talepleri</a>
         <a class="dropdown-item" href="{{ url_for('uretim.index') }}"><i class="fas fa-industry me-2"></i>Üretim Siparişleri</a>
         <a class="dropdown-item" href="{{ url_for('kargo_mutabakat_bp.kargo_mutabakat_page') }}"><i class="fas fa-truck me-2"></i>Kargo Mutabakat</a>
+        <a class="dropdown-item" href="{{ url_for('hazirla_telefon.sayfa') }}"><i class="fas fa-mobile-alt me-2"></i>Telefon Eşlik (telefonda aç)</a>
         <hr class="dropdown-divider">
         <div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Geçmiş &amp; Takip</div>
         <a class="dropdown-item" href="{{ url_for('display_archive') }}"><i class="fas fa-box me-2"></i>Arşiv</a>
@@ -652,6 +662,12 @@
     </a>
     {% endif %}
 
+    <!-- 📱 Telefon eşlik: QR ile telefonu bu ekrana bağla (hazirla-telefon-pc.js) -->
+    <button type="button" class="btn" id="telefonBtn" title="Telefonu bu ekrana bağla">
+      <i class="fas fa-mobile-alt"></i> Telefon
+      <span class="telefon-rozet kapali" id="telefonDurum">Bağlı değil</span>
+    </button>
+
     <!-- Ayarlar -->
     <div class="dropdown">
       <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"
@@ -683,6 +699,43 @@
       <span id="manuelScanStatus" style="font-size:0.8rem; font-weight:600; color:#666; white-space:nowrap;"></span>
     </div>
 
+  </div>
+
+  <!-- 📱 Telefon eşlik penceresi -->
+  <div id="telefonPcCfg" style="display:none"
+       data-url-baslat="{{ url_for('hazirla_telefon.pc_baslat') }}"
+       data-url-senkron="{{ url_for('hazirla_telefon.pc_senkron_rota') }}"
+       data-url-kes="{{ url_for('hazirla_telefon.pc_kes') }}"></div>
+  <div class="modal fade" id="telefonModal" tabindex="-1" aria-labelledby="telefonModalBaslik" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="telefonModalBaslik"><i class="fas fa-mobile-alt me-2"></i>Telefonu Bağla</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+        </div>
+        <div class="modal-body text-center">
+          <div id="telefonQrKutu" class="d-none">
+            <p class="mb-2">Telefonda <strong>Telefon Eşlik</strong> sayfasını aç ve bu QR'ı okut.<br>
+              <small class="text-muted">Zebra'da QR'ı sayfadaki kutuya okut; kamera uygulamasıyla okutursan sayfa kendiliğinden açılır.</small></p>
+            <img id="telefonQr" alt="QR kodu" src="">
+            <div class="mt-2"><small class="text-muted">QR geçerlilik: <span id="telefonQrSayac">2:00</span> · kod: <code id="telefonToken"></code></small></div>
+            <div class="mt-1"><small class="text-muted" id="telefonUrl" style="word-break:break-all"></small></div>
+            <button type="button" class="btn btn-secondary btn-sm mt-3" id="telefonYeniQrBtn"><i class="fas fa-sync-alt"></i> Yeni QR</button>
+          </div>
+          <div id="telefonBagliKutu" class="d-none">
+            <div style="font-size:2.5rem">📱✅</div>
+            <p class="mb-1 fw-bold">Telefon bağlı</p>
+            <p class="text-muted mb-3">Hareketsizlikte kalan süre: <strong id="telefonBagliSure">10:00</strong><br>
+              <small>Telefonda okutulan raf ve ürün bu ekrandaki kutulara düşer; iki taraf karışık okutabilir.</small></p>
+            <button type="button" class="btn btn-danger" id="telefonKesBtn"><i class="fas fa-unlink"></i> Bağlantıyı Kes</button>
+          </div>
+          <div id="telefonKapaliKutu" class="d-none">
+            <p class="text-muted">Bağlantı yok.</p>
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('telefonYeniQrBtn').click()"><i class="fas fa-qrcode"></i> QR Üret</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Otomatik Gönderim popup -->
@@ -1815,4 +1868,5 @@
     }
   })();
   </script>
+  <script src="{{ url_for('static', filename='js/hazirla-telefon-pc.js') }}"></script>
 {% endblock %}

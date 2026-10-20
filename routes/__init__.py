@@ -50,6 +50,7 @@ def register_blueprints(app):
     from takip_notu import takip_bp  # 📌 TAKİP NOTLARI
     from kargo_degistir import kargo_degistir_bp  # 🚚 KARGO FİRMASI DEĞİŞTİRME
     from siparis_notu import siparis_notu_bp  # 📝 SİPARİŞ NOTLARI
+    from hazirla_telefon import hazirla_telefon_bp  # 📱 SİPARİŞ HAZIRLA — TELEFON EŞLİK
     from kargo_mutabakat import kargo_mutabakat_bp  # 🚚 KARGO MUTABAKAT
     from mng_kargo.routes import kargo_gonderi_bp  # 🚚 MNG GİDEN GÖNDERİLER
     from iade_yonetimi import iade_yonetimi_bp  # 📦 SİTE İADE YÖNETİMİ
@@ -111,6 +112,7 @@ def register_blueprints(app):
         takip_bp,  # 📌 TAKİP NOTLARI
         kargo_degistir_bp,  # 🚚 KARGO FİRMASI DEĞİŞTİRME
         siparis_notu_bp,  # 📝 SİPARİŞ NOTLARI
+        hazirla_telefon_bp,  # 📱 SİPARİŞ HAZIRLA — TELEFON EŞLİK
         kargo_mutabakat_bp,  # 🚚 KARGO MUTABAKAT
         kargo_gonderi_bp,  # 🚚 MNG GİDEN GÖNDERİLER
         iade_yonetimi_bp,  # 📦 SİTE İADE YÖNETİMİ

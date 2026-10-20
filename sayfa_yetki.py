@@ -56,6 +56,11 @@ SAYFALAR: tuple[Sayfa, ...] = (
     # ── Siparişler ──
     Sayfa("soru_cevap", "Soru-Cevap", "Siparişler", blueprints=("qna",)),
     Sayfa("siparis_hazirla", "Sipariş Hazırla", "Siparişler", blueprints=("siparis_hazirla",)),
+    # Telefon eşlik: PC'deki sipariş hazırla ekranının QR ile eşleşen canlı aynası. Sayfaya sipariş
+    # hazırlaya girebilen herkes girer; KİMİN hangi ekrana bağlanabileceği hazirla_telefon.py'de
+    # (worker yalnız kendi hesabı, yönetim herkese) — sayfa yetkisi değil, eşleşme kuralı.
+    Sayfa("hazirla_telefon", "Sipariş Hazırla — Telefon Eşlik", "Siparişler", blueprints=("hazirla_telefon",),
+          ebeveynler=("siparis_hazirla",), menude=False),
     Sayfa("yeni_siparis", "Yeni Sipariş", "Siparişler", blueprints=("siparisler_bp",)),
     Sayfa("siparis_listesi", "Sipariş Listesi", "Siparişler",
           blueprints=("order_list_service", "order_service", "new_orders_service",
