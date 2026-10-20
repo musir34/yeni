@@ -14,8 +14,11 @@
   .tel-bagla { max-width: 480px; margin: 0 auto; padding: 24px 16px; text-align: center; }
   .tel-bagla h1 { font-size: 1.35rem; font-weight: 700; margin: 8px 0 4px; }
   .tel-bagla p.ipucu { color: #6b7280; font-size: .95rem; }
-  #qrReader { width: 100%; max-width: 360px; margin: 12px auto; border-radius: 12px; overflow: hidden; background: #000; min-height: 0; }
-  #qrReader:empty { display: none; }
+  #qrReader { display: none; width: 100%; max-width: 360px; margin: 12px auto; border-radius: 12px; overflow: hidden; background: #000; }
+  #qrReader.acik { display: block; min-height: 280px; }
+  #qrReader video { width: 100% !important; display: block; }
+  .tel-btn-satir { display: flex; gap: 8px; margin-top: 10px; }
+  .tel-btn-satir .tel-btn { flex: 1; margin-top: 0; }
   .tel-token-satir { display: flex; gap: 8px; margin-top: 12px; }
   .tel-token-satir input { flex: 1; font-size: 16px; min-height: 48px; border: 2px solid #B76E79; border-radius: 10px; padding: 8px 12px; }
   .tel-btn { min-height: 48px; border: none; border-radius: 10px; font-weight: 600; font-size: 1rem; padding: 10px 18px; color: #fff; background: #B76E79; }
@@ -118,7 +121,11 @@
       <h1>Sipariş Hazırla — Telefon</h1>
       <p class="ipucu">Bilgisayarda <strong>Sipariş Hazırla → 📱 Telefon</strong> düğmesine bas, çıkan QR kodu buradan okut.</p>
 
-      <button type="button" class="tel-btn buyuk" id="qrKameraBtn">📷 Kamerayla QR Okut</button>
+      <div class="tel-btn-satir">
+        <button type="button" class="tel-btn" id="qrKameraBtn">📷 Kamerayla QR Okut</button>
+        <button type="button" class="tel-btn ikincil" id="qrFotoBtn">📸 Fotoğraf Çekerek Okut</button>
+      </div>
+      <input type="file" id="qrFotoInput" accept="image/*" capture="environment" style="display:none">
       <div id="qrReader"></div>
 
       <div class="tel-token-satir">

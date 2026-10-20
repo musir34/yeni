@@ -280,22 +280,49 @@
   }
 
   // ── Kamera: QR (bağlan) ──
+  function kameraHataMetni(e) {
+    var ad = (e && (e.name || e)) ? String(e.name || e) : '';
+    if (!window.isSecureContext) return 'Tarayıcı kamerayı yalnız HTTPS adreste açar (şu an ' + location.protocol + '). "Fotoğraf Çekerek Okut" ile devam et.';
+    if (/NotAllowed|Permission/i.test(ad)) return 'Kamera izni verilmedi. Tarayıcı adres çubuğundaki kilit/kamera simgesinden izin ver ya da "Fotoğraf Çekerek Okut" kullan.';
+    if (/NotFound|Devices/i.test(ad)) return 'Kamera bulunamadı. "Fotoğraf Çekerek Okut" ile dene.';
+    if (/NotReadable|TrackStart/i.test(ad)) return 'Kamera başka bir uygulama tarafından kullanılıyor. Onu kapatıp tekrar dene.';
+    return 'Kamera açılamadı' + (ad ? ' (' + ad + ')' : '') + '. "Fotoğraf Çekerek Okut" ile dene ya da kodu elle gir.';
+  }
   function qrTarayiciKapat() {
     if (qrTarayici) { try { qrTarayici.stop().catch(function () {}); } catch (e) {} qrTarayici = null; }
-    $('qrReader').innerHTML = '';
+    $('qrReader').innerHTML = ''; $('qrReader').classList.remove('acik');
+    $('qrKameraBtn').textContent = '📷 Kamerayla QR Okut';
   }
   function qrTarayiciAc() {
-    if (!window.Html5Qrcode) { mesaj('Kamera kütüphanesi yüklenemedi; kodu elle gir.', 'hata'); return; }
+    if (!window.Html5Qrcode) { mesaj('Kamera kütüphanesi yüklenemedi (internet/CDN). Kodu elle gir.', 'hata'); return; }
     if (qrTarayici) { qrTarayiciKapat(); return; }
+    mesaj('');
+    $('qrReader').classList.add('acik');   // kutu görünür olmalı: kütüphane genişliği buradan ölçer
+    $('qrKameraBtn').textContent = '⏹ Kamerayı Kapat';
     qrTarayici = new Html5Qrcode('qrReader');
-    qrTarayici.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 240, height: 240 } },
+    qrTarayici.start({ facingMode: 'environment' }, { fps: 10, qrbox: function (w, h) { var k = Math.min(w, h, 280); return { width: k, height: k }; } },
       function (metin) { qrTarayiciKapat(); $('tokenInput').value = metin; bagla(metin); },
-      function () {}).catch(function (e) { qrTarayici = null; mesaj('Kamera açılamadı (izin ya da HTTPS gerekir). Kodu elle gir.', 'hata'); });
+      function () {}).catch(function (e) { qrTarayici = null; qrTarayiciKapat(); mesaj(kameraHataMetni(e), 'hata'); });
+  }
+  // Fotoğraf çekerek okut: HTTPS/izin gerektirmez (telefonun kendi kamera uygulaması açılır)
+  function qrFotoOkut(dosya) {
+    if (!dosya) return;
+    if (!window.Html5Qrcode) { mesaj('Kütüphane yüklenemedi; kodu elle gir.', 'hata'); return; }
+    mesaj('Fotoğraf okunuyor…', 'bilgi');
+    qrTarayiciKapat();
+    var okuyucu = new Html5Qrcode('qrReader');
+    okuyucu.scanFile(dosya, false).then(function (metin) {
+      try { okuyucu.clear(); } catch (e) {}
+      $('tokenInput').value = metin; bagla(metin);
+    }).catch(function () {
+      try { okuyucu.clear(); } catch (e) {}
+      mesaj('Fotoğrafta QR okunamadı; QR kodunu yakından ve net çek ya da kodu elle gir.', 'hata');
+    });
   }
 
   // ── Kamera: barkod (raf / ürün) → odaktaki ya da ilk boş alana yazar ──
   function barkodKameraAc() {
-    if (!window.Html5Qrcode) return;
+    if (!window.Html5Qrcode) { if (window.gsToast) gsToast('Kamera kütüphanesi yüklenemedi', 'warning'); return; }
     var hedef = (document.activeElement && document.activeElement.closest && document.activeElement.closest('#kalemler .tel-alan')) ||
       alanlariGetir().filter(function (a) { return !a.classList.contains('ok') && !a.classList.contains('bekliyor'); })[0];
     if (!hedef) return;
@@ -304,7 +331,7 @@
     barkodTarayici = new Html5Qrcode('barkodReader');
     barkodTarayici.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 280, height: 160 } },
       function (metin) { barkodKameraKapat(); hedef.querySelector('input').value = metin; okut(hedef); },
-      function () {}).catch(function () { barkodKameraKapat(); });
+      function () {}).catch(function (e) { barkodKameraKapat(); if (window.gsToast) gsToast(kameraHataMetni(e), 'warning'); });
   }
   function barkodKameraKapat() {
     $('ekranKamera').classList.remove('goster');
@@ -321,6 +348,8 @@
 
   // ── Başlangıç ──
   $('qrKameraBtn').addEventListener('click', qrTarayiciAc);
+  $('qrFotoBtn').addEventListener('click', function () { $('qrFotoInput').value = ''; $('qrFotoInput').click(); });
+  $('qrFotoInput').addEventListener('change', function () { qrFotoOkut(this.files && this.files[0]); });
   $('baglaBtn').addEventListener('click', function () { bagla($('tokenInput').value); });
   $('tokenInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); bagla(this.value); } });
   $('cikBtn').addEventListener('click', cik);
