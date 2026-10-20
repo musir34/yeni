@@ -173,11 +173,13 @@
       if (k.stok_yok) html += '<div class="tel-uyari kirmizi">❌ Stokta yok — hiçbir rafta bulunmuyor.</div>';
       if (k.raf_gerekli) {
         html += '<div class="tel-alan raf" data-tip="raf" data-kalem="' + k.idx + '" data-adet="0"><label>📍 RAF BARKODU</label>' +
-          '<input type="text" inputmode="text" autocomplete="off" autocapitalize="characters" placeholder="Rafı okut"><div class="durum"></div></div>';
+          '<div class="tel-giris"><input type="text" inputmode="text" autocomplete="off" autocapitalize="characters" enterkeyhint="send" placeholder="Rafı okut ya da yaz">' +
+          '<button type="button" class="tel-gonder" title="Gönder">➤</button></div><div class="durum"></div></div>';
       }
       for (var q = 0; q < (k.adet || 1); q++) {
         html += '<div class="tel-alan urun" data-tip="urun" data-kalem="' + k.idx + '" data-adet="' + q + '"><label>📦 KUTU BARKODU (' + (q + 1) + ')</label>' +
-          '<input type="text" inputmode="numeric" autocomplete="off" placeholder="Ürünü okut"><div class="durum"></div></div>';
+          '<div class="tel-giris"><input type="text" inputmode="numeric" autocomplete="off" enterkeyhint="send" placeholder="Ürünü okut ya da yaz">' +
+          '<button type="button" class="tel-gonder" title="Gönder">➤</button></div><div class="durum"></div></div>';
       }
       html += '</div>';
       kart.innerHTML = html;
@@ -240,12 +242,16 @@
   function alanlariBagla() {
     alanlariGetir().forEach(function (a) {
       var inp = a.querySelector('input');
-      // Okuyucu (Zebra klavye modu) Enter/Tab sonekiyle biter; elle yazımda da Enter ile gönderilir
+      // Okuyucu (Zebra klavye modu) Enter/Tab sonekiyle biter; elle yazımda Enter/"Gönder" tuşu,
+      // ➤ düğmesi ya da alandan çıkış (change) gönderir
       inp.addEventListener('keydown', function (e) {
         if (e.key !== 'Enter' && e.key !== 'Tab') return;
         e.preventDefault(); okut(a);
       });
+      inp.addEventListener('change', function () { okut(a); });
       inp.addEventListener('input', function () { a.classList.remove('yanlis'); a.querySelector('.durum').textContent = ''; });
+      var gonder = a.querySelector('.tel-gonder');
+      if (gonder) gonder.addEventListener('click', function () { okut(a); });
     });
   }
 

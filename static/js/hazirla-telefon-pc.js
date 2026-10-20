@@ -113,6 +113,7 @@
     else hedef = kart.querySelector('#barkodInput-right-' + o.kalem + '-' + o.adet);
     if (!hedef) return;
     if (hedef.readOnly || hedef.dataset.confirmed === 'true') return;   // zaten doğrulanmış: üstüne yazma
+    toast('📱 ' + (o.tip === 'raf' ? 'Raf' : 'Ürün') + ' okutuldu: ' + o.deger, 'info');
     hedef.value = o.deger;
     hedef.classList.add('tel-okutma');
     hedef.title = '📱 Telefondan okutuldu';
