@@ -24,6 +24,10 @@
        title="Sipariş Hazırla" id="siparisHazirlaBtn">
       <i class="fas fa-box-open"></i> Sipariş Hazırla
     </a>
+    {# 📱 Telefon eşlik: telefonda açılır, PC'deki sipariş hazırla ekranının QR'ını okutur #}
+    <a href="{{ url_for('hazirla_telefon.sayfa') }}" class="btn btn-info text-white" title="Telefonda aç: sipariş hazırla ekranına QR ile bağlan">
+      <i class="fas fa-mobile-alt"></i> Telefon Eşlik
+    </a>
 {% endif %}
 
     {% if sayfa_erisebilir('alissa') %}
