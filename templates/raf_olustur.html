@@ -406,8 +406,50 @@
                 *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }
             }
 
-            /* ── Dark mode overrides for search results ── */
-            html.gs-dark .barkod-sonuc-row { color: #ddd; }
+            /* ── Gece modu: raflar, arama sonuçları ve özel pencereler ── */
+            @media screen {
+                html.gs-dark {
+                    color-scheme: dark;
+                    --color-bg: #181818;
+                    --color-bg-light: #1e1e1e;
+                    --color-text: #e0e0e0;
+                    --color-border: #3a3a3a;
+                    --shadow-md: 0 5px 15px rgba(0,0,0,.3);
+                }
+                html.gs-dark .main-card,
+                html.gs-dark .modal,
+                html.gs-dark .custom-modal-box { background-color: #1e1e1e; color: #e0e0e0; }
+                html.gs-dark .collapsible-header { background-color: #272727; }
+                html.gs-dark .collapsible-header:hover { background-color: #333; }
+                html.gs-dark .collapsible-content { background-color: #181818; }
+                html.gs-dark .kat-item { background-color: #242424; }
+                html.gs-dark .stok-listesi-container { background-color: #1e1e1e; border-top-color: #3a3a3a; }
+                html.gs-dark .stok-table tbody tr:nth-child(even) { background-color: #242424; }
+                html.gs-dark .stok-table tbody tr:hover { background-color: #303030; }
+                html.gs-dark .btn-secondary { background-color: #343434; color: #f0f0f0; }
+                html.gs-dark a.btn,
+                html.gs-dark a.btn:hover { color: #fff; }
+                html.gs-dark .modal-close { color: #ccc; }
+                html.gs-dark .modal-close:hover { background-color: #333; }
+                html.gs-dark .tab-btn:not(.active) { background-color: #282828; color: #ddd; }
+                html.gs-dark .tab-btn:not(.active):hover { background-color: #333; }
+                html.gs-dark .badge { background-color: #303030; color: #ddd; border-color: #484848; }
+                html.gs-dark .custom-modal-title { color: #f0f0f0; }
+                html.gs-dark .custom-modal-message { color: #ccc; }
+                html.gs-dark .custom-modal-btn.cancel { background-color: #343434; color: #eee; }
+                html.gs-dark .custom-modal-btn.cancel:hover { background-color: #444; }
+                /* Arama satırlarında JS'nin verdiği açık zemin ve hover renklerini ezer. */
+                html.gs-dark .barkod-sonuc-row { background: #242424 !important; color: #ddd; }
+                html.gs-dark .barkod-sonuc-row:nth-child(even) { background: #2b2b2b !important; }
+                html.gs-dark .barkod-sonuc-row:hover { background: #383838 !important; }
+                html.gs-dark .alert-success { background: #193529 !important; color: #91d5ac !important; border-color: #397958 !important; }
+                html.gs-dark .alert-warning { background: #3a301b !important; color: #f1d38a !important; border-color: #8a6d2f !important; }
+                html.gs-dark .alert-danger { background: #3b2025 !important; color: #f3a1ab !important; border-color: #91424e !important; }
+                html.gs-dark #rafSonuc [style*="color:green"] { color: #91d5ac !important; }
+                html.gs-dark #rafSonuc [style*="color:red"],
+                html.gs-dark #rafListesiYeri [style*="color:red"],
+                html.gs-dark #barkodSonuc [style*="color:#dc3545"] { color: #f3a1ab !important; }
+            }
 
             /* ── Responsive ── */
             input, select, textarea { font-size: 16px !important; }

@@ -190,6 +190,37 @@
         .btn-camera.scanning { background: linear-gradient(135deg, #dc3545, #c82333); animation: pulse-cam 1.5s infinite; }
         @keyframes pulse-cam { 0%,100% { box-shadow: 0 0 0 0 rgba(220,53,69,0.5); } 50% { box-shadow: 0 0 0 8px rgba(220,53,69,0); } }
 
+        /* ── Gece modu: özel stok yüzeyleri ── */
+        @media screen {
+            html.gs-dark {
+                color-scheme: dark;
+                --color-bg: #181818;
+                --color-bg-light: #1e1e1e;
+                --color-text: #e0e0e0;
+                --color-border: #3a3a3a;
+                --shadow-sm: 0 1px 3px rgba(0,0,0,.2);
+                --shadow-md: 0 5px 15px rgba(0,0,0,.3);
+            }
+            html.gs-dark .main-card { background-color: #1e1e1e; color: #e0e0e0; }
+            html.gs-dark .barcode-list-container { background-color: #181818; }
+            html.gs-dark .barcode-item { background-color: #242424; }
+            html.gs-dark .item-details p,
+            html.gs-dark .item-quantity .db-stock { color: #b5b5b5; }
+            html.gs-dark .item-details .barcode-value,
+            html.gs-dark #selectedModeText { color: #e2a6b0 !important; }
+            html.gs-dark .btn-secondary { background-color: #343434; color: #f0f0f0; }
+            html.gs-dark .btn-secondary:hover { background-color: #414141; }
+            html.gs-dark .header-actions .btn-warning { background-color: #ffc107; color: #212529; border-color: #ffc107; }
+            html.gs-dark .progress { background-color: #333; }
+            html.gs-dark .barcode-item.is-updating { background-color: #3a301b; border-color: #8a6d2f; }
+            html.gs-dark .barcode-item.is-success { background-color: #193529; border-color: #397958; }
+            html.gs-dark .barcode-item.is-danger { background-color: #3b2025; border-color: #91424e; }
+            html.gs-dark .barcode-item.has-sibling { border-color: #d9ad45; }
+            html.gs-dark .sibling-warn { background-color: #3a301b; border-color: #8a6d2f; border-left-color: #d9ad45; color: #f1d38a; }
+            html.gs-dark .sibling-warn strong,
+            html.gs-dark .sibling-warn small { color: inherit; }
+        }
+
         /* ── Responsive ── */
         @media (max-width: 991px) {
             .container { max-width: none; padding: 1rem; }

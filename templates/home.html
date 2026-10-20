@@ -439,6 +439,11 @@
         <h5 class="mb-0">🎯 Görev: Bu Modeller Eritilecek</h5>
         <span class="text-muted small">Hedef: elde 1 çift kalmayacak · stoklar canlı</span>
       </div>
+      <div class="input-group input-group-sm mb-3">
+        <span class="input-group-text"><i class="fas fa-search" aria-hidden="true"></i></span>
+        <input type="search" class="form-control model-arama" placeholder="Model kodu ara..."
+               aria-label="Görev modellerinde ara" autocomplete="off">
+      </div>
       <div class="row g-3">
         {% for key, baslik, ikon, grup in [
           ('cok', 'Çok Satan Modeller', '🔥', eritme.cok_satan),
@@ -469,11 +474,12 @@
             <div class="collapse" id="eritme-{{ key }}">
               <div class="eritme-modeller mt-2">
                 {% for m in grup.modeller %}
-                <span class="eritme-model{% if m.stok == 0 %} eritme-model--sifir{% endif %}" title="Model {{ m.kod }} · {{ m.stok }} çift">
+                <span class="eritme-model{% if m.stok == 0 %} eritme-model--sifir{% endif %}" data-model-kodu="{{ m.kod }}" title="Model {{ m.kod }} · {{ m.stok }} çift">
                   <strong>{{ m.kod }}</strong><small>{{ m.stok }}</small>
                 </span>
                 {% endfor %}
               </div>
+              <div class="model-arama-bos text-muted small mt-2 d-none" role="status">Bu grupta model bulunamadı.</div>
             </div>
           </div>
         </div>
@@ -510,6 +516,11 @@
         </div>
         {% endfor %}
       </div>
+      <div class="input-group input-group-sm mb-3">
+        <span class="input-group-text"><i class="fas fa-search" aria-hidden="true"></i></span>
+        <input type="search" class="form-control model-arama" placeholder="Model kodu ara..."
+               aria-label="Üretim modellerinde ara" autocomplete="off">
+      </div>
       <div class="uretim-tablo-kap">
         <table class="table table-sm table-hover align-middle mb-0 uretim-tablo">
           <thead>
@@ -524,7 +535,7 @@
           </thead>
           <tbody>
             {% for m in uretim.modeller %}
-            <tr class="{% if not m.siparis %}uretim-satir--pasif{% endif %}">
+            <tr class="{% if not m.siparis %}uretim-satir--pasif{% endif %}" data-model-kodu="{{ m.kod }}">
               <td>
                 <div class="uretim-kod">{{ m.kod }}</div>
                 <div class="uretim-baslik text-muted text-truncate" title="{{ m.baslik }}">{{ m.baslik }}</div>
@@ -550,6 +561,9 @@
               <td class="text-end small text-muted">{{ m.son_tarih|ist('%d.%m.%Y') if m.son_tarih else '—' }}</td>
             </tr>
             {% endfor %}
+            <tr class="model-arama-bos d-none">
+              <td colspan="6" class="text-center text-muted py-3" role="status">Model bulunamadı.</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -714,6 +728,34 @@
       }
       setInterval(refreshSoru, 30000);
     })();
+  </script>
+
+  <!-- Görev ve üretim modellerinde arama -->
+  <script>
+    document.querySelectorAll('.model-arama').forEach(function (input) {
+      var kart = input.closest('.eritme-card, .uretim-card');
+      input.addEventListener('input', function () {
+        var aranan = input.value.trim().toLocaleLowerCase('tr-TR');
+        var gruplar = kart.classList.contains('eritme-card')
+          ? kart.querySelectorAll('.eritme-grup') : [kart];
+        gruplar.forEach(function (grup) {
+          var bulunan = 0;
+          grup.querySelectorAll('[data-model-kodu]').forEach(function (model) {
+            var eslesti = model.dataset.modelKodu.toLocaleLowerCase('tr-TR').includes(aranan);
+            model.classList.toggle('d-none', !eslesti);
+            if (eslesti) bulunan++;
+          });
+          grup.querySelector('.model-arama-bos').classList.toggle('d-none', !aranan || bulunan > 0);
+          var liste = grup.querySelector('.collapse');
+          if (aranan && liste) {
+            bootstrap.Collapse.getOrCreateInstance(liste, { toggle: false }).show();
+          }
+        });
+        kart.querySelectorAll('.eritme-modeller, .uretim-tablo-kap').forEach(function (liste) {
+          liste.scrollTop = 0;
+        });
+      });
+    });
   </script>
 
   <!-- Görev: model listesini kopyala -->
