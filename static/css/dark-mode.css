@@ -274,8 +274,9 @@ html.gs-dark .text-dark { color: #ddd !important; }
 html.gs-dark p { color: #ccc; }
 html.gs-dark strong { color: #eee; }
 html.gs-dark small { color: #aaa; }
-html.gs-dark a { color: #8ab4f8; }
-html.gs-dark a:hover { color: #aecbfa; }
+/* Buton bağlantıları kendi yazı/hover renklerini korusun; mavi yalnız metin linklerine uygulansın. */
+html.gs-dark a:not(:where(.btn, .ss-btn, .btn-home, .btn-print, .btn-detail, .qna-send-btn, .search-container .clear-btn, .header .left-btns a)) { color: #8ab4f8; }
+html.gs-dark a:not(:where(.btn, .ss-btn, .btn-home, .btn-print, .btn-detail, .qna-send-btn, .search-container .clear-btn, .header .left-btns a)):hover { color: #aecbfa; }
 html.gs-dark hr { border-color: #333; }
 html.gs-dark .list-group-item {
   background-color: #1e1e1e;

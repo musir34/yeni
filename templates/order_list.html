@@ -90,13 +90,12 @@
         .uretim-rozeti--uretildi, .uretim-rozeti--paketlendi { background: rgba(25,135,84,.12); color: #146c43; border-color: rgba(25,135,84,.45); }
         html.gs-dark .uretim-rozeti { background: rgba(111,66,193,.25); color: #c9b3f5; }
         html.gs-dark .uretim-rozeti--uretildi, html.gs-dark .uretim-rozeti--paketlendi { background: rgba(25,135,84,.25); color: #8fd6b1; }
-        .archive-hint { border-radius: .6rem; }
-        .archive-hint-list { display: flex; flex-direction: column; gap: .4rem; }
-        .archive-hint-item { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; padding: .45rem .6rem; border: 1px solid rgba(133,100,4,.25); border-radius: .5rem; background: rgba(255,255,255,.55); text-decoration: none; color: inherit; }
-        .archive-hint-item:hover { background: #fff; border-color: rgba(133,100,4,.5); }
-        .archive-hint-no { font-weight: 800; }
-        .archive-hint-meta { font-size: .8rem; opacity: .8; }
-        .archive-hint-go { margin-left: auto; font-weight: 700; font-size: .82rem; white-space: nowrap; }
+        .card.arsiv-karti { border: 3px solid #b7791f; }
+        .arsiv-rozeti { background: #805214; color: #fff; }
+        .arsiv-nedeni { padding: .6rem .75rem; border-radius: .5rem; background: #fff3cd; color: #664d03; white-space: pre-wrap; overflow-wrap: anywhere; }
+        html.gs-dark .card.arsiv-karti { border-color: #d9ad45 !important; }
+        html.gs-dark .arsiv-rozeti { background: #805214; color: #fff; }
+        html.gs-dark .arsiv-nedeni { background: #3a301b; color: #f1d38a; }
         .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; min-height: 180px; padding: 2rem; border: 1px dashed var(--color-border); border-radius: var(--border-radius); background: var(--color-white); color: #6c757d; text-align: center; }
         .empty-state i { font-size: 2rem; color: var(--color-primary); }
 
@@ -411,31 +410,9 @@
         </div>
 
         <div id="orderResults" class="order-results" aria-live="polite">
-        {# Aranan sipariş arşivdeyse burada uyarılır — arşivlenen sipariş statü tablolarından silindiği için normal listede çıkmaz #}
-        {% if archived_matches|default([]) %}
-        <div class="alert alert-warning archive-hint" role="alert">
-            <div class="d-flex align-items-start gap-2">
-                <i class="fas fa-archive mt-1"></i>
-                <div class="flex-grow-1">
-                    <strong>Aradığın sipariş arşivde olabilir.</strong>
-                    <div class="archive-hint-list mt-2">
-                        {% for m in archived_matches %}
-                        <a class="archive-hint-item" href="{{ url_for('archive.display_archive', search=m.order_number) }}">
-                            <span class="archive-hint-no">{{ m.order_number }}</span>
-                            {% if m.customer %}<span class="archive-hint-meta">{{ m.customer }}</span>{% endif %}
-                            {% if m.archive_date %}<span class="archive-hint-meta">{{ m.archive_date | ist('%d-%m-%Y %H:%M') }}</span>{% endif %}
-                            {% if m.archive_reason %}<span class="archive-hint-meta">{{ m.archive_reason }}</span>{% endif %}
-                            <span class="archive-hint-go">Arşivde aç <i class="fas fa-arrow-right"></i></span>
-                        </a>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
 
         {% macro order_card(order, uid) %}
-            <div class="card{% if order.uretim_durumu %} uretim-karti{% endif %}">
+            <div class="card{% if order.uretim_durumu %} uretim-karti{% endif %}{% if order.is_archived %} arsiv-karti{% endif %}">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     {# Shopify kartında display_number mağaza adı (1428); eylemler order_number (SH-…) ile çalışır #}
                     {% set gosterilen_no = order.display_number or order.order_number %}
@@ -444,10 +421,12 @@
                         <span class="copy-container" onclick="copyToClipboard('{{ gosterilen_no }}', this)"><i class="far fa-copy"></i></span>
                         <span class="copy-confirmation">✔️</span>
                     </div>
+                    {% if not order.is_archived %}
                     <form method="POST" action="{{ url_for('order_list_service.order_label') }}" target="_blank">
                         <input type="hidden" name="order_number" value="{{ order.order_number }}"><input type="hidden" name="shipping_barcode" value="{{ order.cargo_tracking_number }}"><input type="hidden" name="cargo_provider" value="{{ order.cargo_provider_name }}"><input type="hidden" name="customer_name" value="{{ order.customer_name }}"><input type="hidden" name="customer_surname" value="{{ order.customer_surname }}"><input type="hidden" name="customer_address" value="{{ order.customer_address }}">
                         <button type="submit" class="btn p-0" title="Kargo Etiketi Yazdır"><img src="/static/logo/kargo.png" alt="Kargo Yazdır" style="width:36px; height:36px; border-radius:5px;"></button>
                     </form>
+                    {% endif %}
                 </div>
                 <div class="card-body">
                     <p class="mb-1"><strong>{{ order.customer_name }} {{ order.customer_surname }}</strong></p>
@@ -458,12 +437,15 @@
                     {% endif %}
                     <p class="mb-1"><small><strong>Tarih:</strong> {{ order.order_date | ist('%d-%m-%Y %H:%M') if order.order_date else 'N/A' }}</small></p>
                     <p class="mb-1">
-                        {% set translated_status = {'Created': 'Yeni', 'Hazirlaniyor': 'Hazırlanıyor', 'Picking': 'İşleme Alındı', 'Shipped': 'Kargoda', 'Delivered': 'Teslim Edildi', 'Cancelled': 'İptal Edildi'}.get(order.status, order.status) %}
+                        {% set translated_status = {'Created': 'Yeni', 'Hazirlaniyor': 'Hazırlanıyor', 'Picking': 'İşleme Alındı', 'Shipped': 'Kargoda', 'Delivered': 'Teslim Edildi', 'Cancelled': 'İptal Edildi', 'Archived': 'Arşivde'}.get(order.status, order.status) %}
                         <strong>Durum:</strong>
-                        <span class="badge {% if translated_status == 'Yeni' %}bg-warning{% elif translated_status == 'Hazırlanıyor' %}bg-info text-white{% elif translated_status == 'İşleme Alındı' %}bg-success{% elif translated_status == 'Kargoda' %}bg-danger{% elif translated_status == 'Teslim Edildi' %}bg-orange{% else %}bg-secondary{% endif %}">{{ translated_status }}</span>
+                        <span class="badge {% if order.is_archived %}arsiv-rozeti{% elif translated_status == 'Yeni' %}bg-warning{% elif translated_status == 'Hazırlanıyor' %}bg-info text-white{% elif translated_status == 'İşleme Alındı' %}bg-success{% elif translated_status == 'Kargoda' %}bg-danger{% elif translated_status == 'Teslim Edildi' %}bg-orange{% else %}bg-secondary{% endif %}">{{ translated_status }}</span>
                         {# Üretim rozeti durum rozetinin yanındaki boşlukta durur; kart boyu uzamaz #}
                         {% if order.uretim_durumu %}<span class="uretim-rozeti uretim-rozeti--{{ order.uretim_durumu }}" title="{{ order.uretim_aciklamasi }}"><i class="fas fa-industry"></i> {{ order.uretim_etiketi }}</span>{% endif %}
                     </p>
+                    {% if order.is_archived %}
+                    <p class="arsiv-nedeni mb-2"><strong>Arşiv nedeni:</strong> {{ order.archive_reason or 'Belirtilmemiş' }}</p>
+                    {% endif %}
                     <p class="mb-1"><small><strong>Kargo:</strong> <span class="kargo-rozet-yeri">{{ kargo_rozet(order.cargo_tracking_number, order.cargo_provider_name) }}</span><span class="cargo-provider {% if order.cargo_provider_name and 'MNG Kargo' in order.cargo_provider_name %}orange{% endif %}">{{ order.cargo_provider_name or '-' }}</span></small></p>
                     {% if translated_status in ['Yeni','Hazırlanıyor','İşleme Alındı'] and (order.agreed_delivery_date or order.estimated_delivery_end) %}
                         <p class="mb-3"><strong>Kalan Süre:</strong> <span class="remaining-time red" data-end-time="{{ order.agreed_delivery_date or order.estimated_delivery_end }}">{{ order.remaining_time }}</span></p>
@@ -518,7 +500,11 @@
                         </div>
                     </div>
                     <button type="button" class="btn btn-outline-warning btn-sm" onclick="siparisNotuAc('{{ uid }}')" title="Siparişe özel not ekle/düzenle">📝 Not</button>
+                    {% if order.is_archived %}
+                    <a class="btn btn-secondary btn-sm" href="{{ url_for('archive.display_archive', search=order.order_number) }}">Arşivde Aç</a>
+                    {% else %}
                     <button class="btn btn-secondary btn-sm" onclick="showArchiveModal('{{ order.order_number }}')">Arşivle</button>
+                    {% endif %}
                  </div>
             </div>
         {% endmacro %}

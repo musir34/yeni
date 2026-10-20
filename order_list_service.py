@@ -161,6 +161,27 @@ def get_union_all_orders():
     )
     return c.union_all(h, p, s, d, x)
 
+
+def _with_archived_orders(query):
+    """Arşiv kayıtlarını aynı kart/sayfalama sorgusuna kat; aktif kopyalarını ele."""
+    active = query.subquery()
+    active_query = db.session.query(
+        *[column.label(column.key) for column in active.c], literal('').label('archive_reason')
+    ).filter(
+        ~db.session.query(Archive.id).filter(Archive.order_number == active.c.order_number).exists()
+    )
+    archived_query = db.session.query(
+        Archive.id.label('id'), Archive.order_number.label('order_number'),
+        Archive.order_date.label('order_date'), Archive.details.label('details'),
+        Archive.merchant_sku.label('merchant_sku'), Archive.product_barcode.label('product_barcode'),
+        Archive.cargo_provider_name.label('cargo_provider_name'), Archive.customer_name.label('customer_name'),
+        Archive.customer_surname.label('customer_surname'), Archive.customer_address.label('customer_address'),
+        Archive.shipping_barcode.label('cargo_tracking_number'), Archive.agreed_delivery_date.label('agreed_delivery_date'),
+        Archive.estimated_delivery_end.label('estimated_delivery_end'), literal('Archived').label('status_name'),
+        Archive.archive_reason.label('archive_reason')
+    )
+    return active_query.union_all(archived_query)
+
 # Geçerli sıralama seçenekleri (UI dropdown ile eşleşir)
 SORT_OPTIONS = ('date_desc', 'deadline_asc', 'deadline_desc')
 DEFAULT_SORT = 'date_desc'
@@ -264,6 +285,8 @@ def _merge_order_rows(rows, status_getter):
         mock.merchant_sku = r.merchant_sku
         mock.product_barcode = r.product_barcode
         mock.status = status_getter(r)
+        mock.is_archived = mock.status == 'Archived'
+        mock.archive_reason = getattr(r, 'archive_reason', '') or ''
         mock.cargo_provider_name = getattr(r, 'cargo_provider_name', '')
         mock.customer_name = getattr(r, 'customer_name', '')
         mock.customer_surname = getattr(r, 'customer_surname', '')
@@ -317,53 +340,6 @@ def _overdue_order_numbers(overdue_orders):
     return {o.order_number for o in overdue_orders if getattr(o, 'order_number', None)}
 
 
-def _archived_search_matches(search_query, limit=5):
-    """Aranan ifadeyle eşleşen ARŞİVDEKİ siparişler (liste üstünde uyarı bandı için).
-
-    Arşivlenen sipariş statü tablolarından silindiği için normal aramada hiç
-    çıkmıyordu; kullanıcı "sipariş kayboldu" sanıyordu. Alanlar sipariş
-    listesindeki arama kutusuyla aynı: sipariş no + müşteri adı/soyadı.
-    """
-    if not search_query:
-        return []
-    sq = search_query.strip()
-    if not sq:
-        return []
-    try:
-        like = f"%{sq}%"
-        rows = (
-            Archive.query
-            .filter(
-                or_(
-                    Archive.order_number.ilike(like),
-                    Archive.customer_name.ilike(like),
-                    Archive.customer_surname.ilike(like),
-                    (Archive.customer_name + ' ' + Archive.customer_surname).ilike(like),
-                )
-            )
-            .order_by(Archive.archive_date.desc())
-            .limit(limit)
-            .all()
-        )
-        seen = set()
-        matches = []
-        for r in rows:
-            if r.order_number in seen:
-                continue
-            seen.add(r.order_number)
-            matches.append({
-                'order_number': r.order_number,
-                'customer': f"{r.customer_name or ''} {r.customer_surname or ''}".strip(),
-                'archive_date': r.archive_date,
-                'archive_reason': r.archive_reason or '',
-            })
-        return matches
-    except Exception as e:
-        # Uyarı bandı ikincil bir yardım; hata olursa sipariş listesi bozulmasın.
-        logger.error(f"Hata: _archived_search_matches - {e}")
-        return []
-
-
 def _decorate_order_priority(orders):
     """Kartlarda hızlı öncelik sinyali için süre durumunu ekle.
 
@@ -395,12 +371,14 @@ def get_order_list():
         show_overdue = sort_key == 'deadline_asc' and request.args.get('show_overdue') == '1'
         overdue_orders = _get_overdue_orders()
         overdue_numbers = _overdue_order_numbers(overdue_orders)
-        union_query = get_union_all_orders()
+        union_query = _with_archived_orders(get_union_all_orders())
         sub = union_query.subquery()
         AllOrders = aliased(sub)
         q = db.session.query(AllOrders)
         if kaynak == 'shopify':
-            q = q.filter(false())        # yalnız site kartları: DB (Trendyol) satırı gelmez
+            q = q.filter(AllOrders.c.status_name == 'Archived', AllOrders.c.order_number.like('SH-%'))
+        elif kaynak == 'trendyol':
+            q = q.filter(~AllOrders.c.order_number.like('SH-%'))
 
         # Geciken = SADECE Yeni/Hazırlanıyor/İşleme Alındı statülerinde teslim
         # süresi geçmiş sipariş. (Teslim Edildi/Kargoda/İptal asla geciken sayılmaz.)
@@ -481,7 +459,6 @@ def get_order_list():
             sort_key=sort_key, overdue_orders=overdue_orders, kaynak=kaynak,
             active_list='all', per_page=per_page, per_page_options=PER_PAGE_OPTIONS,
             show_overdue=show_overdue,
-            archived_matches=_archived_search_matches(search_query),
             order_pull_enabled=_get_order_pull_enabled()
         )
     except Exception as e:
@@ -574,36 +551,52 @@ def get_filtered_orders(status):
             return redirect(url_for('siparis_hazirla.index'))
 
 
+        status_code = model_cls.__name__.replace("Order", "")
+        order_columns = model_cls
         orders_query = model_cls.query
+        # Durum sekmesinde aranan arşiv kaydı da uyarı yerine gerçek kart olarak görünür.
+        if search_query:
+            AllOrders = aliased(_with_archived_orders(get_union_all_orders()).subquery())
+            order_columns = AllOrders.c
+            orders_query = db.session.query(AllOrders).filter(
+                AllOrders.c.status_name.in_((status_code, 'Archived'))
+            )
         if kaynak == 'shopify':
-            orders_query = orders_query.filter(false())   # yalnız site kartları
+            if search_query:
+                orders_query = orders_query.filter(
+                    AllOrders.c.status_name == 'Archived', order_columns.order_number.like('SH-%')
+                )
+            else:
+                orders_query = orders_query.filter(false())   # yalnız site kartları
+        elif kaynak == 'trendyol':
+            orders_query = orders_query.filter(~order_columns.order_number.like('SH-%'))
         # Arama varken geciken gizleme UYGULANMAZ → aranan geciken sipariş no'su bulunur.
         hide_overdue_in_status = sort_key != 'deadline_asc' and not search_query
         if hide_overdue_in_status and overdue_numbers and model_cls in (OrderCreated, OrderHazirlaniyor, OrderPicking):
-            orders_query = orders_query.filter(~model_cls.order_number.in_(overdue_numbers))
+            orders_query = orders_query.filter(~order_columns.order_number.in_(overdue_numbers))
 
         if search_query:
             sq = search_query.strip()
             orders_query = orders_query.filter(
                 or_(
-                    model_cls.order_number.ilike(f"%{sq}%"),
-                    model_cls.customer_name.ilike(f"%{sq}%"),
-                    model_cls.customer_surname.ilike(f"%{sq}%"),
-                    (model_cls.customer_name + ' ' + model_cls.customer_surname).ilike(f"%{sq}%")
+                    order_columns.order_number.ilike(f"%{sq}%"),
+                    order_columns.customer_name.ilike(f"%{sq}%"),
+                    order_columns.customer_surname.ilike(f"%{sq}%"),
+                    (order_columns.customer_name + ' ' + order_columns.customer_surname).ilike(f"%{sq}%")
                 )
             )
 
         grouped_orders = (
-            orders_query.with_entities(model_cls.order_number.label('order_number'))
-            .group_by(model_cls.order_number)
+            orders_query.with_entities(order_columns.order_number.label('order_number'))
+            .group_by(order_columns.order_number)
         )
         total_orders_count = grouped_orders.count()
         page, total_pages, offset = _page_bounds(page, per_page, total_orders_count)
         page_order_rows = (
             grouped_orders
             .order_by(*_group_sort_clause(
-                sort_key, model_cls.order_date,
-                model_cls.agreed_delivery_date, model_cls.estimated_delivery_end
+                sort_key, order_columns.order_date,
+                order_columns.agreed_delivery_date, order_columns.estimated_delivery_end
             ))
             .offset(offset)
             .limit(per_page)
@@ -616,17 +609,16 @@ def get_filtered_orders(status):
             order_index = {order_number: idx for idx, order_number in enumerate(page_order_numbers)}
             raw_orders = (
                 orders_query
-                .filter(model_cls.order_number.in_(page_order_numbers))
+                .filter(order_columns.order_number.in_(page_order_numbers))
                 .order_by(*_sort_clause(
-                    sort_key, model_cls.order_date,
-                    model_cls.agreed_delivery_date, model_cls.estimated_delivery_end
+                    sort_key, order_columns.order_date,
+                    order_columns.agreed_delivery_date, order_columns.estimated_delivery_end
                 ))
                 .all()
             )
             raw_orders.sort(key=lambda r: order_index.get(r.order_number, len(order_index)))
 
-        status_code = status_map[status].__name__.replace("Order", "")
-        orders = _merge_order_rows(raw_orders, lambda _r: status_code)
+        orders = _merge_order_rows(raw_orders, lambda r: getattr(r, 'status_name', status_code))
 
         # 🛍️ Shopify siparişleri: etiketi bu sekmenin durumuna denk gelenler ilk sayfaya katılır
         if page == 1 and kaynak != 'trendyol':
@@ -643,7 +635,6 @@ def get_filtered_orders(status):
             sort_key=sort_key, overdue_orders=overdue_orders, kaynak=kaynak,
             active_list=active_map.get(model_cls), per_page=per_page,
             per_page_options=PER_PAGE_OPTIONS, show_overdue=False,
-            archived_matches=_archived_search_matches(search_query),
             order_pull_enabled=_get_order_pull_enabled()
         )
     except Exception as e:

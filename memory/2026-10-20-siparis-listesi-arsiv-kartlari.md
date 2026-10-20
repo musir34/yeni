@@ -1,0 +1,8 @@
+# Sipariş listesinde arşiv kartları
+
+- İstek: arşivdeki siparişler arama uyarısı yerine normal sipariş kartı olarak görünsün; dört taraflı çerçeve, Arşivde etiketi ve arşiv nedeni bulunsun.
+- `order_list_service.py`: Archive kayıtları tüm siparişler sorgusuna eklendi. Sipariş no/müşteri araması, sıralama, toplam sayı ve sayfalama birleşik sorguyu kullanır. Durum sekmelerinde arama yapıldığında eşleşen arşiv kayıtları da kart olarak gösterilir. Kaynak filtresi Shopify arşivlerini SH- kimliğiyle ayırır.
+- Arşiv kayıtlarına eski statüleri yerine Archived görüntüleme statüsü verilir. Aynı numarayla kalmış aktif kopyalar birleşik sorgudan elenir; ürünler iki kez sayılmaz. Kargo kodu Archive.shipping_barcode alanından alınır.
+- `templates/order_list.html`: eski uyarı kaldırıldı. Arşiv kartına gündüz/gece uyumlu dört kenarlı çerçeve ve açık arşiv nedeni eklendi. Üretim rozeti korunur. Arşiv kartında etiket yazdırma/toplu kargo seçimi bulunmaz; Arşivle yerine Arşivde Aç bağlantısı vardır. Not ve ürün detayları kullanılabilir.
+- `tests/test_order_list_archive.py`: 7 izole regresyon testi geçti. Gerçek liste fonksiyonları AST ile yüklenip bellekte SQLite üzerinde çalıştırıldı; canlı uygulama, veritabanı ve API kullanılmadı. Testler çift kayıt, ürün miktarı, sayfalama, arama, kaynak/durum filtreleri ve kart eylemlerini kapsar. Sorgu kolonlarının union sonrasında adlarını koruması testte yakalanıp düzeltildi.
+- Python/Jinja sözdizimi ve diff boşluk kontrolleri geçti. Tarayıcıda görsel doğrulama yapılmadı. DB şeması, arşivleme/geri yükleme ve stok akışları değiştirilmedi. Deploy kullanıcıda.
