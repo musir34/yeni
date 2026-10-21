@@ -53,3 +53,14 @@ yeni QR'ın eski oturumu kapatması da anahtar ister. Anahtar sessionStorage'da 
 ## Deploy
 pip değişikliği yok. `cd yeni && DISABLE_JOBS=1 ../venv/bin/python scripts/add_hazirla_telefon.py`
 → `git pull && systemctl restart gullupanel.service`.
+
+## 2026-10-21 — Telefon klavyesi kendi kendine açılmasın
+- Sorun: telefonda her güncellemede (`odakla`) ve her gönderimden sonra sıradaki alana otomatik
+  focus veriliyordu → klavye sürekli açılıp ekranı bozuyordu; kapatınca yine açılıyordu.
+- Çözüm (`static/js/hazirla-telefon.js`, `templates/hazirla_telefon.html`):
+  - `odakla()` artık focus vermez, yalnız aktif kartı vurgular.
+  - Sağ altta yuvarlak **⌨️** düğmesi (`#klavyeBtn`): basılınca sıradaki boş alana odaklanır
+    (dokunma içinde eşzamanlı focus → klavye açılır). Okutulacak alan kalmayınca gizlenir.
+  - Enter/Tab ile gönderimde (klavye zaten açık ya da Zebra okuyucu soneki) sıradaki alana geçilir;
+    ➤ düğmesi / alandan çıkışla gönderimde geçilmez (`okut(a, ileri)`).
+  - Script sürümü `?v=4`.

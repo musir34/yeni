@@ -89,6 +89,7 @@
 
   .tel-alt { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e5e7eb; padding: 10px 14px; display: flex; gap: 10px; z-index: 20; }
   .tel-alt .tel-btn { flex: 1; }
+  #klavyeBtn { position: fixed; right: 14px; bottom: 84px; width: 48px; height: 48px; border-radius: 50%; border: none; background: #111827; color: #fff; font-size: 1.35rem; line-height: 48px; padding: 0; box-shadow: 0 3px 10px rgba(0,0,0,.3); z-index: 21; }
 
   /* Kapandı kaplaması */
   .tel-kapli { position: fixed; inset: 0; background: rgba(17,24,39,.92); color: #fff; z-index: 50; display: none; align-items: center; justify-content: center; text-align: center; padding: 24px; }
@@ -160,6 +161,7 @@
     <div id="sipBos" class="tel-bos">Bilgisayardaki sipariş bekleniyor…</div>
     <div id="kalemler" class="tel-kartlar"></div>
 
+    <button type="button" id="klavyeBtn" title="Klavyeyi aç" aria-label="Klavyeyi aç" style="display:none">⌨️</button>
     <div class="tel-alt">
       <button type="button" class="tel-btn ikincil" id="barkodKameraBtn">📷 Kamerayla Barkod Okut</button>
     </div>
@@ -188,5 +190,5 @@
 
 {% block scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-<script src="{{ url_for('static', filename='js/hazirla-telefon.js') }}?v=3"></script>
+<script src="{{ url_for('static', filename='js/hazirla-telefon.js') }}?v=4"></script>
 {% endblock %}

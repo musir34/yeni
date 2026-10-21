@@ -226,17 +226,27 @@
     odakla();
   }
 
-  // Odak: ilk okutulmamış alan (raf önce), kart vurgusu
+  // Sıradaki alan: ilk okutulmamış alan (raf önce)
+  function hedefAlan() {
+    return alanlariGetir().filter(function (a) { return !a.classList.contains('ok') && !a.classList.contains('bekliyor'); })[0];
+  }
+
+  // Kart vurgusu. Kendiliğinden focus YOK: telefon klavyesi her güncellemede açılıp ekranı
+  // bozuyordu; klavye yalnız ⌨️ düğmesiyle ya da alana dokununca açılır.
   function odakla() {
-    var hedef = alanlariGetir().filter(function (a) { return !a.classList.contains('ok') && !a.classList.contains('bekliyor'); })[0];
+    var hedef = hedefAlan();
     document.querySelectorAll('#kalemler .tel-kart').forEach(function (k) { k.classList.remove('aktif-kart'); });
+    $('klavyeBtn').style.display = hedef ? '' : 'none';
     if (!hedef) return;
     var kart = hedef.closest('.tel-kart'); if (kart) kart.classList.add('aktif-kart');
-    var aktif = document.activeElement;
-    if (!aktif || !aktif.closest || !aktif.closest('#kalemler .tel-alan') || aktif.readOnly) {
-      var inp = hedef.querySelector('input');
-      setTimeout(function () { try { inp.focus({ preventScroll: false }); } catch (e) {} }, 60);
-    }
+  }
+
+  // ⌨️ düğmesi: sıradaki alana odaklan (dokunma içinde eşzamanlı focus → klavye açılır)
+  function klavyeAc() {
+    var hedef = hedefAlan(); if (!hedef) return;
+    var inp = hedef.querySelector('input');
+    try { inp.focus(); } catch (e) {}
+    hedef.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 
   function alanlariBagla() {
@@ -246,7 +256,7 @@
       // ➤ düğmesi ya da alandan çıkış (change) gönderir
       inp.addEventListener('keydown', function (e) {
         if (e.key !== 'Enter' && e.key !== 'Tab') return;
-        e.preventDefault(); okut(a);
+        e.preventDefault(); okut(a, true);
       });
       inp.addEventListener('change', function () { okut(a); });
       inp.addEventListener('input', function () { a.classList.remove('yanlis'); a.querySelector('.durum').textContent = ''; });
@@ -255,7 +265,8 @@
     });
   }
 
-  function okut(a) {
+  // ileri: Enter/Tab ile gönderildiyse (klavye zaten açık / okuyucu soneki) sıradaki alana odaklan
+  function okut(a, ileri) {
     var inp = a.querySelector('input'), deger = inp.value.trim();
     if (!deger || a.classList.contains('ok') || !eslesmeId) return;
     if (a.dataset.tip === 'raf') {
@@ -278,9 +289,9 @@
           a.classList.add('yanlis'); a.querySelector('.durum').textContent = j.error || 'Gönderilemedi'; return;
         }
         titret(50);
-        // Sonraki boş alana geç (PC onayı gelince yeşile döner)
+        // Enter ile gönderildiyse sonraki boş alana geç (PC onayı gelince yeşile döner)
         var sonraki = alanlariGetir().filter(function (x) { return x !== a && !x.classList.contains('ok') && !x.classList.contains('bekliyor'); })[0];
-        if (sonraki) setTimeout(function () { sonraki.querySelector('input').focus(); }, 50);
+        if (ileri && sonraki) setTimeout(function () { sonraki.querySelector('input').focus(); }, 50);
         turPlanla(150);
       }).catch(function () { delete gonderilen[key]; a.classList.remove('bekliyor'); a.querySelector('.durum').textContent = 'Sunucuya ulaşılamadı'; });
   }
@@ -361,6 +372,7 @@
   $('cikBtn').addEventListener('click', cik);
   $('yenidenBtn').addEventListener('click', yenidenBagla);
   $('barkodKameraBtn').addEventListener('click', barkodKameraAc);
+  $('klavyeBtn').addEventListener('click', klavyeAc);
   $('kameraKapatBtn').addEventListener('click', barkodKameraKapat);
   document.addEventListener('visibilitychange', function () { if (!document.hidden && eslesmeId) turPlanla(0); });
 
