@@ -130,6 +130,49 @@ def iptalleri_tara() -> int:
     return sayi
 
 
+def _takip_numaralari(order: dict) -> set[str]:
+    numaralar = set()
+    for f in order.get("fulfillments") or []:
+        for t in f.get("trackingInfo") or []:
+            n = str(t.get("number") or "").strip()
+            if n:
+                numaralar.add(n)
+    return numaralar
+
+
+def baska_kargoyla_karsilananlari_tara() -> int:
+    """Shopify'da elle başka takip numarasıyla karşılanan sipariş (ekip eski usul etiket kesmiş, #1464):
+    MNG'deki sipariş/gönderi kurye almadıysa iptal edilir; panelde 'barkod bekliyor' diye takılı kalmaz.
+    Takip numarası bizim MNG numaramızsa (panelin kendi fulfillment'ı) ya da numara hiç yoksa dokunulmaz."""
+    from models import KargoGonderi
+    from .durum import HAZIRLANDI, SIPARIS_ACILDI
+    from .servis import DURUM_BEKLIYOR, DURUM_HATA, kayit_iptal
+    acik = (KargoGonderi.query
+            .filter(KargoGonderi.kaynak == KAYNAK_SHOPIFY,
+                    KargoGonderi.durum.in_((DURUM_BEKLIYOR, DURUM_HATA, SIPARIS_ACILDI, HAZIRLANDI)))
+            .all())
+    if not acik:
+        return 0
+    from shopify_site.shopify_service import shopify_service
+    esik = (datetime.now(timezone.utc) - timedelta(days=_geriye_gun())).strftime("%Y-%m-%d")
+    sonuc = shopify_service.get_orders(limit=TARAMA_LIMIT, query_filter=f"fulfillment_status:shipped updated_at:>{esik}")
+    if not sonuc.get("success"):
+        return 0
+    numaralar = {str(o.get("legacyResourceId") or str(o.get("id") or "").split("/")[-1]): _takip_numaralari(o)
+                 for o in sonuc.get("orders") or []}
+    sayi = 0
+    for kayit in acik:
+        nums = numaralar.get(kayit.kaynak_ref)
+        if not nums or (kayit.shipment_id and kayit.shipment_id in nums):
+            continue
+        if kayit_iptal(kayit):
+            kayit.hata = f"Shopify'da başka takip numarasıyla karşılandı ({', '.join(sorted(nums))}); MNG siparişi iptal edildi"
+            db.session.commit()
+            logger.info("[MNG] Shopify başka kargoyla karşılandı → MNG iptal %s (%s)", kayit.kaynak_ad, kayit.referans)
+            sayi += 1
+    return sayi
+
+
 def yeni_siparisleri_tara() -> int:
     """Zamanlayıcı girişi; hata yutulur, açılan gönderi sayısı döner."""
     if not otomatik_acik():
@@ -139,6 +182,11 @@ def yeni_siparisleri_tara() -> int:
     except Exception:
         db.session.rollback()
         logger.exception("[MNG] Shopify iptal taraması hatası (yutuldu)")
+    try:
+        baska_kargoyla_karsilananlari_tara()
+    except Exception:
+        db.session.rollback()
+        logger.exception("[MNG] Shopify başka-kargo taraması hatası (yutuldu)")
     acilan = 0
     try:
         from siparis_hazirla import _fetch_shopify_beklemede_orders

@@ -599,3 +599,29 @@ def test_yeniden_ac_sube_cozulmeyen_acik_siparisi_de_duzeltir(ctx):
     ctx.barkod_hatasi = None
     k2 = _ac_ve_barkodla("shopify", "77071", "#1571", "SH1571")                 # barkodlu kayıt: yeniden açılmaz
     assert k2.durum == "hazirlandi" and servis.yeniden_ac(k2, adres="x") is False
+
+
+class SahteShopifyKarsilama:
+    """fulfillment_status:shipped sorgusuna sipariş → takip numaraları döner."""
+    def __init__(self, siparisler):
+        self.siparisler = siparisler        # {legacyResourceId: [takip no, ...]}
+
+    def get_orders(self, limit=20, query_filter=None, **kw):
+        assert "fulfillment_status:shipped" in query_filter
+        return {"success": True, "orders": [
+            {"legacyResourceId": i, "fulfillments": [{"trackingInfo": [{"number": n} for n in nums]}]}
+            for i, nums in self.siparisler.items()]}
+
+
+def test_shopify_baska_takip_numarasiyla_karsilanan_siparisin_mng_kaydi_iptal(ctx, monkeypatch):
+    """#1464: ekip eski usul DHL etiketi kesip takip numarasını Shopify'a elle girdi; MNG'deki sipariş
+    'barkod bekliyor' diye takılı kaldı. Başka numarayla karşılanan sipariş → MNG iptal; kendi numaramızla
+    karşılanmış ya da numarasız karşılanmış sipariş → dokunulmaz."""
+    from mng_kargo.shopify_tarama import baska_kargoyla_karsilananlari_tara
+    k1 = servis.gonderi_ac("shopify", "77080", "#1580", "SH1580", _alici())              # MNG'de açık, barkodsuz
+    k2 = _ac_ve_barkodla("shopify", "77081", "#1581", "SH1581")                            # kendi numaramızla karşılanmış
+    k3 = servis.gonderi_ac("shopify", "77082", "#1582", "SH1582", _alici())              # numarasız karşılama
+    _shopify_yama(monkeypatch, SahteShopifyKarsilama({"77080": ["251613035913"], "77081": [k2.shipment_id], "77082": []}))
+    assert baska_kargoyla_karsilananlari_tara() == 1
+    assert k1.durum == "iptal" and "251613035913" in k1.hata and "SH1580" in ctx.iptaller
+    assert k2.durum == "hazirlandi" and k3.durum == "siparis_acildi"

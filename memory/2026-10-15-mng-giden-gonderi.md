@@ -140,3 +140,7 @@
   kayboluyordu → form artık siparis_acildi+hata notu+barkodsuz kayıtta da açık; yeniden_ac/yeniden_dene bu
   durumu kabul eder (önce cancelorder). SUBE_DENEME_SINIRI 6→3. DG5556431446 ve SH1465 hata değil: barkod,
   işleme alınınca/etiket basılınca istenir ("Sipariş MNG'de, barkod bekliyor" normal bekleme).
+- 2026-10-21 #1464 sonucu: ekip siparişi eski usul (DHL eCommerce 251613035913) elle karşılamış; MNG kaydı
+  gereksizdi → kayit_iptal ile iptal edildi (MNG cancelorder). Otomasyon: shopify_tarama.
+  baska_kargoyla_karsilananlari_tara (5 dk): fulfillment_status:shipped siparişlerde takip numarası var ve
+  bizim shipment_id değilse MNG kaydı iptal + hata notu; numarasız karşılama ya da kendi numaramız → dokunulmaz.
