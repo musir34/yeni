@@ -158,8 +158,8 @@ def etiket_sayfasi(gonderi_id):
 @roles_required("admin", "manager")
 def yeniden_dene(gonderi_id):
     kayit = _kayit(gonderi_id)
-    if kayit.durum not in (DURUM_BEKLIYOR, DURUM_HATA):
-        flash("Yalnız bekleyen/hatalı gönderi yeniden denenir.", "warning")
+    if kayit.durum not in (DURUM_BEKLIYOR, DURUM_HATA) and not (kayit.durum == SIPARIS_ACILDI and not kayit.shipment_id):
+        flash("Yalnız bekleyen/hatalı ya da barkodu alınamamış gönderi yeniden denenir.", "warning")
         return redirect(url_for("kargo_gonderi.liste"))
     basarili = yeniden_ac(kayit, il=(request.form.get("il") or "").strip(), ilce=(request.form.get("ilce") or "").strip(),
                           adres=(request.form.get("adres") or "").strip())

@@ -49,7 +49,7 @@ DURUM_HATA = "hata"             # deneme sınırı doldu ya da kalıcı hata, in
 MAX_DENEME = 5
 YENIDEN_DENEME_PENCERESI = timedelta(days=3)
 SORGU_ARALIGI = timedelta(minutes=20)       # aynı gönderi bu süreden sık sorulmaz
-SUBE_DENEME_SINIRI = 6     # 'varış şubesi bulunamadı' bu kadar denemede geçmezse insan baksın (adres/il/ilçe çelişkisi)
+SUBE_DENEME_SINIRI = 3     # 'varış şubesi bulunamadı' bu kadar denemede geçmezse insan baksın (adres/il/ilçe çelişkisi; gerçek gecikme 1 dk sürer)
 KAPIDA_ODEME_MIN = Decimal("20")            # MNG: "Tahsilatlı Kapıda Gönderi Tutar en az 20 TL"
 TAKIP_URL_SABLON = os.getenv("MNG_TAKIP_URL_SABLON") or "https://kargotakip.dhlecommerce.com.tr/?takipNo={shipment_id}"
 
@@ -341,7 +341,8 @@ def yeniden_ac(kayit: KargoGonderi, il: str = "", ilce: str = "", adres: str = "
         kayit.ilce = tr_upper(ilce)[:40]
     if adres and adres.strip():
         kayit.alici_adres = re.sub(r"\s+", " ", adres).strip()
-    if kayit.durum not in (DURUM_BEKLIYOR, DURUM_HATA):
+    # siparis_acildi + barkodsuz: MNG'de açık ama şube çözülemeyen sipariş de adres düzeltmesiyle yeniden açılabilir
+    if kayit.durum not in (DURUM_BEKLIYOR, DURUM_HATA) and not (kayit.durum == SIPARIS_ACILDI and not kayit.shipment_id):
         return False
     if not (kayit.shipment_id or kayit.barkod):
         try:

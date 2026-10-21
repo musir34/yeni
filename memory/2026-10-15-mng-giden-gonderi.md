@@ -135,3 +135,8 @@
   kayıtta MNG siparişi cancelorder ile iptal edilip aynı referansla yeniden createOrder — canlıda GSTEST ile
   doğrulandı: cancel sonrası aynı referenceId yeni adresle kabul ediliyor); Kargo Gönderileri formuna adres kutusu.
   MNG 20311 = ilçe adı/kodu uyumsuz (örn. KADIKÖY'e districtCode 0 verince de 20311).
+- 2026-10-21 #1464 devam: ekip Yeniden Dene'ye adres değiştirmeden bastı (MNG'de iptal+yeniden açıldı, aynı
+  çelişkili adres → yine şube yok). Yeniden Dene sonrası kayıt siparis_acildi'ye dönünce adres kutusu
+  kayboluyordu → form artık siparis_acildi+hata notu+barkodsuz kayıtta da açık; yeniden_ac/yeniden_dene bu
+  durumu kabul eder (önce cancelorder). SUBE_DENEME_SINIRI 6→3. DG5556431446 ve SH1465 hata değil: barkod,
+  işleme alınınca/etiket basılınca istenir ("Sipariş MNG'de, barkod bekliyor" normal bekleme).

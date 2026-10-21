@@ -587,3 +587,15 @@ def test_yeniden_ac_barkodlu_kaydi_iptal_etmez(ctx):
     k = _ac_ve_barkodla("shopify", "77062", "#1562", "SH1562")
     k.durum = "hata"; db.session.commit()
     assert servis.yeniden_ac(k) is True and k.durum == "hazirlandi" and "SH1562" not in ctx.iptaller
+
+
+def test_yeniden_ac_sube_cozulmeyen_acik_siparisi_de_duzeltir(ctx):
+    """Yeniden Dene sonrası kayıt siparis_acildi'ye döner; adres kutusu kaybolmasın, düzeltme yine yapılabilsin."""
+    ctx.barkod_hatasi = SUBE_YOK
+    k = _ac_ve_barkodla("shopify", "77070", "#1570", "SH1570")
+    assert k.durum == "siparis_acildi" and k.hata
+    assert servis.yeniden_ac(k, adres="Cumhuriyet Mah. GMK Bulvarı No 242") is True
+    assert ctx.iptaller[-1] == "SH1570" and k.alici_adres == "Cumhuriyet Mah. GMK Bulvarı No 242" and k.durum == "siparis_acildi"
+    ctx.barkod_hatasi = None
+    k2 = _ac_ve_barkodla("shopify", "77071", "#1571", "SH1571")                 # barkodlu kayıt: yeniden açılmaz
+    assert k2.durum == "hazirlandi" and servis.yeniden_ac(k2, adres="x") is False

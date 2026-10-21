@@ -114,7 +114,8 @@
           <td class="kg-mini">{{ k.son_sorgu_at | ist('%d.%m %H:%M') if k.son_sorgu_at else '-' }}</td>
           <td class="kg-hata text-danger">{{ k.hata or '' }}</td>
           <td class="text-end text-nowrap">
-            {% if k.durum in ('bekliyor', 'hata') %}
+            {# siparis_acildi + hata notu (varış şubesi çözülmedi): adres düzeltme formu burada da açık #}
+            {% if k.durum in ('bekliyor', 'hata') or (k.durum == 'siparis_acildi' and k.hata and not k.shipment_id) %}
               <form method="post" action="{{ url_for('kargo_gonderi.yeniden_dene', gonderi_id=k.id) }}" class="d-inline-flex gap-1 align-items-center">
                 <input type="text" name="il" placeholder="İl" value="{{ k.il or '' }}" class="form-control form-control-sm" style="width:7rem">
                 <input type="text" name="ilce" placeholder="İlçe" value="{{ k.ilce or '' }}" class="form-control form-control-sm" style="width:7rem"
