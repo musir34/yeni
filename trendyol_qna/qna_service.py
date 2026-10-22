@@ -255,6 +255,26 @@ def _notify_new_questions(rows) -> None:
         logger.exception("[QNA] WhatsApp bildirimi gönderilemedi")
 
 
+def _red_gerekcesi(resp) -> str:
+    """Trendyol hata gövdesinden okunur gerekçe: errors[].message / message / detail.
+
+    Ham gövdenin başı zaman damgası, URI, correlationId ile dolu; gerekçe sonda kalıp
+    kesiliyordu. Gerekçe bulunamazsa ham gövde (kırpılmış) döner.
+    """
+    try:
+        veri = resp.json()
+    except ValueError:
+        veri = None
+    if isinstance(veri, dict):
+        mesajlar = [str(e.get("message") or e.get("key") or "").strip()
+                    for e in (veri.get("errors") or []) if isinstance(e, dict)]
+        mesajlar += [str(veri.get(k) or "").strip() for k in ("message", "detail", "title")]
+        mesajlar = [m for m in dict.fromkeys(mesajlar) if m]
+        if mesajlar:
+            return " · ".join(mesajlar)[:600]
+    return (resp.text or "")[:600]
+
+
 def answer_question(question_id: int, text: str, username: str | None = None) -> dict:
     """
     Cevabı Trendyol'a gönder ve yerel kaydı güncelle.
@@ -282,9 +302,8 @@ def answer_question(question_id: int, text: str, username: str | None = None) ->
         return {"ok": False, "hata": f"Trendyol'a ulaşılamadı: {e}"}
 
     if not resp.ok:
-        detail = resp.text[:300]
-        logger.warning("[QNA] cevap reddedildi (%s): %s", resp.status_code, detail)
-        return {"ok": False, "hata": f"Trendyol cevabı kabul etmedi ({resp.status_code}): {detail}"}
+        logger.warning("[QNA] cevap reddedildi (%s): %s", resp.status_code, resp.text[:2000])
+        return {"ok": False, "hata": f"Trendyol cevabı kabul etmedi ({resp.status_code}): {_red_gerekcesi(resp)}"}
 
     now = datetime.now(timezone.utc)
     onceki_taslak = row.ai_draft

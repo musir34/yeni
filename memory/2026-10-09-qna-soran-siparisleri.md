@@ -13,3 +13,5 @@ metadata:
 - Geçmiş: `scripts/backfill_trendyol_siparis_musteri.py` (~90 gün, 14 günlük pencere), deploy sonrası bir kez.
 - Test: tests/test_qna_siparis_musteri.py (sqlite, --noconftest). Ekran görüntüyle doğrulanmadı.
 İlgili: [[project-trendyol-qna]]
+
+2026-10-22: Trendyol cevap 400 hatasında gerekçe ekranda kesiliyordu (resp.text[:300], gerekçe gövdenin sonunda) -> qna_service._red_gerekcesi errors[].message/message/detail gösterir, logda 2000 karakter. Codex taslak hatası sunucu logu bekleniyor ([QNA-AI] codex hata / [AI-ASISTAN] codex rc=). Codex'e giden hafıza Claude ile aynı (_kurallar + _draft_prompt).
