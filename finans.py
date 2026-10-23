@@ -310,9 +310,13 @@ def ana_gider():
     tum_kalemler = FinansAnaGiderKalem.query.order_by(FinansAnaGiderKalem.aktif.desc(),
                                                       FinansAnaGiderKalem.sira,
                                                       FinansAnaGiderKalem.ad).all()
+    from finans_calisan_service import arsivde
+    arsiv_kalemler = [k for k in tum_kalemler if arsivde(k)]   # işten ayrılanlar ayrı listede
+    tum_kalemler = [k for k in tum_kalemler if not arsivde(k)]
     return render_template('finans_ana_gider.html', donem=donem, durum=durum,
                            gruplar=fs.ana_gider_gruplari(durum, _bugun_ist()),
                            odenen=odenen, bekleyen=bekleyen, tum_kalemler=tum_kalemler,
+                           arsiv_kalemler=arsiv_kalemler,
                            kategoriler=fs.kategoriler('ana_gider'), bugun=_bugun_ist(),
                            belirsiz_adet=belirsiz_adet,
                            calisan_cariler=maas_carileri())

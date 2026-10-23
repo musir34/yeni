@@ -117,6 +117,14 @@
                   <input type="hidden" name="aktif" value="{{ '0' if k.aktif else '1' }}">
                   <button class="btn btn-sm {{ 'btn-outline-danger' if k.aktif else 'btn-outline-success' }}">{{ 'Pasif' if k.aktif else 'Aktif' }}</button>
                 </form>
+                {% if k.calisan_cari_id %}
+                <form method="POST" action="{{ url_for('finans.calisan_arsiv', kalem_id=k.id) }}" class="d-inline"
+                      onsubmit='return confirm({{ (k.calisan_cari.ad ~ " işten ayrıldı olarak arşivlensin mi? Ödeme planı pasife alınır, cari hesabı kapatılır; geçmiş kayıtlar silinmez.") | tojson }})'>
+                  <input type="hidden" name="next" value="{{ url_for('finans.ana_gider', donem=donem) }}">
+                  <input type="hidden" name="arsiv" value="1">
+                  <button class="btn btn-sm btn-outline-secondary" title="İşten ayrıldı: plan + cari hesabı tek adımda kapatılır">🗄 Arşivle</button>
+                </form>
+                {% endif %}
               </td>
             </tr>
           {% else %}
@@ -126,6 +134,34 @@
         </table>
       </div>
     </div>
+    {% if arsiv_kalemler %}
+    <div class="card fn-card mt-3">
+      <div class="card-header fw-bold" role="button" data-bs-toggle="collapse" data-bs-target="#fnCalisanArsiv" aria-expanded="false">🗄 Arşiv — işten ayrılan çalışanlar ({{ arsiv_kalemler | length }})</div>
+      <div class="collapse" id="fnCalisanArsiv">
+        <div class="card-body p-0 fn-table-wrap">
+          <table class="table table-sm fn-table mb-0">
+            <thead><tr><th>Çalışan</th><th>Plan</th><th>Dönem</th><th></th></tr></thead>
+            <tbody>
+            {% for k in arsiv_kalemler %}
+              <tr class="text-muted">
+                <td><a class="text-muted" href="{{ url_for('finans.cari_detay', cari_id=k.calisan_cari_id) }}">{{ k.calisan_cari.ad }}</a></td>
+                <td>{{ k.ad }} <span class="fn-mini">({{ 'Haftalık' if k.siklik == 'haftalik' else 'Aylık' }})</span></td>
+                <td class="fn-mini">{{ k.baslangic_donem }} → {{ k.bitis_donem or '∞' }}</td>
+                <td class="fn-actions text-end text-nowrap">
+                  <form method="POST" action="{{ url_for('finans.calisan_arsiv', kalem_id=k.id) }}" class="d-inline">
+                    <input type="hidden" name="next" value="{{ url_for('finans.ana_gider', donem=donem) }}">
+                    <input type="hidden" name="arsiv" value="0">
+                    <button class="btn btn-sm btn-outline-success" title="Plan ve cari hesabı yeniden açılır">↩ Geri Al</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
   </div>
 </div>
 

@@ -294,6 +294,43 @@ def durum_satiri(kalem, donem, hakedis=None):
             'bekleyen': kalan is None or kalan > 0, 'odeme': None, 'mesailer': mesailer}
 
 
+def arsivde(kalem) -> bool:
+    """İşten ayrılan çalışan: planı pasif + cari hesabı kapalı (calisan_arsivle ile)."""
+    return bool(kalem.calisan_cari_id and not kalem.aktif
+                and kalem.calisan_cari is not None and not kalem.calisan_cari.aktif)
+
+
+def calisan_arsivle(kalem_id, arsiv: bool = True) -> FinansAnaGiderKalem:
+    """İşten ayrılan çalışan tek düğmeyle arşive: plan pasife alınır + cari kapatılır (tek transaction).
+    Geçmiş hak ediş/ödeme kayıtlarına dokunulmaz. Bekleyen hak edişi ya da bakiyesi olan çalışan
+    arşivlenemez (önce hesap kapatılır). arsiv=False: cari yeniden açılır + plan aktife döner."""
+    try:
+        k = (FinansAnaGiderKalem.query.filter_by(id=int(kalem_id or 0))
+             .populate_existing().with_for_update().first())
+        if not k or not k.calisan_cari_id:
+            raise fs.FinansHata('Çalışan ödeme planı bulunamadı.')
+        if arsiv:
+            if k.aktif:
+                plan_hakedislerini_isle(k)   # bugüne kadarki hak edişler yazılsın, sonra kapansın
+            cari = cs.cari_getir(k.calisan_cari_id, kilitle=True)
+            if any(d['bekleyen'] for d in hakedis_satirlari(cari_id=cari.id)):
+                raise fs.FinansHata(f'"{cari.ad}" için bekleyen hak ediş/ödeme var; önce ödeyin, sonra arşivleyin.')
+            if Decimal(str(cari.bakiye or 0)) != 0:
+                raise fs.FinansHata(f'"{cari.ad}" cari bakiyesi sıfır değil ({cari.bakiye:.2f} ₺); '
+                                    f'önce hesabı kapatın, sonra arşivleyin.')
+            k.aktif = False
+            cari.aktif = False
+        else:
+            cari = cs.cari_getir(k.calisan_cari_id, kilitle=True)
+            cari.aktif = True
+            k.aktif = True
+        db.session.commit()
+        return k
+    except Exception:
+        db.session.rollback()
+        raise
+
+
 def hakedis_satirlari(donem=None, cari_id=None):
     q = FinansCalisanHakedis.query.join(FinansAnaGiderKalem)
     if donem:

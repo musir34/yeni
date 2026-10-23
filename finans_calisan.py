@@ -42,3 +42,18 @@ def calisan_mesai():
     except fs.FinansHata as e:
         _hata_flash(e)
     return _geri(url_for('finans.ana_gider'))
+
+
+@finans_bp.route('/calisan/<int:kalem_id>/arsiv', methods=['POST'])
+@login_required
+@roles_required('admin')
+def calisan_arsiv(kalem_id):
+    """İşten ayrılan çalışan: plan pasif + cari kapalı tek adımda; arsiv=0 ile geri alınır."""
+    arsiv = request.form.get('arsiv', '1') == '1'
+    try:
+        k = cs.calisan_arsivle(kalem_id, arsiv=arsiv)
+        _log('UPDATE', f'Çalışan {"arşivlendi" if arsiv else "arşivden çıkarıldı"} — {k.calisan_cari.ad}', kalem_id=kalem_id)
+        flash(f'✅ "{k.calisan_cari.ad}" {"arşivlendi; ödeme planı ve cari hesabı kapatıldı" if arsiv else "arşivden çıkarıldı; plan ve cari hesabı yeniden açıldı"}.', 'success')
+    except fs.FinansHata as e:
+        _hata_flash(e)
+    return _geri(url_for('finans.ana_gider'))
