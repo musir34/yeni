@@ -72,6 +72,14 @@
     if (window.GS && GS.showConfirmSheet) { GS.showConfirmSheet(msg, function () { f.submit(); }); }
     else if (window.confirm(msg)) { f.submit(); }
   }
+  // Panel içi onay: data-fn-onay="mesaj" taşıyan form önce GS onay kartını açar (tarayıcı confirm() yok).
+  document.addEventListener('submit', function (e) {
+    var f = e.target && e.target.closest ? e.target.closest('form[data-fn-onay]') : null;
+    if (!f || f.dataset.fnOnaylandi) return;
+    e.preventDefault();
+    var msg = f.dataset.fnOnay, go = function () { f.dataset.fnOnaylandi = '1'; f.submit(); };
+    if (window.GS && GS.showConfirmSheet) { GS.showConfirmSheet(msg, go); } else if (window.confirm(msg)) { go(); }
+  }, true);
   function fnToast(msg, type) {
     if (window.GS && GS.showToast) GS.showToast(msg, type || 'info'); else alert(msg);
   }
