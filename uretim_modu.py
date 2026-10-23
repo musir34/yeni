@@ -3,8 +3,10 @@
 Üretim Modu (ön sipariş) servisi.
 
 - Ayarlar: PlatformConfig 'ayar torbası' deseni (platform='uretim_ayar') —
-  extra_config = {"models": ["0172", ...]}. Migration GEREKMEZ
-  (desen: trendyol_qna/qna_ayar.py).
+  extra_config = {"models": ["0172", ...], "renkler": {"0172": ["Siyah", "Bej"]}}.
+  "renkler"de kaydı olmayan (ya da boş listeli) model = TÜM renkler üretimde;
+  listeli model = yalnız o renklerin barkodları üretimde. Migration GEREKMEZ
+  (desen: trendyol_qna/qna_ayar.py; renk kapsamı takip_notu ile aynı kural).
 - Üretim modundaki modellerin barkodları Trendyol'a daima URETIM_SABIT_ADET
   olarak gider (stock_sync/service.py bu modülden get_uretim_barcodes çağırır).
 - Yeni sipariş ingest'inde eşleşen siparişler uretim_siparis tablosuna yazılır
@@ -43,12 +45,29 @@ def get_uretim_ayar() -> dict:
         kayit = _kayit()
         if kayit is not None:
             cfg = kayit.extra_config or {}
-            models = cfg.get("models") or []
-            return {"models": [str(m).strip() for m in models if str(m).strip()]}
+            models = [str(m).strip() for m in (cfg.get("models") or []) if str(m).strip()]
+            renkler = _renkleri_temizle(cfg.get("renkler"), models)
+            return {"models": models, "renkler": renkler}
     except Exception:
         logger.warning("[URETIM] ayar okunamadı", exc_info=True)
         db.session.rollback()
-    return {"models": []}
+    return {"models": [], "renkler": {}}
+
+
+def _renkleri_temizle(ham, models: list[str]) -> dict[str, list[str]]:
+    """{"model": [renk, ...]} — yalnız listedeki modeller ve dolu renk listeleri
+    kalır (boş liste = tüm renkler demek, saklanmaz)."""
+    temiz: dict[str, list[str]] = {}
+    if not isinstance(ham, dict):
+        return temiz
+    for model, liste in ham.items():
+        model = str(model or "").strip()
+        if model not in models or not isinstance(liste, list):
+            continue
+        renkler = sorted({str(r).strip() for r in liste if str(r).strip()})
+        if renkler:
+            temiz[model] = renkler
+    return temiz
 
 
 def toggle_model(model_id: str) -> bool:
@@ -64,9 +83,53 @@ def toggle_model(model_id: str) -> bool:
     else:
         models = models + [model_id]
         acik = True
-    kayit.extra_config = {**(kayit.extra_config or {}), "models": models}
+    renkler = {k: v for k, v in ((kayit.extra_config or {}).get("renkler") or {}).items()
+               if str(k).strip() != model_id}  # çıkarılan modelin renk kaydı da gider
+    kayit.extra_config = {**(kayit.extra_config or {}), "models": models, "renkler": renkler}
     db.session.commit()
     return acik
+
+
+def set_model_renkler(model_id: str, renkler) -> dict:
+    """Modeli üretim moduna al (listede değilse ekler) ve renk kapsamını yaz.
+    renkler: None/boş = tüm renkler; liste = yalnız bu renkler.
+    Dönüş: {"acik": True, "renkler": [...]} (boş liste = tüm renkler)."""
+    model_id = str(model_id or "").strip()
+    if not model_id:
+        raise ValueError("model_id boş olamaz")
+    secili = sorted({str(r).strip() for r in (renkler or []) if str(r).strip()})
+    kayit = _kayit(olustur=True)
+    cfg = kayit.extra_config or {}
+    models = [str(m).strip() for m in cfg.get("models") or []]
+    if model_id not in models:
+        models = models + [model_id]
+    renk_map = {k: v for k, v in (cfg.get("renkler") or {}).items() if str(k).strip() != model_id}
+    if secili:
+        renk_map[model_id] = secili
+    kayit.extra_config = {**cfg, "models": models, "renkler": renk_map}
+    db.session.commit()
+    return {"acik": True, "renkler": secili}
+
+
+def get_uretim_renkler() -> dict[str, list[str]]:
+    """Model → üretimdeki renkler (yalnız renk kısıtı OLAN modeller; kaydı olmayan
+    model tüm renkleriyle üretimde). Hata → boş harita."""
+    return dict(get_uretim_ayar()["renkler"])
+
+
+def model_renkleri(model_id: str) -> list[str]:
+    """Modelin Product tablosundaki mevcut renkleri (renk seçici için). Hata → []."""
+    model_id = str(model_id or "").strip()
+    if not model_id:
+        return []
+    try:
+        rows = (Product.query.filter(Product.product_main_id == model_id)
+                .with_entities(Product.color).distinct().all())
+        return sorted({str(r.color).strip() for r in rows if r.color and str(r.color).strip()})
+    except Exception:
+        logger.warning("[URETIM] model renkleri okunamadı", exc_info=True)
+        db.session.rollback()
+        return []
 
 
 def get_uretim_models() -> set[str]:
@@ -76,19 +139,30 @@ def get_uretim_models() -> set[str]:
 
 def get_uretim_barcodes() -> set[str]:
     """
-    Üretim modundaki modellerin TÜM barkodları. Stok senkronunda bu barkodlar
-    Trendyol'a daima URETIM_SABIT_ADET olarak gider. Her hata → boş set
-    (senkron eski davranışıyla devam eder).
+    Üretim modundaki modellerin barkodları — renk kısıtı olan modelde yalnız
+    seçili renklerin barkodları, kısıtsız modelde tüm barkodlar. Stok senkronunda
+    bu barkodlar Trendyol'a daima URETIM_SABIT_ADET olarak gider. Her hata → boş
+    set (senkron eski davranışıyla devam eder).
     """
     try:
-        models = get_uretim_models()
+        ayar = get_uretim_ayar()
+        models = set(ayar["models"])
         if not models:
             return set()
+        renkler = ayar["renkler"]
         rows = (Product.query
                 .filter(Product.product_main_id.in_(models))
-                .with_entities(Product.barcode)
+                .with_entities(Product.barcode, Product.product_main_id, Product.color)
                 .all())
-        return {r.barcode for r in rows if r.barcode}
+        out = set()
+        for barcode, model, color in rows:
+            if not barcode:
+                continue
+            secili = renkler.get(str(model or "").strip())
+            if secili and str(color or "").strip() not in secili:
+                continue
+            out.add(barcode)
+        return out
     except Exception:
         logger.warning("[URETIM] barkod seti okunamadı", exc_info=True)
         db.session.rollback()

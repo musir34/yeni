@@ -538,7 +538,7 @@
             <tr class="{% if not m.siparis %}uretim-satir--pasif{% endif %}" data-model-kodu="{{ m.kod }}">
               <td>
                 <div class="uretim-kod">{{ m.kod }}</div>
-                <div class="uretim-baslik text-muted text-truncate" title="{{ m.baslik }}">{{ m.baslik }}</div>
+                <div class="uretim-baslik text-muted text-truncate" title="{{ m.renkler|join(', ') }}">{{ m.renkler|join(', ') if m.renkler else '—' }}</div>
               </td>
               <td class="text-end">{{ m.stok }}</td>
               <td>

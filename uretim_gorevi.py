@@ -22,7 +22,7 @@ from sqlalchemy import func
 from models import (db, CentralStock, Product, UretimSiparis,
                     OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped,
                     OrderDelivered, OrderCancelled, OrderArchived)
-from uretim_modu import get_uretim_models
+from uretim_modu import get_uretim_models, get_uretim_renkler
 
 logger = logging.getLogger(__name__)
 
@@ -103,22 +103,33 @@ def _fiyat_haritasi(order_numbers: list[str]) -> dict[tuple[str, str], float]:
     return harita
 
 
-def _urun_haritasi(modeller: set[str]) -> tuple[dict[str, str], dict[str, dict]]:
-    """barcode → model kodu; model kodu → {'baslik','stok'} (stok canlı, merkezi)."""
+def _urun_haritasi(modeller: set[str],
+                  renk_kisiti: dict[str, list[str]] | None = None
+                  ) -> tuple[dict[str, str], dict[str, dict]]:
+    """barcode → model kodu; model kodu → {'baslik','stok','renkler'} (stok canlı,
+    merkezi). renkler: üretime dahil renkler — kısıtlı modelde seçili renkler,
+    kısıtsız modelde modelin tüm renkleri."""
+    renk_kisiti = renk_kisiti or {}
     barkod_model: dict[str, str] = {}
-    model_bilgi: dict[str, dict] = {m: {"baslik": "", "stok": 0} for m in modeller}
+    model_bilgi: dict[str, dict] = {m: {"baslik": "", "stok": 0, "renkler": []} for m in modeller}
     if not modeller:
         return barkod_model, model_bilgi
+    tum_renkler: dict[str, set[str]] = {}
     try:
-        for barcode, model, title in (Product.query
-                                      .filter(Product.product_main_id.in_(modeller))
-                                      .with_entities(Product.barcode, Product.product_main_id,
-                                                     Product.title).all()):
+        for barcode, model, title, color in (Product.query
+                                             .filter(Product.product_main_id.in_(modeller))
+                                             .with_entities(Product.barcode, Product.product_main_id,
+                                                            Product.title, Product.color).all()):
             model = str(model).strip()
             if barcode:
                 barkod_model[str(barcode).strip()] = model
             if title and not model_bilgi[model]["baslik"]:
                 model_bilgi[model]["baslik"] = title
+            if color and str(color).strip():
+                tum_renkler.setdefault(model, set()).add(str(color).strip())
+        for model in modeller:
+            model_bilgi[model]["renkler"] = (list(renk_kisiti.get(model) or [])
+                                             or sorted(tum_renkler.get(model, set())))
         for model, stok in (db.session.query(Product.product_main_id,
                                              func.coalesce(func.sum(CentralStock.qty), 0))
                             .join(CentralStock, CentralStock.barcode == Product.barcode)
@@ -184,6 +195,7 @@ def _hesapla(uretim_satirlari, fiyat_map: dict, barkod_model: dict,
         modeller.append({
             "kod": model,
             "baslik": bilgi.get("baslik") or "",
+            "renkler": list(bilgi.get("renkler") or []),
             "stok": bilgi.get("stok", 0),
             "siparis": siparis,
             "cift": t["cift"] if t else 0,
@@ -217,7 +229,7 @@ def _uretim_ozeti_hesapla() -> dict | None:
     modeller = get_uretim_models()
     if not modeller:
         return None
-    barkod_model, model_bilgi = _urun_haritasi(modeller)
+    barkod_model, model_bilgi = _urun_haritasi(modeller, get_uretim_renkler())
     # order_date naive UTC saklanır (ingest ist_to_utc) → kesim de UTC
     kesim = datetime.utcnow() - timedelta(days=PENCERE_GUN)
     try:

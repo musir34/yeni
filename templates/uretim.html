@@ -74,6 +74,7 @@
             <input type="text" id="yeniModel" class="form-control" placeholder="Model kodu (örn: 0172)" autocomplete="off">
             <button id="modelEkle" class="ur-primary-btn"><i class="bi bi-plus-lg"></i> Ekle</button>
           </div>
+          <div class="ur-renk-secici" id="renkSecici" style="display:none;"></div>
           <div class="ur-mail-note">
             <i class="bi bi-envelope"></i>
             Mail bildirimleri kullanıcı bazlıdır:
@@ -264,6 +265,15 @@
   }
   .ur-chip button:hover { background:var(--ur-red-soft); color:var(--ur-red); }
   .ur-chips-empty { color:var(--ur-muted); font-size:.8rem; align-self:center; }
+  .ur-chip-renk { font-weight:500; color:var(--ur-muted); font-size:.72rem; }
+  .ur-renk-secici { margin-top:12px; max-width:520px; padding:12px 14px; border-radius:12px; background:#fff; border:1px solid #ecd7db; }
+  .ur-renk-secici h6 { font-size:.82rem; font-weight:700; color:var(--ur-ink); margin:0 0 8px; }
+  .ur-renk-liste { display:flex; flex-wrap:wrap; gap:6px 14px; margin:8px 0 10px; }
+  .ur-renk-secici label { display:inline-flex; align-items:center; gap:6px; font-size:.8rem; margin:0; color:var(--ur-ink); cursor:pointer; }
+  .ur-renk-tum { font-weight:700; }
+  .ur-renk-btns { display:flex; gap:8px; }
+  .ur-renk-btns .ur-primary-btn { height:36px; }
+  .ur-renk-vazgec { height:36px; padding:0 14px; border:1px solid #ecd7db; border-radius:12px; background:#fff; color:var(--ur-muted); font-size:.82rem; cursor:pointer; }
   .ur-model-add { display:flex; gap:8px; margin-top:12px; max-width:340px; }
   .ur-model-add .form-control { height:42px; border-radius:12px; border-color:#ecd7db; font-size:.86rem; }
   .ur-model-add .form-control:focus { border-color:var(--ur-rose); box-shadow:0 0 0 4px rgba(183,110,121,.12); }
@@ -470,6 +480,8 @@
   html.gs-dark .ur-icon-btn,html.gs-dark .ur-sync-btn,html.gs-dark .ur-undo-btn,
   html.gs-dark .ur-chip,html.gs-dark .ur-mail-note { background:#26272d; border-color:#33353c; color:#d5d7db; }
   html.gs-dark .ur-settings { background:#232025; border-color:#3a3238; }
+  html.gs-dark .ur-renk-secici, html.gs-dark .ur-renk-vazgec { background:#26272d; border-color:#33353c; color:#d5d7db; }
+  html.gs-dark .ur-renk-secici h6, html.gs-dark .ur-renk-secici label { color:#e6e7ea; }
   html.gs-dark .ur-model-add .form-control { background:#26272d; border-color:#33353c; color:#e6e7ea; }
   html.gs-dark .ur-urun { color:#c9ccd2; }
   html.gs-dark .ur-urun code { background:#2b2d33; color:#c1c4cb; }
@@ -748,14 +760,69 @@
         const res = await fetch('/uretim/api/ayar');
         const data = await res.json();
         const modeller = (data.ayar || {}).models || [];
+        const renkler = (data.ayar || {}).renkler || {};
         const tag = document.getElementById('urModelSayi');
         tag.style.display = modeller.length ? '' : 'none';
         tag.textContent = `${modeller.length} model aktif`;
         document.getElementById('modelChipler').innerHTML = modeller.map(m => `
             <span class="ur-chip">${esc(m)}
+                <span class="ur-chip-renk">· ${renkler[m] && renkler[m].length ? esc(renkler[m].join(', ')) : 'Tüm renkler'}</span>
+                <button title="Renkleri düzenle" data-model-renk="${esc(m)}"><i class="bi bi-palette"></i></button>
                 <button title="Üretim modundan çıkar" data-model-sil="${esc(m)}"><i class="bi bi-x-lg"></i></button>
             </span>`).join('') || '<span class="ur-chips-empty">Henüz model eklenmedi — ürün listesinden de ekleyebilirsin.</span>';
     }
+
+    // 🎨 Renk seçici: model üretim moduna tüm renkleriyle ya da seçili renklerle alınır
+    async function renkSeciciAc(model) {
+        const kutu = document.getElementById('renkSecici');
+        kutu.style.display = '';
+        kutu.innerHTML = '<small>Renkler yükleniyor…</small>';
+        let data;
+        try {
+            const res = await fetch(`/uretim/api/model-renkler?model=${encodeURIComponent(model)}`);
+            data = await res.json();
+        } catch (e) { data = { success: false, message: 'Sunucu hatası' }; }
+        if (!data.success) { kutu.innerHTML = `<small class="text-danger">${esc(data.message || 'Renkler alınamadı')}</small>`; return; }
+        if (!data.mevcut.length) {
+            kutu.innerHTML = `<small class="text-danger">'${esc(model)}' model kodlu ürün bulunamadı.</small>`;
+            return;
+        }
+        const tumu = !data.uretimde || !data.secili.length;
+        kutu.dataset.model = model;
+        kutu.innerHTML = `
+            <h6>${esc(model)} — üretime girecek renkler</h6>
+            <label class="ur-renk-tum"><input type="checkbox" id="renkTum" ${tumu ? 'checked' : ''}> Tüm renkler</label>
+            <div class="ur-renk-liste">
+                ${data.mevcut.map(r => `<label><input type="checkbox" class="ur-renk-cb" value="${esc(r)}"
+                    ${tumu || data.secili.includes(r) ? 'checked' : ''} ${tumu ? 'disabled' : ''}> ${esc(r)}</label>`).join('')}
+            </div>
+            <div class="ur-renk-btns">
+                <button type="button" class="ur-primary-btn" id="renkKaydet"><i class="bi bi-check-lg"></i> ${data.uretimde ? 'Kaydet' : 'Üretim Moduna Al'}</button>
+                <button type="button" class="ur-renk-vazgec" id="renkVazgec">Vazgeç</button>
+            </div>`;
+    }
+
+    document.getElementById('renkSecici').addEventListener('change', (e) => {
+        if (e.target.id !== 'renkTum') return;
+        document.querySelectorAll('#renkSecici .ur-renk-cb').forEach(cb => {
+            cb.disabled = e.target.checked;
+            if (e.target.checked) cb.checked = true;
+        });
+    });
+    document.getElementById('renkSecici').addEventListener('click', async (e) => {
+        const kutu = document.getElementById('renkSecici');
+        if (e.target.closest('#renkVazgec')) { kutu.style.display = 'none'; kutu.innerHTML = ''; return; }
+        if (!e.target.closest('#renkKaydet')) return;
+        const tum = document.getElementById('renkTum').checked;
+        const renkler = tum ? [] : [...kutu.querySelectorAll('.ur-renk-cb:checked')].map(cb => cb.value);
+        if (!tum && !renkler.length) { toast('En az bir renk seçin ya da "Tüm renkler"i işaretleyin', 'error'); return; }
+        const res = await fetch('/uretim/api/model-renk-kaydet', {
+            method: 'POST', headers: POST_HEADERS, body: JSON.stringify({ model: kutu.dataset.model, renkler })
+        });
+        const data = await res.json().catch(() => ({ success: false }));
+        toast(data.message || (data.success ? 'Kaydedildi' : 'Hata'), data.success ? 'success' : 'error');
+        if (data.success) { kutu.style.display = 'none'; kutu.innerHTML = ''; ayarYukle(); }
+    });
 
     async function modelToggle(model) {
         const res = await fetch('/uretim/api/model-toggle', {
@@ -771,13 +838,15 @@
         const model = input.value.trim();
         if (!model) return;
         input.value = '';
-        modelToggle(model);
+        renkSeciciAc(model);
     });
     document.getElementById('yeniModel').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); document.getElementById('modelEkle').click(); }
     });
 
     document.getElementById('modelChipler').addEventListener('click', (e) => {
+        const renkBtn = e.target.closest('[data-model-renk]');
+        if (renkBtn) { renkSeciciAc(renkBtn.getAttribute('data-model-renk')); return; }
         const btn = e.target.closest('[data-model-sil]');
         if (btn) modelToggle(btn.getAttribute('data-model-sil'));
     });

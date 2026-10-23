@@ -826,3 +826,51 @@ def model_toggle():
              if acik else f"{model_id} üretim modundan çıkarıldı — ilk senkronla gerçek stok gider")
     logger.info(f"[URETIM] {mesaj}")
     return jsonify({"success": True, "acik": acik, "message": mesaj})
+
+
+@uretim_bp.route("/api/model-renkler", methods=["GET"])
+def model_renkler():
+    """Renk seçici: modelin mevcut renkleri + üretimdeki renk kapsamı."""
+    from uretim_modu import model_renkleri, get_uretim_ayar
+    model_id = str(request.args.get("model") or "").strip()
+    if not model_id:
+        return jsonify({"success": False, "message": "Model kodu boş"}), 400
+    ayar = get_uretim_ayar()
+    return jsonify({"success": True, "model": model_id,
+                    "mevcut": model_renkleri(model_id),
+                    "uretimde": model_id in ayar["models"],
+                    "secili": ayar["renkler"].get(model_id, [])})
+
+
+@uretim_bp.route("/api/model-renk-kaydet", methods=["POST"])
+def model_renk_kaydet():
+    """Modeli üretim moduna al + renk kapsamı. renkler boş = tüm renkler."""
+    from uretim_modu import set_model_renkler, model_renkleri, URETIM_SABIT_ADET
+    from models import Product
+    data = request.get_json(silent=True) or {}
+    model_id = str(data.get("model") or "").strip()
+    if not model_id:
+        return jsonify({"success": False, "message": "Model kodu boş"}), 400
+    renkler = data.get("renkler") or []
+    if not isinstance(renkler, list):
+        return jsonify({"success": False, "message": "Renk listesi geçersiz"}), 400
+    mevcut = model_renkleri(model_id)
+    if not mevcut and not Product.query.filter_by(product_main_id=model_id).first():
+        return jsonify({"success": False, "message": f"'{model_id}' model kodlu ürün bulunamadı."}), 404
+    bilinmeyen = [r for r in renkler if str(r).strip() and str(r).strip() not in mevcut]
+    if bilinmeyen:
+        return jsonify({"success": False,
+                        "message": f"Bu modelde olmayan renk: {', '.join(map(str, bilinmeyen))}"}), 400
+    # Tüm renkler tek tek seçildiyse kısıt saklanmaz (yeni açılan renk de üretime girsin)
+    if mevcut and set(str(r).strip() for r in renkler) >= set(mevcut):
+        renkler = []
+    try:
+        sonuc = set_model_renkler(model_id, renkler)
+    except Exception:
+        db.session.rollback()
+        logger.exception("[URETIM] renk kaydetme hatası")
+        return jsonify({"success": False, "message": "Kaydedilemedi"}), 500
+    kapsam = ", ".join(sonuc["renkler"]) if sonuc["renkler"] else "tüm renkler"
+    mesaj = f"{model_id} üretim modunda ({kapsam}) — Trendyol'a sabit {URETIM_SABIT_ADET} stok gidecek"
+    logger.info(f"[URETIM] {mesaj}")
+    return jsonify({"success": True, "acik": True, "renkler": sonuc["renkler"], "message": mesaj})

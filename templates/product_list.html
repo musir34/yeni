@@ -569,7 +569,7 @@ $(function(){
         $modal.addClass('is-visible');
         $('#modalTitle').text('Yükleniyor...');
         $('#modalBody').html('<div class="text-center p-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>');
-        $('#modalSaveBtn').show();
+        $('#modalSaveBtn').show().text('Kaydet');
 
         if(action==='update_model_price'){
             const title=`${modelId} - Model Fiyatı Gir`;
@@ -591,6 +591,31 @@ $(function(){
                     $('#modalBody').html('<p class="text-danger">Mevcut değer alınamadı.</p>');
                 }
             });
+            return;
+        }
+
+        if(action==='uretim_renk'){
+            $('#modalTitle').text(`${modelId} - Üretim Modu Renkleri`);
+            $.get(`/uretim/api/model-renkler?model=${encodeURIComponent(modelId)}`, function(res){
+                if(!res.success || !res.mevcut.length){
+                    $('#modalBody').html(`<p class="text-danger p-4">${escapeHtml(res.message||'Bu model için renk bulunamadı.')}</p>`);
+                    $('#modalSaveBtn').hide();
+                    return;
+                }
+                const tumu=!res.uretimde || !res.secili.length;
+                const safeModelId=escapeHtml(modelId);
+                const renkler=res.mevcut.map(c=>`<label style="display:inline-flex;align-items:center;gap:6px;margin:0 14px 6px 0;">
+                    <input type="checkbox" class="uretim-renk-cb" value="${escapeHtml(c)}" ${tumu||res.secili.includes(c)?'checked':''} ${tumu?'disabled':''}> ${escapeHtml(c)}</label>`).join('');
+                $('#modalBody').html(`
+                    <form id="uretimRenkForm" data-model="${safeModelId}">
+                        <p style="margin-bottom:8px;">${res.uretimde?'Bu model üretim modunda. Üretime giren renkleri değiştirebilirsiniz.':'Bu modeli üretim moduna alın: tüm renkler ya da seçeceğiniz renkler.'}</p>
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:700;margin-bottom:8px;"><input type="checkbox" id="uretimRenkTum" ${tumu?'checked':''}> Tüm renkler</label>
+                        <div>${renkler}</div>
+                        ${res.uretimde?`<button type="button" class="btn btn-sm btn-outline-danger mt-2" id="uretimCikar" data-model="${safeModelId}"><i class="fas fa-times"></i> Üretim Modundan Çıkar</button>`:''}
+                    </form>
+                `);
+                $('#modalSaveBtn').text(res.uretimde?'Kaydet':'Üretim Moduna Al');
+            }).fail(()=>{ $('#modalBody').html('<p class="text-danger p-4">Sunucu hatası oluştu.</p>'); $('#modalSaveBtn').hide(); });
             return;
         }
 
@@ -637,19 +662,26 @@ $(function(){
     });
 
     // 🏭 Üretim Modu toggle — model stok 0 olsa da Trendyol'a sabit 5 gider
+    // Pencerede renk kapsamı seçilir: tüm renkler ya da seçili renkler
     $('.model-grid').on('click','.toggle-uretim-modu',function(){
-        const btn=$(this), modelId=String(btn.data('model'));
-        fetch('/uretim/api/model-toggle',{
-            method:'POST',
-            headers:{'Content-Type':'application/json','X-Requested-With':'fetch'},
-            body:JSON.stringify({model:modelId})
-        }).then(r=>r.json()).then(res=>{
-            gsToast(res.message||(res.success?'Tamam':'Hata'), res.success?'success':'error');
-            if(res.success){
-                btn.find('.uretim-durum').text(res.acik?' (Açık)':'');
-                takipYukle(); // canlı bağ: üretimdeki modeller takip panelinde otomatik
-            }
-        }).catch(()=>gsToast('Sunucu hatası oluştu.','error'));
+        openActionModal('uretim_renk', String($(this).data('model')));
+    });
+    const URETIM_HEADERS={'Content-Type':'application/json','X-Requested-With':'fetch'};
+    function uretimDurumGuncelle(modelId, acik){
+        $(`.toggle-uretim-modu[data-model="${modelId}"] .uretim-durum`).text(acik?' (Açık)':'');
+        takipYukle(); // canlı bağ: üretimdeki modeller takip panelinde otomatik
+    }
+    $('#modalBody').on('change','#uretimRenkTum',function(){
+        $('#modalBody .uretim-renk-cb').prop('disabled', this.checked);
+        if(this.checked) $('#modalBody .uretim-renk-cb').prop('checked', true);
+    });
+    $('#modalBody').on('click','#uretimCikar',function(){
+        const modelId=String($(this).data('model'));
+        fetch('/uretim/api/model-toggle',{method:'POST',headers:URETIM_HEADERS,body:JSON.stringify({model:modelId})})
+            .then(r=>r.json()).then(res=>{
+                gsToast(res.message||(res.success?'Tamam':'Hata'), res.success?'success':'error');
+                if(res.success){ uretimDurumGuncelle(modelId, res.acik); $modal.removeClass('is-visible'); }
+            }).catch(()=>gsToast('Sunucu hatası oluştu.','error'));
     });
 
     // 📌 Takip Notları paneli — model bazlı not, renk kapsamı + renk notları.
@@ -807,6 +839,20 @@ $(function(){
 
     $('#modalSaveBtn').on('click', function(){
         let url='', formId='';
+        if(currentAction==='uretim_renk'){
+            const $f=$('#uretimRenkForm');
+            if(!$f.length) return;
+            const modelId=String($f.data('model'));
+            const tum=$('#uretimRenkTum').is(':checked');
+            const renkler=tum?[]:$f.find('.uretim-renk-cb:checked').map(function(){return this.value;}).get();
+            if(!tum && !renkler.length){ gsToast('En az bir renk seçin ya da "Tüm renkler"i işaretleyin','error'); return; }
+            fetch('/uretim/api/model-renk-kaydet',{method:'POST',headers:URETIM_HEADERS,body:JSON.stringify({model:modelId, renkler})})
+                .then(r=>r.json()).then(res=>{
+                    gsToast(res.message||(res.success?'Kaydedildi':'Hata'), res.success?'success':'error');
+                    if(res.success){ uretimDurumGuncelle(modelId, true); $modal.removeClass('is-visible'); }
+                }).catch(()=>gsToast('Sunucu hatası oluştu.','error'));
+            return;
+        }
         if(currentAction==='update_model_price'){ url='/api/update_model_price'; formId='#singleInputForm'; }
         else return;
 
