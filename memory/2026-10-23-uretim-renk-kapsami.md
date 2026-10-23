@@ -15,3 +15,7 @@ Komutan emri: model üretim moduna alınırken tüm renkler ya da seçilen birka
 - Seçilmeyen rengin barkodu sabit 10 almaz, gerçek stokla gider; o renge gelen sipariş üretime düşmez.
 - Önceden açılmış üretim kayıtları renk daraltılınca silinmez, listede kalır.
 - Test: tests/test_uretim_renk_kapsami.py (8 test, geçti).
+
+## Ek (aynı gün)
+- Anasayfa kartı: renk satırı kesik başlar, her modelde Göster/Gizle düğmesi tüm renkleri açar/kapatır (templates/home.html, CSS + küçük JS).
+- Anasayfa kartı Stok sütunu: renk seçilmiş modelde yalnız o renklerin stoğu toplanır (uretim_gorevi.py).

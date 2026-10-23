@@ -170,6 +170,21 @@ def test_model_renkleri_mevcut_renkleri_doner():
     assert model_renkleri("YOK") == []
 
 
+def test_kart_stogu_yalniz_secili_renklerden():
+    from uretim_gorevi import _urun_haritasi
+
+    db.session.add(CentralStock(barcode=BC_SIYAH, qty=3))
+    db.session.add(CentralStock(barcode=BC_BEJ, qty=5))
+    db.session.add(CentralStock(barcode=BC_KIRMIZI, qty=7))
+    db.session.commit()
+
+    _, bilgi = _urun_haritasi({MODEL}, {MODEL: ["Siyah", "Bej"]})
+    assert bilgi[MODEL]["stok"] == 8
+
+    _, bilgi = _urun_haritasi({MODEL}, {})
+    assert bilgi[MODEL]["stok"] == 15
+
+
 def test_kart_uretime_dahil_renkleri_gosterir():
     from uretim_gorevi import _urun_haritasi
 

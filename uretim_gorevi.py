@@ -130,12 +130,17 @@ def _urun_haritasi(modeller: set[str],
         for model in modeller:
             model_bilgi[model]["renkler"] = (list(renk_kisiti.get(model) or [])
                                              or sorted(tum_renkler.get(model, set())))
-        for model, stok in (db.session.query(Product.product_main_id,
-                                             func.coalesce(func.sum(CentralStock.qty), 0))
-                            .join(CentralStock, CentralStock.barcode == Product.barcode)
-                            .filter(Product.product_main_id.in_(modeller))
-                            .group_by(Product.product_main_id).all()):
-            model_bilgi[str(model).strip()]["stok"] = int(stok or 0)
+        # Stok yalnız üretime dahil renklerden toplanır (kısıtsız model: tüm renkler)
+        for model, color, stok in (db.session.query(Product.product_main_id, Product.color,
+                                                    func.coalesce(func.sum(CentralStock.qty), 0))
+                                   .join(CentralStock, CentralStock.barcode == Product.barcode)
+                                   .filter(Product.product_main_id.in_(modeller))
+                                   .group_by(Product.product_main_id, Product.color).all()):
+            model = str(model).strip()
+            secili = renk_kisiti.get(model)
+            if secili and str(color or "").strip() not in secili:
+                continue
+            model_bilgi[model]["stok"] += int(stok or 0)
     except Exception:
         db.session.rollback()
         logger.warning("[URETIM-KART] ürün/stok haritası okunamadı", exc_info=True)

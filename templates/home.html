@@ -112,6 +112,11 @@
     .uretim-tablo td { font-size:.9rem; vertical-align:middle; }
     .uretim-tablo .uretim-kod { font-weight:800; font-size:1rem; color:#222; }
     .uretim-tablo .uretim-baslik { max-width:260px; font-size:.75rem; }
+    .uretim-renk-satir { display:flex; align-items:flex-start; gap:6px; max-width:300px; }
+    .uretim-renk-satir .uretim-baslik { flex:1; min-width:0; }
+    .uretim-renk-satir.acik .uretim-baslik { white-space:normal; overflow:visible; text-overflow:clip; }
+    .uretim-renk-btn { flex:0 0 auto; border:0; background:transparent; padding:0 2px; font-size:.72rem; font-weight:700; color:var(--color-primary); cursor:pointer; line-height:1.4; }
+    .uretim-renk-btn:hover { text-decoration:underline; }
     .uretim-bar { display:flex; align-items:center; gap:8px; min-width:150px; }
     .uretim-bar__cubuk { flex:1; height:8px; border-radius:999px; background:rgba(0,0,0,.06); overflow:hidden; }
     .uretim-bar__cubuk span { display:block; height:100%; border-radius:999px; background:var(--color-primary); }
@@ -538,7 +543,10 @@
             <tr class="{% if not m.siparis %}uretim-satir--pasif{% endif %}" data-model-kodu="{{ m.kod }}">
               <td>
                 <div class="uretim-kod">{{ m.kod }}</div>
-                <div class="uretim-baslik text-muted text-truncate" title="{{ m.renkler|join(', ') }}">{{ m.renkler|join(', ') if m.renkler else '—' }}</div>
+                <div class="uretim-renk-satir">
+                  <div class="uretim-baslik text-muted text-truncate">{{ m.renkler|join(', ') if m.renkler else '—' }}</div>
+                  {% if m.renkler %}<button type="button" class="uretim-renk-btn" aria-expanded="false">Göster</button>{% endif %}
+                </div>
               </td>
               <td class="text-end">{{ m.stok }}</td>
               <td>
@@ -732,6 +740,15 @@
 
   <!-- Görev ve üretim modellerinde arama -->
   <script>
+    // Üretim kartı: her modelde renk listesi Göster/Gizle
+    document.querySelectorAll('.uretim-renk-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var acik = btn.closest('.uretim-renk-satir').classList.toggle('acik');
+        btn.textContent = acik ? 'Gizle' : 'Göster';
+        btn.setAttribute('aria-expanded', acik ? 'true' : 'false');
+      });
+    });
+
     document.querySelectorAll('.model-arama').forEach(function (input) {
       var kart = input.closest('.eritme-card, .uretim-card');
       input.addEventListener('input', function () {
