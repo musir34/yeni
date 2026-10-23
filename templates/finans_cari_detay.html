@@ -23,7 +23,14 @@
       <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#fnAlimModal"><i class="fas fa-box me-1"></i>Mal Girişi</button>
       <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#fnOdemeModal"><i class="fas fa-money-bill me-1"></i>Ödeme Yap</button>
       <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#fnSatisModal">Satış</button>
-      <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#fnTahsilatModal">Tahsilat</button>{% else %}
+      <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#fnTahsilatModal">Tahsilat</button>
+      {% if yuvarlama_uygun %}
+      <form method="POST" action="{{ url_for('finans.cari_yuvarlama', cari_id=cari.id) }}" class="d-inline"
+            onsubmit='return confirm({{ ((cari.bakiye | abs) | tl_format ~ " ₺ alacak küsurat olarak kapatılsın mı? Bakiye sıfırlanır, kasaya dokunulmaz.") | tojson }})'>
+        <input type="hidden" name="tarih" value="{{ bugun }}">
+        <button class="btn btn-sm btn-outline-warning" title="Fazla ödemeden kalan küçük alacağı sil (bakiye sıfır)">Küsuratı Kapat ({{ (cari.bakiye | abs) | tl_format }} ₺)</button>
+      </form>
+      {% endif %}{% else %}
       <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#fnCalisanBorcModal"><i class="fas fa-hand-holding-usd me-1"></i>Cebinden Para Verdi</button>
       {% if calisan_borc_kalan %}<button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#fnCalisanBorcOdemeModal"><i class="fas fa-money-bill me-1"></i>Geri Öde</button>{% endif %}
       <a class="btn btn-sm btn-outline-primary" href="{{ url_for('finans.ana_gider') }}">Ödeme planları</a>{% endif %}

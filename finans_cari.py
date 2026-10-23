@@ -95,6 +95,7 @@ def cari_detay(cari_id):
                            para_etiket=cs.PARA_ETIKET, sembol=cs.sembol(cari),
                            hareket_var=cari.hareketler.first() is not None,  # iptaller dahil (servis kilidiyle aynı)
                            hareket_etiket=cs.HAREKET_ETIKET, bugun=_bugun_ist(),
+                           yuvarlama_uygun=cs.yuvarlama_uygun(cari),
                            calisan_haklari=hakedis_satirlari(cari_id=cari_id) if cari.tur in ('calisan', 'sahsi') else [],
                            calisan_borc_kalan=cs.calisan_borc_kalan(cari_id) if cari.tur == 'calisan' else 0,
                            sahsi_borc=cs.sahsi_kasa_borcu(cari_id) if cari.tur == 'sahsi' else 0,
@@ -158,8 +159,24 @@ def cari_odeme(cari_id):
                          kur=_kur_from_form())
         s = cs.sembol(h.cari)
         _log("CREATE", f"Finans cari ödeme — {h.cari.ad}: {tutar}{s} ({h.islem.hesap.ad})", tutar=str(tutar))
+        yuv = cs.yuvarlama_bul(h)
         flash(f'✅ Ödeme kaydedildi: {tutar:.2f} {s}{_kasa_eki(h)} {h.islem.hesap.ad} hesabından düştü. '
-              f'Borç bakiyesi {h.yeni_bakiye:.2f} {s}.', 'success')
+              + (f'Fazla verilen {yuv.tutar:.2f} ₺ küsurat olarak kapatıldı, bakiye sıfır.' if yuv
+                 else f'Borç bakiyesi {h.yeni_bakiye:.2f} {s}.'), 'success')
+    except FinansHata as e:
+        _hata_flash(e)
+    return _geri(url_for('finans.cari_detay', cari_id=cari_id))
+
+
+@finans_bp.route('/cari/<int:cari_id>/yuvarlama', methods=['POST'])
+@login_required
+@roles_required('admin')
+def cari_yuvarlama(cari_id):
+    """Eski fazla ödemelerden kalan küçük alacağı küsurat olarak kapat (yeni ödemelerde otomatik)."""
+    try:
+        h = cs.yuvarlama_kapat(cari_id, fs.parse_tarih(request.form.get('tarih')), _uid())
+        _log("CREATE", f"Finans cari küsurat kapatıldı — {h.cari.ad}: {h.tutar}₺", tutar=str(h.tutar))
+        flash(f'✅ {h.tutar:.2f} ₺ küsurat kapatıldı; {h.cari.ad} bakiyesi sıfır.', 'success')
     except FinansHata as e:
         _hata_flash(e)
     return _geri(url_for('finans.cari_detay', cari_id=cari_id))

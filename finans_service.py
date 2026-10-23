@@ -396,9 +396,14 @@ def transfer_yap(kaynak_kodu: str, hedef_kodu: str, tutar: Decimal, tarih: datet
         raise
 
 
+# Ödeme küsuratı satırının bağ anahtarı: odeme_anahtari = 'yuvarlama:<ödeme hareket id>' (UUID değil, çakışmaz).
+YUVARLAMA_ANAHTAR = 'yuvarlama:'
+
+
 def cari_hareket_geri_al(h: FinansCariHareket, kullanici_id: int, simdi: datetime) -> None:
     """Cari hareketi iptal işaretle + cari bakiyeyi ters delta ile geri al. COMMIT ETMEZ.
-    Hem islem_iptal (kasa bağlı) hem finans_cari_service.hareket_iptal (bağsız) buradan geçer."""
+    Hem islem_iptal (kasa bağlı) hem finans_cari_service.hareket_iptal (bağsız) buradan geçer.
+    Ödeme iptal edilirse ona bağlı küsurat (yuvarlama) satırı da geri alınır; yoksa borç +küsurat kadar şişerdi."""
     h = db.session.query(FinansCariHareket).filter_by(id=h.id).with_for_update().one()
     db.session.refresh(h)
     if h.iptal:
@@ -418,6 +423,10 @@ def cari_hareket_geri_al(h: FinansCariHareket, kullanici_id: int, simdi: datetim
     h.iptal = True
     h.iptal_tarihi = simdi
     h.iptal_kullanici_id = kullanici_id
+    if h.tur == 'odeme':
+        yuvarlama = FinansCariHareket.query.filter_by(odeme_anahtari=f'{YUVARLAMA_ANAHTAR}{h.id}', iptal=False).first()
+        if yuvarlama:
+            cari_hareket_geri_al(yuvarlama, kullanici_id, simdi)
 
 
 def islem_iptal(islem_id: int, kullanici_id: int, neden: str = None,

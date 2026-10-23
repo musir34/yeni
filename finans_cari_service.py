@@ -41,13 +41,18 @@ CARI_TUR_ETIKET = {'tedarikci': 'Tedarikçi', 'musteri': 'Müşteri', 'diger': '
 HAREKET_TURLERI = {'alim': +1, 'odeme': -1, 'satis': -1, 'tahsilat': +1,
                   'hakedis': +1, 'hakedis_azaltma': -1, 'borc_alma': -1, 'borc_odeme': +1,
                   'calisan_borc': +1, 'calisan_borc_odeme': -1, 'mahsup': +1, 'mesai': +1,
-                  'alissa_hakedis': +1, 'alissa_duzeltme': -1}
+                  'alissa_hakedis': +1, 'alissa_duzeltme': -1, 'yuvarlama': +1}
 HAREKET_ETIKET = {'alim': 'Mal Girişi', 'odeme': 'Ödeme', 'satis': 'Satış', 'tahsilat': 'Tahsilat',
                  'hakedis': 'Hak ediş', 'hakedis_azaltma': 'Hak ediş düzeltmesi',
                  'borc_alma': 'Kasadan borç aldım', 'borc_odeme': 'Borç geri ödemesi',
                  'calisan_borc': 'Cebinden verdi', 'calisan_borc_odeme': 'Geri ödeme',
                  'mahsup': 'Maaş hesaba yazıldı', 'mesai': 'Mesai',
-                 'alissa_hakedis': 'Alissa hak edişi', 'alissa_duzeltme': 'Alissa hak ediş düzeltmesi'}
+                 'alissa_hakedis': 'Alissa hak edişi', 'alissa_duzeltme': 'Alissa hak ediş düzeltmesi',
+                 'yuvarlama': 'Küsurat kapatıldı'}
+# Ödeme küsuratı (komutan emri 2026-10-23): 2997 ₺ borca 3000 ₺ ödenince 3 ₺ "alacağımız" kalmasın.
+# Fazla verilen bu sınırın altındaysa bakiye 'yuvarlama' satırıyla sıfıra çekilir; kasaya dokunmaz
+# (para gerçekten çıktı). Üstü bilinçli ön ödeme sayılır, alacak olarak kalır. Yalnız TL cari.
+YUVARLAMA_SINIRI = Decimal('10.00')
 # Alissa haftalık hak edişi alissa/cari.py tarafından defterden hesaplanıp yazılır; elle iptal edilmez.
 ALISSA_TURLERI = ('alissa_hakedis', 'alissa_duzeltme')
 SAHSI_BORC_TURLERI = ('borc_alma', 'borc_odeme', 'mahsup')
@@ -313,6 +318,41 @@ def _cari_hareket(cari: FinansCari, tur: str, tutar: Decimal, tarih: datetime, a
     return h
 
 
+def yuvarlama_uygun(cari: FinansCari) -> bool:
+    """Küçük alacak bakiyesi (0 < alacak ≤ sınır) küsurat olarak kapatılabilir mi? Şahsi/çalışan ve USD hariç."""
+    b = Decimal(str(cari.bakiye or 0))
+    return (cari.aktif and cari.tur not in ('sahsi', 'calisan') and (cari.para_birimi or 'TRY') == 'TRY'
+            and b < 0 and -b <= YUVARLAMA_SINIRI)
+
+
+def _yuvarlama_yaz(cari: FinansCari, tarih: datetime, aciklama: str, kullanici_id: int,
+                   anahtar: str = None) -> FinansCariHareket:
+    """Alacak bakiyesini sıfıra çeken 'yuvarlama' satırı (kasasız). Cari FOR UPDATE ile gelmiş olmalı."""
+    fark = -Decimal(str(cari.bakiye or 0))
+    return _cari_hareket(cari, 'yuvarlama', fark, tarih, aciklama, kullanici_id, odeme_anahtari=anahtar)
+
+
+def yuvarlama_bul(odeme: FinansCariHareket):
+    """Ödemeye bağlı küsurat satırı (yoksa None)."""
+    return FinansCariHareket.query.filter_by(odeme_anahtari=f'{fs.YUVARLAMA_ANAHTAR}{odeme.id}', iptal=False).first()
+
+
+def yuvarlama_kapat(cari_id, tarih: datetime, kullanici_id: int) -> FinansCariHareket:
+    """Elle: mevcut küçük alacak bakiyesini (eski fazla ödemeler) küsurat olarak kapat."""
+    try:
+        cari = cari_getir(cari_id, kilitle=True)
+        if not yuvarlama_uygun(cari):
+            raise FinansHata(f'Küsurat kapatma yalnız {YUVARLAMA_SINIRI:.2f} ₺ ve altındaki alacak bakiyesinde, '
+                             'açık TL tedarikçi/müşteri/diğer hesaplarda kullanılır.')
+        h = _yuvarlama_yaz(cari, tarih, f'{cari.ad} — {-Decimal(str(cari.bakiye)):.2f} ₺ küsurat kapatıldı',
+                           kullanici_id)
+        db.session.commit()
+        return h
+    except Exception:
+        db.session.rollback()
+        raise
+
+
 def mal_girisi(cari_id, kalemler: list[dict], tarih: datetime, aciklama: str, kullanici_id: int,
                tur: str = 'alim') -> FinansCariHareket:
     """alim (borç ↑) veya satis (alacak ↑) — kalem dökümlü, kasaya dokunmaz."""
@@ -368,6 +408,10 @@ def odeme_yap(cari_id, hesap_kodu: str, tutar: Decimal, tarih: datetime, aciklam
         islem = fs._hareket(hesap, 'cari_odeme', -1, kasa_tutar, tarih, kullanici_id,
                             aciklama=_kasa_aciklama(aciklama, tutar, kur))
         h = _cari_hareket(cari, tur, tutar, tarih, aciklama, kullanici_id, islem_id=islem.id, kur=kur)
+        # Borcu küçük bir küsuratla aşan ödeme (2997'ye 3000): fark alacak olarak kalmaz, sıfıra çekilir.
+        if tur == 'odeme' and h.onceki_bakiye > 0 and yuvarlama_uygun(cari):
+            _yuvarlama_yaz(cari, tarih, f'{cari.ad} — ödeme küsuratı ({tutar:.2f} ₺ ödendi, borç {h.onceki_bakiye:.2f} ₺)',
+                           kullanici_id, anahtar=f'{fs.YUVARLAMA_ANAHTAR}{h.id}')
         db.session.commit()
         return h
     except Exception:
