@@ -98,6 +98,12 @@
     html.gs-dark .eritme-model { background:rgba(255,255,255,.08); }
     /* Üretim Modelleri kartı (son 30 gün sipariş / fiyat) */
     .uretim-card h5 { color:#666; font-weight:600; }
+    .uretim-bilgi-btn { border:0; background:transparent; padding:0 4px; color:var(--color-primary); font-size:1rem; line-height:1; cursor:pointer; vertical-align:middle; }
+    .uretim-bilgi-btn:hover { opacity:.75; }
+    .uretim-bilgi { border:1px dashed rgba(0,0,0,.15); border-radius:12px; padding:10px 14px; margin-bottom:12px; font-size:.82rem; color:#555; background:rgba(0,0,0,.02); }
+    .uretim-bilgi ul { margin:0; padding-left:18px; }
+    .uretim-bilgi li { margin-bottom:3px; }
+    html.gs-dark .uretim-bilgi { border-color:#444; color:#ccc; background:rgba(255,255,255,.03); }
     .uretim-ozet__kutu {
       border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:10px 14px; height:100%;
       background:linear-gradient(135deg, rgba(0,0,0,.02), transparent);
@@ -497,7 +503,12 @@
     {% if uretim %}
     <div class="card-soft p-3 mt-3 uretim-card">
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-        <h5 class="mb-0">🏭 Üretim Modelleri: Sipariş ve Fiyat</h5>
+        <h5 class="mb-0">🏭 Üretim Modelleri: Sipariş ve Fiyat
+          <button type="button" class="uretim-bilgi-btn" data-bs-toggle="collapse" data-bs-target="#uretimBilgi"
+                  aria-expanded="false" aria-controls="uretimBilgi" title="Bu kart ne gösteriyor?">
+            <i class="fas fa-info-circle"></i>
+          </button>
+        </h5>
         <div class="d-flex align-items-center gap-2">
           <span class="text-muted small">Son {{ uretim.gun }} gün · fiyat Trendyol satır fiyatı · stoklar canlı</span>
           <button class="btn btn-sm btn-outline-primary eritme-kopyala" type="button"
@@ -505,6 +516,20 @@
                   title="Üretim modeli kodlarını kopyala">
             <i class="fas fa-copy me-1"></i> Kopyala
           </button>
+        </div>
+      </div>
+      <div class="collapse" id="uretimBilgi">
+        <div class="uretim-bilgi">
+          <ul>
+            <li><strong>Model:</strong> Model kodu. Altında üretime dahil renkler yazar; "Göster" ile hepsi açılır.</li>
+            <li><strong>Stok:</strong> Yalnız üretimdeki renklerin şu anki merkezi stoğu.</li>
+            <li><strong>Sipariş ({{ uretim.gun }} gün):</strong> Kalın sayı son {{ uretim.gun }} günde üretim listesine düşen sipariş sayısıdır; raftan karşılanan siparişler sayılmaz. Gri sayı bu siparişlerdeki toplam çift.</li>
+            <li><strong>Pembe çubuk:</strong> Modelleri kıyaslar. En çok sipariş alan model çubuğu tam doldurur, diğerleri ona oranla dolar.</li>
+            <li><strong>Son Fiyat:</strong> En son siparişteki satış fiyatı. Yanındaki renkli fark ortalamaya göre artışı (yeşil) ya da düşüşü (kırmızı) gösterir.</li>
+            <li><strong>Ort. Fiyat:</strong> {{ uretim.gun }} gündeki çift başı ortalama satış fiyatı.</li>
+            <li><strong>Son Sipariş:</strong> Fiyatı bilinen en son siparişin tarihi.</li>
+            <li>Fiyatlar Trendyol satır fiyatıdır; site (SH-) ve değişim (DG-) siparişleri sayıma girer, fiyata girmez. Soluk satır = {{ uretim.gun }} günde hiç sipariş yok.</li>
+          </ul>
         </div>
       </div>
       <div class="row g-2 mb-3">

@@ -19,3 +19,4 @@ Komutan emri: model üretim moduna alınırken tüm renkler ya da seçilen birka
 ## Ek (aynı gün)
 - Anasayfa kartı: renk satırı kesik başlar, her modelde Göster/Gizle düğmesi tüm renkleri açar/kapatır (templates/home.html, CSS + küçük JS).
 - Anasayfa kartı Stok sütunu: renk seçilmiş modelde yalnız o renklerin stoğu toplanır (uretim_gorevi.py).
+- Kart başlığına ⓘ bilgi düğmesi: sütun açıklamaları açılır kutuda (templates/home.html).

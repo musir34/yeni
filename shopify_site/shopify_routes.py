@@ -497,6 +497,27 @@ def price_compare_api():
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
+@shopify_bp.route("/api/price-compare/sync", methods=["POST"])
+@login_required
+@check_shopify_config
+def price_compare_sync():
+    """Seçilen modelin Shopify satış fiyatlarını Trendyol fiyatlarına eşitle."""
+    payload = request.get_json(silent=True)
+    model_code = payload.get("model_code") if isinstance(payload, dict) else None
+    if not isinstance(model_code, str) or not model_code.strip():
+        return jsonify({"success": False, "error": "Model kodu zorunludur."}), 400
+    try:
+        result = price_compare_service.sync_model_prices(model_code)
+        if result.get("updated"):
+            log_user_action("UPDATE", {
+                "işlem_açıklaması": f"{model_code}: {result['updated']} Shopify varyantının fiyatı Trendyol ile eşitlendi",
+                "sayfa": "Shopify Fiyat Karşılaştırma",
+            })
+        return jsonify(result)
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
 @shopify_bp.route("/api/price-compare/export")
 @login_required
 @check_shopify_config

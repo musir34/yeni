@@ -119,7 +119,7 @@ SAYFALAR: tuple[Sayfa, ...] = (
           roller=SADECE_ADMIN, ebeveynler=("finans", "finans_cari"), menude=False),
     # ── Paneller ──
     Sayfa("shopify_fiyat", "Shopify ↔ Trendyol Fiyat", "Paneller",
-          endpoints=("shopify.price_compare_dashboard", "shopify.price_compare_api", "shopify.price_compare_export")),
+          endpoints=("shopify.price_compare_dashboard", "shopify.price_compare_api", "shopify.price_compare_export", "shopify.price_compare_sync")),
     Sayfa("shopify_siparisler", "Shopify Siparişler", "Paneller", blueprints=("shopify",)),
     Sayfa("site_iade", "Site İade Yönetimi", "Paneller", blueprints=("iade_yonetimi",)),
     Sayfa("idefix", "Idefix", "Paneller", blueprints=("idefix",)),

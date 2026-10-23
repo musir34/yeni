@@ -11,6 +11,7 @@ yapılmış durumda. Burada sadece o eşleşmelerin fiyat tarafına bakıyoruz.
 from __future__ import annotations
 
 import logging
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any, Dict, List, Optional
 
 from .shopify_config import ShopifyConfig
@@ -22,6 +23,27 @@ class PriceCompareService:
     """Shopify ↔ Trendyol satış fiyatı karşılaştırma servisi."""
 
     VARIANTS_PAGE_SIZE = 250
+
+    PRICE_SYNC_QUERY = """
+    query GetPriceSyncVariants($ids: [ID!]!) {
+      nodes(ids: $ids) {
+        ... on ProductVariant {
+          id
+          price
+          product { id }
+        }
+      }
+    }
+    """
+
+    PRICE_SYNC_MUTATION = """
+    mutation SyncVariantPrices($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+      productVariantsBulkUpdate(productId: $productId, variants: $variants, allowPartialUpdates: false) {
+        productVariants { id price }
+        userErrors { field message }
+      }
+    }
+    """
 
     def __init__(self):
         self.config = ShopifyConfig
@@ -148,6 +170,7 @@ class PriceCompareService:
                 "success": True,
                 "summary": _empty_summary(),
                 "groups": [],
+                "model_codes": [],
             }
 
         # Panel ürünlerini barkoda göre çek (model_kodu, title, color, size, fiyat için)
@@ -259,7 +282,92 @@ class PriceCompareService:
             "success": True,
             "summary": summary,
             "groups": result_groups,
+            "model_codes": sorted(groups),
         }
+
+    def sync_model_prices(self, model_code: str) -> Dict[str, Any]:
+        """Bir modelin eşleşmiş Shopify varyantlarını paneldeki Trendyol fiyatına eşitle."""
+        from models import Product, ShopifyMapping
+        from sqlalchemy import or_
+
+        query = Product.query.filter_by(product_main_id=model_code)
+        if model_code == "(model kodu yok)":
+            query = Product.query.filter(or_(
+                Product.product_main_id == model_code,
+                Product.product_main_id.is_(None),
+                Product.product_main_id == "",
+            ))
+        products = {p.barcode: p for p in query.all()}
+        mappings = ShopifyMapping.query.filter(ShopifyMapping.barcode.in_(products)).all() if products else []
+        result = {"success": True, "updated": 0, "unchanged": 0, "skipped": 0, "failed": 0, "errors": []}
+        if not mappings:
+            result["success"] = False
+            result["errors"].append("Bu model için eşleşmiş ürün bulunamadı.")
+            return result
+
+        # Fiyat istemciden alınmaz; her model işlenirken veritabanından okunur.
+        targets = {}
+        for mapping in mappings:
+            price = _to_money(products[mapping.barcode].sale_price)
+            if price is None or price <= 0:
+                result["skipped"] += 1
+                continue
+            targets[mapping.shopify_variant_id] = price
+
+        variant_ids = list(targets)
+        pending = {}
+        for start in range(0, len(variant_ids), self.VARIANTS_PAGE_SIZE):
+            ids = variant_ids[start:start + self.VARIANTS_PAGE_SIZE]
+            data = self._graphql(self.PRICE_SYNC_QUERY, {"ids": ids})
+            nodes = {node["id"]: node for node in data.get("nodes", []) if node and node.get("id")}
+            for variant_id in ids:
+                node = nodes.get(variant_id)
+                product_id = ((node or {}).get("product") or {}).get("id")
+                if not node or not product_id:
+                    result["skipped"] += 1
+                    continue
+                if _to_money(node.get("price")) == targets[variant_id]:
+                    result["unchanged"] += 1
+                    continue
+                pending.setdefault(product_id, []).append({
+                    "id": variant_id,
+                    "price": format(targets[variant_id], ".2f"),
+                })
+
+        # Shopify aynı ürüne ait varyantları kabul eder; stok/compareAtPrice gönderilmez.
+        for product_id, variants in pending.items():
+            for start in range(0, len(variants), self.VARIANTS_PAGE_SIZE):
+                batch = variants[start:start + self.VARIANTS_PAGE_SIZE]
+                try:
+                    data = self._graphql(self.PRICE_SYNC_MUTATION, {"productId": product_id, "variants": batch})
+                    payload = data.get("productVariantsBulkUpdate") or {}
+                    errors = payload.get("userErrors") or []
+                    if errors:
+                        result["failed"] += len(batch)
+                        result["errors"].extend(error.get("message", "Shopify fiyat güncellemesini reddetti.") for error in errors)
+                        continue
+                    returned = {v["id"]: _to_money(v.get("price")) for v in (payload.get("productVariants") or [])}
+                    for variant in batch:
+                        if returned.get(variant["id"]) == targets[variant["id"]]:
+                            result["updated"] += 1
+                        else:
+                            result["failed"] += 1
+                            result["errors"].append(f"{variant['id']}: fiyat güncellemesi doğrulanamadı.")
+                except Exception as exc:
+                    # Önceki başarılı grupları kaybetmeden kısmi sonucu bildir.
+                    result["failed"] += len(batch)
+                    result["errors"].append(str(exc))
+
+        result["success"] = result["failed"] == 0
+        return result
+
+
+def _to_money(val: Any) -> Optional[Decimal]:
+    try:
+        amount = Decimal(str(val))
+        return amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if amount.is_finite() else None
+    except (InvalidOperation, ValueError, TypeError):
+        return None
 
 
 def _to_float(val: Any) -> Optional[float]:

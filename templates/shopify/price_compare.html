@@ -107,6 +107,21 @@
         </div>
     </div>
 
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="d-flex gap-2 flex-wrap align-items-center">
+                <button id="btnSyncSelected" class="btn btn-primary" disabled>
+                    <i class="bi bi-check2-square"></i> Seçilenleri eşitle (0)
+                </button>
+                <button id="btnSyncAll" class="btn btn-outline-primary" disabled>
+                    <i class="bi bi-arrow-repeat"></i> Tümünü eşitle
+                </button>
+                <span class="text-muted small">Shopify satış fiyatlarını paneldeki Trendyol fiyatlarına eşitler. Tümü, filtre dışında kalan modelleri de kapsar.</span>
+            </div>
+            <div id="syncResult" class="alert mt-3 mb-0" role="status" aria-live="polite" style="display:none; white-space:pre-line;"></div>
+        </div>
+    </div>
+
     <!-- Tablo -->
     <div class="card">
         <div class="card-body p-0">
@@ -122,6 +137,9 @@
                 <table id="priceTable" class="table table-sm mb-0" style="display:none;">
                     <thead class="table-dark">
                         <tr>
+                            <th style="width:38px;" class="text-center">
+                                <input id="chkSelectVisible" type="checkbox" class="form-check-input" aria-label="Görünen modelleri seç" disabled>
+                            </th>
                             <th style="width:38px;"></th>
                             <th>Model Kodu</th>
                             <th>Ürün</th>
@@ -146,6 +164,11 @@
     var allGroups = [];
     var expanded = {};   // model_code -> true/false
     var allExpanded = false;
+    var allModelCodes = [];
+    var selectedModels = Object.create(null);
+    var loading = false;
+    var syncing = false;
+    var dataLoaded = false;
 
     var STATUS_BADGE = {
         equal: ['Aynı', 'bg-success'],
@@ -204,7 +227,7 @@
             var dcls = diffCls(v.diff);
             var sizeColor = [v.color, v.size].filter(Boolean).join(' / ');
             return '<tr class="variant-row bg-light-subtle">' +
-                '<td></td>' +
+                '<td colspan="2"></td>' +
                 '<td colspan="2" class="ps-5"><code>' + escapeHtml(v.barcode) + '</code>' +
                     (sizeColor ? ' <span class="text-muted small ms-2">' + escapeHtml(sizeColor) + '</span>' : '') +
                 '</td>' +
@@ -229,6 +252,8 @@
             var caret = open ? 'bi-chevron-down' : 'bi-chevron-right';
 
             var headerRow = '<tr class="model-row" data-code="' + escapeHtml(g.model_code) + '" style="cursor:pointer;">' +
+                '<td class="text-center"><input type="checkbox" class="form-check-input model-select" data-code="' + escapeHtml(g.model_code) + '" aria-label="' + escapeHtml(g.model_code + ' modelini seç') + '"' +
+                    (selectedModels[g.model_code] ? ' checked' : '') + (syncing ? ' disabled' : '') + '></td>' +
                 '<td class="text-center"><i class="bi ' + caret + '"></i></td>' +
                 '<td><strong>' + escapeHtml(g.model_code) + '</strong></td>' +
                 '<td>' + escapeHtml(g.product_title || '') + '</td>' +
@@ -248,8 +273,19 @@
             return headerRow + detail;
         }).join('');
 
-        tbody.innerHTML = html || '<tr><td colspan="8" class="text-center text-muted p-4">Sonuç bulunamadı.</td></tr>';
+        tbody.innerHTML = html || '<tr><td colspan="9" class="text-center text-muted p-4">Sonuç bulunamadı.</td></tr>';
         document.getElementById('resultCount').textContent = filtered.length + ' model / ' + totalVariants + ' varyant gösteriliyor';
+
+        Array.from(tbody.querySelectorAll('.model-select')).forEach(function (checkbox) {
+            checkbox.addEventListener('click', function (event) { event.stopPropagation(); });
+            checkbox.addEventListener('change', function () {
+                var code = checkbox.getAttribute('data-code');
+                if (checkbox.checked) selectedModels[code] = true;
+                else delete selectedModels[code];
+                updateControls();
+            });
+        });
+        updateControls();
 
         // Click handler
         Array.from(tbody.querySelectorAll('.model-row')).forEach(function (row) {
@@ -272,7 +308,83 @@
         document.getElementById('statOnly').textContent = (b.only_shopify || 0) + (b.only_trendyol || 0);
     }
 
+    function updateControls() {
+        var busy = loading || syncing;
+        var count = Object.keys(selectedModels).length;
+        document.getElementById('btnSyncSelected').textContent = 'Seçilenleri eşitle (' + count + ')';
+        document.getElementById('btnSyncSelected').disabled = busy || !dataLoaded || !count;
+        document.getElementById('btnSyncAll').textContent = 'Tümünü eşitle (' + allModelCodes.length + ')';
+        document.getElementById('btnSyncAll').disabled = busy || !dataLoaded || !allModelCodes.length;
+        document.getElementById('btnRefresh').disabled = busy;
+        document.getElementById('btnExport').disabled = busy || !dataLoaded;
+        document.getElementById('btnExpandAll').disabled = busy || !dataLoaded;
+        ['chkOnlyDiff', 'inputMinDiff', 'inputSearch', 'selectStatus'].forEach(function (id) {
+            document.getElementById(id).disabled = busy;
+        });
+        var visible = allGroups.filter(groupMatchesFilter);
+        var checked = visible.filter(function (g) { return selectedModels[g.model_code]; }).length;
+        var selectVisible = document.getElementById('chkSelectVisible');
+        selectVisible.checked = visible.length > 0 && checked === visible.length;
+        selectVisible.indeterminate = checked > 0 && checked < visible.length;
+        selectVisible.disabled = busy || !dataLoaded || !visible.length;
+        Array.from(document.querySelectorAll('.model-select')).forEach(function (checkbox) {
+            checkbox.disabled = busy;
+        });
+    }
+
+    function showSyncResult(message, style) {
+        var box = document.getElementById('syncResult');
+        box.className = 'alert alert-' + style + ' mt-3 mb-0';
+        box.textContent = message;
+        box.style.display = '';
+    }
+
+    async function syncPrices(all) {
+        if (loading || syncing || !dataLoaded) return;
+        var codes = all ? allModelCodes.slice() : Object.keys(selectedModels);
+        if (!codes.length) return;
+        syncing = true;
+        updateControls();
+        var totals = { updated: 0, unchanged: 0, skipped: 0, failed: 0 };
+        var errors = [];
+        var completed = 0;
+        var stopped = false;
+        try {
+            for (var i = 0; i < codes.length; i++) {
+                showSyncResult('Eşitleniyor: ' + (i + 1) + ' / ' + codes.length + ' model (' + codes[i] + ')\n' +
+                    totals.updated + ' varyant güncellendi. İşlem bitene kadar sayfayı açık tutun.', 'info');
+                var response = await fetch('{{ url_for("shopify.price_compare_sync") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_code: codes[i] })
+                });
+                var result = await response.json();
+                if (!response.ok || result.error) throw new Error(result.error || result.message || 'İstek tamamlanamadı.');
+                ['updated', 'unchanged', 'skipped', 'failed'].forEach(function (key) {
+                    totals[key] += result[key] || 0;
+                });
+                (result.errors || []).forEach(function (error) { errors.push(codes[i] + ': ' + error); });
+                completed += 1;
+            }
+        } catch (error) {
+            stopped = true;
+            errors.push('İşlem durdu: ' + error.message + ' Son modelin sonucunu yeniden karşılaştırarak kontrol edin.');
+        } finally {
+            syncing = false;
+            var message = completed + ' / ' + codes.length + ' model işlendi. ' +
+                totals.updated + ' varyant eşitlendi, ' + totals.unchanged + ' zaten aynı, ' +
+                totals.skipped + ' atlandı, ' + totals.failed + ' güncelleme doğrulanamadı.';
+            if (totals.skipped) message += '\nAtlananlar: geçerli Trendyol fiyatı veya Shopify varyantı bulunamayan ürünler.';
+            if (errors.length) message += '\n' + errors.slice(0, 8).join('\n') + (errors.length > 8 ? '\nDiğer hata sayısı: ' + (errors.length - 8) : '');
+            showSyncResult(message, stopped || errors.length || totals.skipped ? 'warning' : 'success');
+            await loadData();
+        }
+    }
+
     function loadData() {
+        loading = true;
+        dataLoaded = false;
+        updateControls();
         var onlyDiff = document.getElementById('chkOnlyDiff').checked ? '1' : '0';
         var minDiff = document.getElementById('inputMinDiff').value || '0';
         var url = '{{ url_for("shopify.price_compare_api") }}?only_differences=' + onlyDiff + '&min_diff_percent=' + encodeURIComponent(minDiff);
@@ -284,7 +396,7 @@
         document.getElementById('btnExport').disabled = true;
         document.getElementById('btnExpandAll').disabled = true;
 
-        fetch(url)
+        return fetch(url)
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 if (!data.success) {
@@ -292,6 +404,9 @@
                     return;
                 }
                 allGroups = data.groups || [];
+                allModelCodes = data.model_codes || [];
+                selectedModels = Object.create(null);
+                dataLoaded = true;
                 expanded = {};
                 allExpanded = false;
                 document.getElementById('btnExpandAll').innerHTML = '<i class="bi bi-arrows-expand"></i> Hepsini Aç';
@@ -306,7 +421,8 @@
             })
             .finally(function () {
                 document.getElementById('loadingBox').style.display = 'none';
-                document.getElementById('btnRefresh').disabled = false;
+                loading = false;
+                updateControls();
             });
     }
 
@@ -336,6 +452,18 @@
         if (btnRefresh) btnRefresh.addEventListener('click', loadData);
         if (btnExport) btnExport.addEventListener('click', exportCsv);
         if (btnExpand) btnExpand.addEventListener('click', toggleAll);
+        var btnSyncSelected = document.getElementById('btnSyncSelected');
+        var btnSyncAll = document.getElementById('btnSyncAll');
+        if (btnSyncSelected) btnSyncSelected.addEventListener('click', function () { syncPrices(false); });
+        if (btnSyncAll) btnSyncAll.addEventListener('click', function () { syncPrices(true); });
+        var selectVisible = document.getElementById('chkSelectVisible');
+        if (selectVisible) selectVisible.addEventListener('change', function () {
+            allGroups.filter(groupMatchesFilter).forEach(function (g) {
+                if (selectVisible.checked) selectedModels[g.model_code] = true;
+                else delete selectedModels[g.model_code];
+            });
+            render();
+        });
         ['inputSearch', 'selectStatus'].forEach(function (id) {
             var el = document.getElementById(id);
             if (el) el.addEventListener('input', render);
