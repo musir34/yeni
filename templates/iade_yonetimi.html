@@ -539,7 +539,9 @@
         });
         document.getElementById('copyCreatedCode').addEventListener('click', async () => {
             await navigator.clipboard.writeText(document.getElementById('createdReturnCode').textContent);
-            document.getElementById('copyCreatedCode').innerHTML = '<i class="bi bi-check2"></i>';
+            const btn = document.getElementById('copyCreatedCode');
+            btn.innerHTML = '<i class="bi bi-check2"></i>';
+            setTimeout(() => { btn.innerHTML = '<i class="bi bi-copy"></i>'; }, 1800);
         });
     }
     loadReturns(false);

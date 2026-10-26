@@ -924,9 +924,11 @@
         // Barkod kopyala
         const copyBtn = e.target.closest('.ur-copy-btn');
         if (copyBtn) {
-            // Başarıda bildirim yok (Komutan: gereksiz uyarı) — yalnız hata gösterilir
+            // Başarıda toast yok (Komutan: gereksiz uyarı) — yalnız ikon 1,5 sn tik olur; hata toast ile
             try {
                 await navigator.clipboard.writeText(copyBtn.getAttribute('data-copy'));
+                copyBtn.innerHTML = '<i class="fas fa-check" style="color:var(--ur-success, #198754)"></i>';
+                setTimeout(() => { copyBtn.innerHTML = '<i class="far fa-copy"></i>'; }, 1500);
             } catch { toast('Kopyalanamadı', 'error'); }
             return;
         }

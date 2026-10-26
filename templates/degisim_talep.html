@@ -439,10 +439,10 @@
 
     function copyToClipboard(text, el){
       navigator.clipboard.writeText(text).then(()=>{
-        const original='fa-copy', ok='fa-check'; const $i=$(el);
-        $i.removeClass(original).addClass(ok).css('color','var(--color-success)');
-        setTimeout(()=>{$i.removeClass(ok).addClass(original).css('color','')},2000);
-      });
+        const $i=$(el);                                   // 'far fa-check' ücretsiz Font Awesome'da yok → tik 'fas' ile
+        $i.removeClass('far fa-copy').addClass('fas fa-check').css('color','var(--color-success)').attr('title','Kopyalandı');
+        setTimeout(()=>{$i.removeClass('fas fa-check').addClass('far fa-copy').css('color','').attr('title','')},2000);
+      }).catch(()=>{ $(el).css('color','var(--color-danger, #dc3545)'); setTimeout(()=>$(el).css('color',''),2000); });
     }
 
     const returnStateMeta = {
