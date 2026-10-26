@@ -50,6 +50,7 @@ MAX_DENEME = 5
 YENIDEN_DENEME_PENCERESI = timedelta(days=3)
 SORGU_ARALIGI = timedelta(minutes=20)       # aynı gönderi bu süreden sık sorulmaz
 SUBE_DENEME_SINIRI = 3     # 'varış şubesi bulunamadı' bu kadar denemede geçmezse insan baksın (adres/il/ilçe çelişkisi; gerçek gecikme 1 dk sürer)
+SUBE_DENEME_ARALIGI = timedelta(seconds=90)   # sayılan denemeler en az bu kadar aralıklı (üst üste tıklama / açılıştan hemen sonra sayılmaz)
 KAPIDA_ODEME_MIN = Decimal("20")            # MNG: "Tahsilatlı Kapıda Gönderi Tutar en az 20 TL"
 TAKIP_URL_SABLON = os.getenv("MNG_TAKIP_URL_SABLON") or "https://kargotakip.dhlecommerce.com.tr/?takipNo={shipment_id}"
 
@@ -262,6 +263,7 @@ def barkod_al(kayit: KargoGonderi, bekle: bool = False) -> bool:
     etiket basımı gibi anlık ihtiyaçta)."""
     if kayit.durum != SIPARIS_ACILDI:
         return False
+    son_yazim = kayit.guncellendi_at      # flush/refresh öncesi (barkod_istendi bayrağı yazımı sayılmasın)
     # Aynı kayda eşzamanlı iki istek (etiket basımı + Shopify 'Hazirlaniyor' tetiklemesi, ayrı işçilerde)
     # MNG'ye iki createbarcode göndermesin: satır kilitlenir, kilit alınınca durum yeniden okunur
     # (diğer işçi barkodu aldıysa burada bitmiştir). SQLite'ta kilit yok, yalnız yeniden okur.
@@ -278,12 +280,20 @@ def barkod_al(kayit: KargoGonderi, bekle: bool = False) -> bool:
         if isinstance(exc, MngHata) and sube_cozulmedi(exc):
             # Geçici olabilir (sipariş MNG'de yeni), ama defalarca geçmiyorsa adres ile il/ilçe çelişiyordur
             # (#1464: adres metni "denizli sarayköy", seçilen il/ilçe MERSİN/YENİŞEHİR) → hata + yol gösterme.
+            # MNG şubeyi açılıştan 30-60 sn sonra çözer; ekip üst üste tıklayınca (#1482: 105 sn içinde 3 tıklama)
+            # sayaç dolup kayıt boşuna hataya düşüyordu. Son yazımdan (açılış ya da sayılan deneme) 90 sn
+            # geçmeden gelen deneme sayılmaz ve kaydı değiştirmez.
+            if son_yazim and datetime.utcnow() - son_yazim < SUBE_DENEME_ARALIGI:
+                logger.info("[MNG] %s: şube henüz çözülmedi, deneme sayılmadı (son yazımdan %ss)", kayit.referans,
+                            int((datetime.utcnow() - son_yazim).total_seconds()))
+                return False
             kayit.deneme = (kayit.deneme or 0) + 1
             if kayit.deneme >= SUBE_DENEME_SINIRI:
                 kayit.durum = DURUM_HATA
-                kayit.hata = (f"MNG {kayit.deneme} denemede varış şubesini bulamadı; adres ile il/ilçe uyuşmuyor olabilir "
-                              f"(il/ilçe: {kayit.il}/{kayit.ilce}; adres: {(kayit.alici_adres or '')[:120]}). "
-                              "İl/ilçe/adresi düzeltip Yeniden Dene (MNG'deki sipariş iptal edilip yeniden açılır).")
+                kayit.hata = (f"MNG {kayit.deneme} denemede varış şubesini bulamadı; adres ile il/ilçe uyuşmuyor ya da adres "
+                              f"MNG'nin ayrıştıramadığı biçimde olabilir (il/ilçe: {kayit.il}/{kayit.ilce}; adres: "
+                              f"{(kayit.alici_adres or '')[:120]}). Adresi 'X Mahallesi Y Caddesi/Sokak No/Kat/Daire' biçiminde "
+                              "sadeleştirip (tek cadde adı) ya da il/ilçeyi düzeltip Yeniden Dene.")
                 logger.warning("[MNG] %s: varış şubesi %s denemede çözülmedi → hata", kayit.referans, kayit.deneme)
                 return False
             kayit.hata = f"MNG varış şubesini henüz çözmedi ({kayit.deneme}. deneme); barkod sonraki turda alınacak"

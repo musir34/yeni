@@ -177,4 +177,18 @@ def test_alici_adresi_200_karakterde_kesilir():
     from mng_kargo.govde import adres_kisalt
     uzun = "Taspazar mahallesi,  Atatürk bulvarı, 40mt yol üzeri, " * 6
     assert len(adres_kisalt(uzun)) <= 200 and "  " not in adres_kisalt(uzun)
-    assert adres_kisalt("  Moda  Cad. 3 ") == "Moda Cad. 3"
+    assert adres_kisalt("  Moda  Cad. 3 ") == "Moda Caddesi 3"
+
+
+def test_adres_normalize_kisaltmalari_acar_ve_ascii_yapar():
+    """#1482 (26.10): MNG 'A Keykubat Bulv cevhet atilla caddesi C blok kat1 daire:3' ile şube bulamadı,
+    açık yazımla buldu. Kısaltmalar açılır, Türkçe harfler ASCII olur, DB metni değişmez."""
+    from mng_kargo.govde import adres_normalize, alici_govdesi
+    from mng_kargo.govde import Alici
+    assert adres_normalize("Konaklı Mah. A Keykubat Bulv cevhet atilla cad. C blok kat1 daire:3") == \
+        "Konakli Mahallesi A Keykubat Bulvari cevhet atilla Caddesi C Blok Kat 1 Daire 3"
+    assert adres_normalize("Yayla mahallesi 1412.sokak elif apartmanı no :22 giriş kat daire no :17") == \
+        "Yayla Mahallesi 1412.Sokak elif Apartmani No 22 giris kat daire No 17"
+    assert adres_normalize("  Moda  Cad. 3 ") == "Moda Caddesi 3"
+    g = alici_govdesi(Alici(ad_soyad="A", adres="Şehit Bayram Gökmen mah.Konuralp cad.No:80/1", telefon="5", il="DÜZCE", ilce="MERKEZ"))
+    assert g["address"] == "Sehit Bayram Gokmen Mahallesi Konuralp Caddesi No 80/1"

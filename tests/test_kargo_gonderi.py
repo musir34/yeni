@@ -122,6 +122,12 @@ def _alici():
     return Alici(ad_soyad="Ayşe Yılmaz", adres="Moda Cad. 3", telefon="5321234567", il="İSTANBUL", ilce="KADIKÖY")
 
 
+def _eskit(k, saniye=120):
+    """Kaydın son yazımını geriye al (sayılan deneme aralığı için)."""
+    k.guncellendi_at = datetime.utcnow() - timedelta(seconds=saniye)
+    db.session.commit()
+
+
 def _ac_ve_barkodla(kaynak, ref, ad, referans, **ek):
     """Sipariş aç + işleme al (barkod_iste) → hazırlandı."""
     k = servis.gonderi_ac(kaynak, ref, ad, referans, _alici(), **ek)
@@ -153,7 +159,9 @@ def test_gonderi_ac_siparisi_acar_barkod_ikinci_asamada(ctx):
 
 def test_sube_cozulmediyse_barkod_sonraki_turda(ctx):
     ctx.barkod_hatasi = SUBE_YOK
-    k = _ac_ve_barkodla("manuel", "SP1", "SP1", "MN1")
+    k = servis.gonderi_ac("manuel", "SP1", "SP1", "MN1", _alici())
+    _eskit(k)
+    servis.barkod_iste("manuel", "SP1")
     assert k.durum == "siparis_acildi" and k.barkod_istendi and "şubesini henüz çözmedi" in k.hata
     ctx.barkod_hatasi = None
     assert servis.takip_isi()["barkod"] == 1              # bayrak duruyor → takip işi alır
@@ -563,13 +571,28 @@ def test_il_merkezi_ilcesi_mng_kodu_00_gecerli_sayilir(ctx):
 
 def test_varis_subesi_defalarca_cozulmezse_hata_ve_yol_gosterme(ctx):
     """#1464: adres 'denizli sarayköy' derken il/ilçe MERSİN/YENİŞEHİR; MNG her turda 'varış şubesi bulunamadı'.
-    Sonsuza dek 'sonraki turda' yerine sınırda hata + sebep."""
+    Sonsuza dek 'sonraki turda' yerine sınırda hata + sebep (denemeler 90 sn aralıklı sayılır)."""
     ctx.barkod_hatasi = SUBE_YOK
-    k = _ac_ve_barkodla("shopify", "77060", "#1560", "SH1560")
+    k = servis.gonderi_ac("shopify", "77060", "#1560", "SH1560", _alici())
+    _eskit(k)
+    servis.barkod_iste("shopify", "77060")
     assert k.durum == "siparis_acildi" and "(1. deneme)" in k.hata
     for _ in range(servis.SUBE_DENEME_SINIRI - 1):
+        _eskit(k)
         servis.barkod_al(k)
     assert k.durum == "hata" and "varış şubesini bulamadı" in k.hata and "Yeniden Dene" in k.hata
+
+
+def test_ust_uste_tiklama_sube_denemesi_sayilmaz(ctx):
+    """#1482: açılıştan saniyeler sonra üst üste 3 tıklama sayaç doldurup kaydı boşuna hataya düşürüyordu."""
+    ctx.barkod_hatasi = SUBE_YOK
+    k = servis.gonderi_ac("shopify", "77063", "#1563", "SH1563", _alici())       # az önce açıldı
+    for _ in range(5):
+        assert servis.barkod_al(k, bekle=True) is False
+    assert k.durum == "siparis_acildi" and (k.deneme or 0) == 0 and not k.hata     # hiçbiri sayılmadı
+    _eskit(k)
+    servis.barkod_al(k)
+    assert k.deneme == 1 and "(1. deneme)" in k.hata
 
 
 def test_yeniden_ac_adres_duzeltir_mng_siparisini_iptal_edip_yeniden_acar(ctx):
@@ -592,7 +615,9 @@ def test_yeniden_ac_barkodlu_kaydi_iptal_etmez(ctx):
 def test_yeniden_ac_sube_cozulmeyen_acik_siparisi_de_duzeltir(ctx):
     """Yeniden Dene sonrası kayıt siparis_acildi'ye döner; adres kutusu kaybolmasın, düzeltme yine yapılabilsin."""
     ctx.barkod_hatasi = SUBE_YOK
-    k = _ac_ve_barkodla("shopify", "77070", "#1570", "SH1570")
+    k = servis.gonderi_ac("shopify", "77070", "#1570", "SH1570", _alici())
+    _eskit(k)
+    servis.barkod_iste("shopify", "77070")
     assert k.durum == "siparis_acildi" and k.hata
     assert servis.yeniden_ac(k, adres="Cumhuriyet Mah. GMK Bulvarı No 242") is True
     assert ctx.iptaller[-1] == "SH1570" and k.alici_adres == "Cumhuriyet Mah. GMK Bulvarı No 242" and k.durum == "siparis_acildi"

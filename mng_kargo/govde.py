@@ -132,9 +132,37 @@ def parca_listesi(referans: str, parcalar: tuple[Parca, ...]) -> list[dict]:
 ADRES_AZAMI = 200          # MNG 26048: Recipient.Address 200 karakterden uzun olamaz
 
 
+_ADRES_KISALTMA = (
+    # MNG varış şubesini adres metnini ayrıştırarak bulur; kısaltmalı/bitişik yazımda ("A Keykubat Bulv",
+    # "kat1 daire:3") şube çözülmüyor, açık yazımda ("Konaklı Mahallesi Cevhet Atilla Caddesi Kat 1 Daire 3")
+    # çözülüyor (26.10.2026 canlı denemeler, #1482). Sık kısaltmalar açılır; metin ASCII'ye indirilir.
+    (r"\b(mah|mh|mahallesi|mahalle)\.?(?=\s|$)", "Mahallesi"),
+    (r"\b(cad|cd|caddesi|cadde)\.?(?=\s|$)", "Caddesi"),
+    (r"\b(sok|sk|sokak|sokagi|sokağı)\.?(?=\s|$)", "Sokak"),
+    (r"\b(bulv|blv|bul|bulvari|bulvarı|bulvar)\.?(?=\s|$)", "Bulvari"),
+    (r"\b(apt|ap|apartmani|apartmanı|apartman)\.?(?=\s|$)", "Apartmani"),
+    (r"\b(no|nu|numara)\s*[:.]?\s*(?=\d)", "No "),
+    (r"\b(kat|k)\s*[:.]?\s*(?=\d)", "Kat "),
+    (r"\b(daire|dr|d)\s*[:.]?\s*(?=\d)", "Daire "),
+    (r"\b(blok)\s*[:.]?\s*", "Blok "),
+)
+_TR_ASCII = str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU")
+
+
+def adres_normalize(adres: str | None) -> str:
+    """MNG isteği için adres: kısaltmalar açık, Türkçe harfler ASCII, boşluk sıkıştırılmış. Veritabanındaki
+    müşteri metni değişmez; yalnız MNG'ye giden gövde (ZPL fontu da Türkçe harf basmıyor)."""
+    metin = " ".join((adres or "").split())
+    metin = re.sub(r"\b(mah|mh|cad|cd|sok|sk|bulv|blv|bul|apt|ap)\.(?=\S)", r"\1. ", metin, flags=re.IGNORECASE)   # "mah.Konuralp cad.No" → aralıklı
+    for kalip, yeni in _ADRES_KISALTMA:
+        metin = re.sub(kalip, yeni, metin, flags=re.IGNORECASE)
+    metin = metin.translate(_TR_ASCII)
+    return " ".join(metin.split())
+
+
 def adres_kisalt(adres: str | None) -> str:
-    """Fazla boşlukları sıkıştır, 200'ü aşarsa kes (müşteri serbest metni bazen çok uzun)."""
-    duz = re.sub(r"\s+", " ", (adres or "")).strip()
+    """Normalize et, 200'ü aşarsa kes (müşteri serbest metni bazen çok uzun)."""
+    duz = adres_normalize(adres)
     return duz if len(duz) <= ADRES_AZAMI else duz[:ADRES_AZAMI].rstrip()
 
 

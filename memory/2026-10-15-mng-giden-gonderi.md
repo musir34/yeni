@@ -144,3 +144,11 @@
   gereksizdi → kayit_iptal ile iptal edildi (MNG cancelorder). Otomasyon: shopify_tarama.
   baska_kargoyla_karsilananlari_tara (5 dk): fulfillment_status:shipped siparişlerde takip numarası var ve
   bizim shipment_id değilse MNG kaydı iptal + hata notu; numarasız karşılama ya da kendi numaramız → dokunulmaz.
+- 2026-10-26 #1482 (ANTALYA/ALANYA) "varış şubesi bulunamadı": ekip 105 sn içinde 3 kez tıklayınca sayaç
+  doldu; ama 9 dk sonra da çözülmedi. Canlı GSTEST denemeleri (SMS kapalı, hepsi iptal edildi): MNG şubeyi
+  ADRES METNİNİ ayrıştırarak buluyor. "X Mahallesi Y Caddesi C Blok Kat 1 Daire 3" → OK; ham "A Keykubat Bulv
+  ... kat1 daire:3" → yok; "Mah."/"Cad." kısaltmalı → yok; bulvar+cadde birlikte → yok; tek bulvar ASCII "No 1"
+  → OK, aynısı Türkçe "Bulvarı"+"Kat/Daire" → yok (kural tam çözülemedi). Kayıt tek cadde haliyle yeniden
+  açıldı, barkod alındı. Eklenen: govde.adres_normalize (kısaltma açma + ASCII; DB metni değişmez),
+  SUBE_DENEME_ARALIGI 90 sn (erken/üst üste tıklama sayılmaz; son_yazim flush öncesi alınır), hata metnine
+  "tek cadde adıyla sadeleştir" ipucu. Kalıcı çözüm için MNG'ye adres ayrıştırma kuralı sorulmalı.
