@@ -1,6 +1,7 @@
 import logging
 import os
 import json
+import re
 import traceback
 from datetime import datetime
 from flask import Blueprint, render_template, request
@@ -131,6 +132,10 @@ def _is_cod_order(order):
     return any(any(kw in gw.lower() for kw in cod_keywords) for gw in gateways)
 
 
+# base_filter'daki -tag: dışlamalarının yerel karşılığı (arama dizini gecikmesine karşı)
+_SHOPIFY_KAPALI_TAGLAR = frozenset({"Hazirlaniyor", "Kargoda", "Teslim Edildi", "Arsivlendi"})
+
+
 def _fetch_shopify_beklemede_orders(limit=20):
     """Shopify'dan beklemedeki siparişleri çek.
     - Ödemesi onaylanmış (PAID) siparişler → hazırlamaya düşer
@@ -166,6 +171,12 @@ def _fetch_shopify_beklemede_orders(limit=20):
 
         # Birleştir ve tarihe göre sırala
         all_orders = paid_orders + cod_orders
+        # 🔁 Shopify arama dizini (query: -tag:...) birkaç saniye geriden gelir: paketleme
+        # onayıyla "Hazirlaniyor" etiketi yazılan sipariş hemen ardından gelen listede
+        # hâlâ dönüyor, ekran yenilenince yine aynı sipariş açılıyordu. Kaydın kendi
+        # tags alanı güncel olduğundan kapalı statü etiketi taşıyanlar burada elenir.
+        all_orders = [o for o in all_orders
+                      if not (set(o.get("tags") or []) & _SHOPIFY_KAPALI_TAGLAR)]
         all_orders.sort(key=lambda o: o.get("createdAt", ""))
 
         logging.info(f"[SHOPIFY] Hazırlamaya düşen: {len(all_orders)} (paid={len(paid_orders)}, cod={len(cod_orders)})")
@@ -817,3 +828,143 @@ def get_queue_orders():
             "error": str(e),
             "orders": []
         }), 500
+
+
+# ─────────────────────────────────────────────────────────────
+# 📋 Bugün Hazırlananlar — bu ekrandan paketlenen siparişlerin günlük sırası.
+# Etiket çıkmadan sıradaki siparişe geçilince "hangisiydi?" sorusu için: gün
+# İstanbul 00:00'da sıfırlanır (zaman penceresi; ayrı tablo/iş yok). Kaynak:
+# user_logs paketleme kaydı (confirm_packing) + aynı günün etiket izleri
+# (/order-label PRINT ve otomatik gönderim "kargo kodu verildi").
+# ─────────────────────────────────────────────────────────────
+_HAZIRLANDI_EK = "hazırlandı — "
+_ETIKET_YAZDIRILDI_EK = "Kargo etiketi yazdırıldı — "
+_OTO_GONDERIM_EK = "Otomatik gönderim — kargo kodu verildi — "
+
+
+def _bugun_baslangici_utc() -> datetime:
+    """İstanbul gününün 00:00'ı, naive UTC (user_logs.timestamp konvansiyonu)."""
+    from datetime import timezone
+    from time_utils import IST
+    gun_basi = datetime.now(IST).replace(hour=0, minute=0, second=0, microsecond=0)
+    return gun_basi.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def bugun_hazirlananlari_derle(rows) -> tuple[list[dict], dict[str, dict]]:
+    """user_logs satırlarından (kronolojik) → (hazırlanan siparişler sırayla, etiket izleri).
+    Saf mantık: DB yok. Aynı sipariş iki kez paketlendiyse ilk kayıt kalır; başarısız
+    paketleme (Durum=BASARISIZ) sayılmaz. Etiket izi anahtarı iz metnindeki sipariş no
+    (Shopify'da yazdırmada mağaza adı '#1428', otomatik gönderimde 'SH-<id>' olabilir)."""
+    from time_utils import fmt_ist
+    hazirlananlar: dict[str, dict] = {}
+    etiketler: dict[str, dict] = {}
+    for r in rows:
+        try:
+            d = json.loads(r.details or "{}")
+        except Exception:
+            d = {}
+        aciklama = (d.get("Işlem Açıklaması") or d.get("İşlem Açıklaması") or "").strip()
+        if not aciklama:
+            continue
+        if _HAZIRLANDI_EK in aciklama:
+            if (d.get("Durum") or "") == "BASARISIZ":
+                continue
+            no = str(d.get("Sipariş No") or "").strip()
+            if not no:
+                m = re.search(r"— (\S+) \(", aciklama)
+                no = m.group(1) if m else ""
+            if not no or no in hazirlananlar:
+                continue
+            hazirlananlar[no] = {
+                "order_number": no,
+                "saat": fmt_ist(r.timestamp, "%H:%M"),
+                "musteri": d.get("Müşteri") or "",
+                "kaynak": d.get("Kaynak") or ("SHOPIFY" if no.startswith("SH-") else "TRENDYOL"),
+                "hazirlayan": d.get("Kullanıcı") or "",
+            }
+        elif aciklama.startswith(_ETIKET_YAZDIRILDI_EK) or aciklama.startswith(_OTO_GONDERIM_EK):
+            tur = "yazdirildi" if aciklama.startswith(_ETIKET_YAZDIRILDI_EK) else "oto"
+            no = aciklama.split("— ")[-1].strip()
+            if no and no not in etiketler:       # ilk iz kalır
+                etiketler[no] = {"tur": tur, "saat": fmt_ist(r.timestamp, "%H:%M")}
+    return list(hazirlananlar.values()), etiketler
+
+
+def _hazirlanan_yazdir_bilgisi(order_number: str, kaynak: str):
+    """Yeniden yazdır formu için /order-label alanları (sipariş hazırladaki yazdirForm ile
+    birebir); sipariş bulunamazsa None → düğme çıkmaz."""
+    try:
+        if kaynak == "SHOPIFY" or order_number.startswith("SH-"):
+            from uretim_modu import shopify_siparis
+            so = shopify_siparis(order_number)
+            if so is None:
+                return None
+            return {
+                "order_number": so.shopify_order_name or order_number,
+                "shipping_barcode": "",
+                "cargo_provider": "",
+                "customer_name": so.customer_name or "",
+                "customer_surname": so.customer_surname or "",
+                "customer_address": so.customer_address or "",
+                "kapida_odeme": "1" if so.kapida_odeme else "0",
+                "kapida_odeme_tutari": so.kapida_odeme_tutari or 0,
+                "gorunen_no": so.shopify_order_name or order_number,
+            }
+        from archive import find_order_across_tables
+        o, _ = find_order_across_tables(order_number)
+        if o is None:
+            return None
+        return {
+            "order_number": order_number,
+            "shipping_barcode": o.cargo_tracking_number or "",
+            "cargo_provider": o.cargo_provider_name or "",
+            "customer_name": o.customer_name or "",
+            "customer_surname": o.customer_surname or "",
+            "customer_address": o.customer_address or "",
+            "kapida_odeme": "0",
+            "kapida_odeme_tutari": 0,
+            "gorunen_no": order_number,
+        }
+    except Exception:
+        db.session.rollback()
+        logging.warning("[BUGUN] yazdır bilgisi okunamadı: %s", order_number, exc_info=True)
+        return None
+
+
+@siparis_hazirla_bp.route("/api/bugun-hazirlananlar")
+def bugun_hazirlananlar():
+    from flask import jsonify
+    from sqlalchemy import or_
+    from models import UserLog
+    from time_utils import fmt_ist
+
+    try:
+        rows = (db.session.query(UserLog)
+                .filter(UserLog.timestamp >= _bugun_baslangici_utc())
+                .filter(~UserLog.action.like("PAGE_VIEW%"))
+                .filter(or_(UserLog.details.like(f"%{_HAZIRLANDI_EK}%"),
+                            UserLog.details.like(f"%{_ETIKET_YAZDIRILDI_EK}%"),
+                            UserLog.details.like(f"%{_OTO_GONDERIM_EK}%")))
+                .order_by(UserLog.timestamp.asc())
+                .all())
+    except Exception:
+        db.session.rollback()
+        logging.exception("[BUGUN] user_logs okunamadı")
+        return jsonify({"success": False, "message": "Kayıtlar okunamadı"}), 500
+
+    siparisler, etiketler = bugun_hazirlananlari_derle(rows)
+    sonuc = []
+    for sira, satir in enumerate(siparisler, start=1):
+        yazdir = _hazirlanan_yazdir_bilgisi(satir["order_number"], satir["kaynak"])
+        gorunen = (yazdir or {}).get("gorunen_no") or satir["order_number"]
+        iz = etiketler.get(satir["order_number"]) or etiketler.get(gorunen)
+        sonuc.append({
+            **satir,
+            "sira": sira,
+            "gorunen_no": gorunen,
+            "etiket": iz["tur"] if iz else "yok",
+            "etiket_saat": iz["saat"] if iz else "",
+            "yazdir": yazdir,
+        })
+    return jsonify({"success": True, "gun": fmt_ist(datetime.utcnow(), "%d.%m.%Y"),
+                    "siparisler": sonuc})

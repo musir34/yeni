@@ -175,7 +175,10 @@
     <div class="ur-autoship-card">
       <div class="ur-autoship-head">
         <h3>Otomatik Gönderim Aktif</h3>
-        <p>Kargo kodu: <span id="urAutoShipKodUst"></span></p>
+        <!-- id="autoShipBarcode": Güllü Kargo Asist Chrome eklentisi (e:\gullu-kargo-asist content-script.js)
+             panel sayfasında yalnız bu kimliği izler ve kodu DHL Gönderi Hazırlık sekmesine iletir;
+             data-urun-adet DHL paket tipi (Tekli/İkili...) için kalem sayısı. -->
+        <p>Kargo kodu: <span id="autoShipBarcode" data-urun-adet=""></span></p>
       </div>
       <div class="ur-autoship-kod">
         <strong id="urAutoShipKod"></strong>
@@ -405,6 +408,7 @@
   .ur-detail-barcode { display:inline-flex; align-items:center; gap:6px; margin-top:7px; font-size:.74rem; color:var(--ur-muted); font-family:monospace; }
   .ur-copy-btn { width:24px; height:24px; display:grid; place-items:center; border:0; border-radius:7px; background:transparent; color:var(--ur-muted); cursor:pointer; padding:0; }
   .ur-copy-btn:hover { background:var(--ur-rose-soft); color:var(--ur-rose-dark); }
+  .ur-copy-btn--ok, .ur-copy-btn--ok:hover { background:var(--ur-green-soft); color:var(--ur-green); }
   .ur-detail-qty { flex:0 0 auto; text-align:center; padding:6px 13px; border-radius:11px; background:#fff; border:1px solid var(--ur-line); font-size:1rem; font-weight:750; }
   .ur-detail-qty span { display:block; font-size:.62rem; font-weight:700; color:var(--ur-muted); text-transform:uppercase; letter-spacing:.06em; }
   .ur-meta { display:flex; flex-wrap:wrap; gap:6px 16px; color:var(--ur-muted); font-size:.76rem; }
@@ -924,11 +928,17 @@
         // Barkod kopyala
         const copyBtn = e.target.closest('.ur-copy-btn');
         if (copyBtn) {
-            // Başarıda toast yok (Komutan: gereksiz uyarı) — yalnız ikon 1,5 sn tik olur; hata toast ile
+            // Bildirim kutusu yok: tuşun kendisi 1.5 sn "kopyalandı" (yeşil tik) olur, sonra eski haline döner
             try {
                 await navigator.clipboard.writeText(copyBtn.getAttribute('data-copy'));
-                copyBtn.innerHTML = '<i class="fas fa-check" style="color:var(--ur-success, #198754)"></i>';
-                setTimeout(() => { copyBtn.innerHTML = '<i class="far fa-copy"></i>'; }, 1500);
+                copyBtn.classList.add('ur-copy-btn--ok');
+                copyBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
+                copyBtn.title = 'Kopyalandı';
+                setTimeout(() => {
+                    copyBtn.classList.remove('ur-copy-btn--ok');
+                    copyBtn.innerHTML = '<i class="far fa-copy"></i>';
+                    copyBtn.title = 'Barkodu kopyala';
+                }, 1500);
             } catch { toast('Kopyalanamadı', 'error'); }
             return;
         }
@@ -1107,7 +1117,10 @@
                 cargo_provider: kargoAktif.kargo.cargo_provider || '', sayfa: 'Üretim Siparişleri' })
         }).catch(() => {});
         document.getElementById('urAutoShipKod').textContent = kod;
-        document.getElementById('urAutoShipKodUst').textContent = kod;
+        // Eklenti köprüsü: kod + kalem sayısı (sipariş hazırladaki ürün kartı sayısının karşılığı)
+        const eklentiSpan = document.getElementById('autoShipBarcode');
+        eklentiSpan.textContent = kod;
+        eklentiSpan.setAttribute('data-urun-adet', String(kalemListesi(kargoAktif).length || 1));
         const kart = document.getElementById('urAutoShip');
         kart.hidden = false;
         setTimeout(() => { kart.hidden = true; }, 3000);

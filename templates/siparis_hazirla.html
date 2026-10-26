@@ -612,6 +612,11 @@
   <div class="btn-group-top">
     <a href="{{ url_for('home.home') }}" class="btn btn-secondary">Anasayfa</a>
     <a href="{{ url_for('display_archive') }}" class="btn btn-secondary">Arşiv</a>
+    <!-- Bugün bu ekrandan paketlenen siparişler sırayla (00:00'da sıfırlanır) — etiket çıkmadan
+         sıradakine geçilince "hangisiydi?" için; etiket izi olmayanlar kırmızı, yeniden yazdırılabilir -->
+    <button type="button" class="btn btn-info text-white" id="bugunHazirlananBtn" title="Bugün bu ekrandan hazırlanan siparişler (her gün 00:00'da sıfırlanır)">
+      <i class="fas fa-clipboard-list me-1"></i>Bugün Hazırlananlar <span class="badge bg-light text-dark" id="bugunHazirlananSayi" hidden></span>
+    </button>
 
 
 
@@ -1045,6 +1050,31 @@
       </form>
     </div>
   </div>
+
+  <!-- Bugün Hazırlananlar: bu ekrandan bugün (İstanbul 00:00'dan beri) paketlenen siparişler sırayla -->
+  <div class="modal fade" id="bugunModal" tabindex="-1" aria-labelledby="bugunModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="bugunModalLabel"><i class="fas fa-clipboard-list me-2"></i>Bugün Hazırlananlar <small class="text-muted" id="bugunModalGun"></small></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div id="bugunListe" class="table-responsive"><div class="text-center text-muted py-4">Yükleniyor…</div></div>
+        </div>
+        <div class="modal-footer">
+          <span class="me-auto text-muted small">Liste her gün 00:00'da sıfırlanır. <span class="badge bg-danger">Etiket yok</span> = bu sipariş için ne yazdırma ne otomatik gönderim izi var.</span>
+          <button type="button" class="btn btn-outline-secondary" id="bugunYenile"><i class="fas fa-sync-alt me-1"></i>Yenile</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Yeniden yazdır: sipariş hazırladaki yazdirForm ile aynı /order-label alanları -->
+  <form id="bugunYazdirForm" method="POST" action="{{ url_for('order_label') }}" target="_blank" hidden>
+    <input type="hidden" name="order_number"/><input type="hidden" name="shipping_barcode"/><input type="hidden" name="cargo_provider"/>
+    <input type="hidden" name="customer_name"/><input type="hidden" name="customer_surname"/><input type="hidden" name="customer_address"/>
+    <input type="hidden" name="kapida_odeme"/><input type="hidden" name="kapida_odeme_tutari"/>
+  </form>
 
   <!-- Arşiv Uyarısı (GLOBAL, TEK KEZ) -->
   <div id="archiveWarningModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
@@ -1867,6 +1897,79 @@
       });
     }
   })();
+  </script>
+  <script>
+    // ── Bugün Hazırlananlar: düğme → modal; liste her açılışta /api/bugun-hazirlananlar'dan ──
+    (function () {
+      var btn = document.getElementById('bugunHazirlananBtn');
+      var modalEl = document.getElementById('bugunModal');
+      if (!btn || !modalEl) return;
+      var liste = document.getElementById('bugunListe');
+      var sayi = document.getElementById('bugunHazirlananSayi');
+      var veri = [];
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+      function etiketRozet(r) {
+        if (r.etiket === 'yazdirildi') return '<span class="badge bg-success">Yazdırıldı ' + esc(r.etiket_saat) + '</span>';
+        if (r.etiket === 'oto') return '<span class="badge bg-primary">Oto. gönderim ' + esc(r.etiket_saat) + '</span>';
+        return '<span class="badge bg-danger">Etiket yok</span>';
+      }
+      function ciz() {
+        if (!veri.length) {
+          liste.innerHTML = '<div class="text-center text-muted py-4">Bugün bu ekrandan henüz sipariş hazırlanmadı.</div>';
+          return;
+        }
+        var h = '<table class="table table-sm table-hover mb-0 align-middle"><thead><tr>'
+          + '<th>#</th><th>Saat</th><th>Sipariş</th><th>Müşteri</th><th>Kaynak</th><th>Hazırlayan</th><th>Etiket</th><th></th>'
+          + '</tr></thead><tbody>';
+        veri.forEach(function (r, i) {
+          h += '<tr class="' + (r.etiket === 'yok' ? 'table-danger' : '') + '">'
+            + '<td>' + r.sira + '</td><td>' + esc(r.saat) + '</td>'
+            + '<td><strong>' + esc(r.gorunen_no) + '</strong>'
+            + (r.gorunen_no !== r.order_number ? '<br><small class="text-muted">' + esc(r.order_number) + '</small>' : '') + '</td>'
+            + '<td>' + esc(r.musteri) + '</td><td>' + esc(r.kaynak) + '</td><td>' + esc(r.hazirlayan) + '</td>'
+            + '<td>' + etiketRozet(r) + '</td>'
+            + '<td class="text-end">' + (r.yazdir
+                ? '<button type="button" class="btn btn-sm btn-warning" data-bugun-yazdir="' + i + '"><i class="fas fa-print me-1"></i>Yazdır</button>'
+                : '<small class="text-muted">sipariş bulunamadı</small>') + '</td>'
+            + '</tr>';
+        });
+        liste.innerHTML = h + '</tbody></table>';
+      }
+      function yukle() {
+        liste.innerHTML = '<div class="text-center text-muted py-4">Yükleniyor…</div>';
+        fetch("{{ url_for('siparis_hazirla.bugun_hazirlananlar') }}")
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (!d.success) throw new Error(d.message || 'Hata');
+            veri = d.siparisler || [];
+            document.getElementById('bugunModalGun').textContent = d.gun || '';
+            sayi.textContent = veri.length;
+            sayi.hidden = false;
+            ciz();
+          })
+          .catch(function (e) {
+            liste.innerHTML = '<div class="text-center text-danger py-4">Liste alınamadı: ' + esc(e.message) + '</div>';
+          });
+      }
+      btn.addEventListener('click', function () { bootstrap.Modal.getOrCreateInstance(modalEl).show(); });
+      modalEl.addEventListener('show.bs.modal', yukle);
+      document.getElementById('bugunYenile').addEventListener('click', yukle);
+      liste.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-bugun-yazdir]');
+        if (!b) return;
+        var r = veri[Number(b.getAttribute('data-bugun-yazdir'))];
+        if (!r || !r.yazdir) return;
+        var f = document.getElementById('bugunYazdirForm');
+        Object.keys(r.yazdir).forEach(function (k) {
+          if (f.elements[k]) f.elements[k].value = r.yazdir[k] == null ? '' : r.yazdir[k];
+        });
+        f.submit();
+      });
+    })();
   </script>
   <script src="{{ url_for('static', filename='js/hazirla-telefon-pc.js') }}?v=3"></script>
 {% endblock %}
