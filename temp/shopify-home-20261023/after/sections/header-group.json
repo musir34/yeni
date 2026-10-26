@@ -1,0 +1,164 @@
+{
+  "type": "header",
+  "name": "t:sections.refactor_words.labels.header_group",
+  "sections": {
+    "announcement": {
+      "type": "announcement-bar",
+      "blocks": {
+        "a88d0552-422f-479a-9ccf-bddae7bb3e36": {
+          "type": "content",
+          "settings": {
+            "text": "Save 20% use code: BULKSAVE",
+            "link": "",
+            "target": true
+          }
+        },
+        "359cd407-1fe0-473f-8b0c-cf52d0783b96": {
+          "type": "content",
+          "settings": {
+            "text": "FREE SHIPPING on orders above $50",
+            "link": "",
+            "target": false
+          }
+        }
+      },
+      "block_order": [
+        "a88d0552-422f-479a-9ccf-bddae7bb3e36",
+        "359cd407-1fe0-473f-8b0c-cf52d0783b96"
+      ],
+      "disabled": true,
+      "settings": {
+        "visibility": "all",
+        "show_locale_selector": true,
+        "show_country_selector": false,
+        "show_social_icons": true,
+        "bar_bgcolor": "#000000",
+        "bar_txtcolor": "#d4d4d4"
+      }
+    },
+    "header": {
+      "type": "header",
+      "blocks": {
+        "a3ca4eae-c334-45dd-9842-c49d594b1c4b": {
+          "type": "store-selector",
+          "disabled": true,
+          "settings": {}
+        },
+        "2e0d797d-c8e1-463d-a5ad-fe6ae2c0c9de": {
+          "type": "info",
+          "settings": {
+            "caption": "Teslimat Bilgisi",
+            "title": "Kargo & Teslimat",
+            "link": "",
+            "link_type": "_self",
+            "icon": "delivery"
+          }
+        }
+      },
+      "block_order": [
+        "a3ca4eae-c334-45dd-9842-c49d594b1c4b",
+        "2e0d797d-c8e1-463d-a5ad-fe6ae2c0c9de"
+      ],
+      "settings": {
+        "logo_src": "shopify://shop_images/Gullu-Logo-png.png",
+        "logo_height": 48,
+        "logo_mobile_src": "shopify://shop_images/Gullu-Logo-png_8ec2f216-d3db-41d5-a525-2c5961224681.png",
+        "logo_mobile_height": 40,
+        "main_linklist": "main-menu",
+        "show_search": true,
+        "sticky_header": true,
+        "header_absolute_homepage": false,
+        "header_absolute_collection": false,
+        "header_absolute_custom": "",
+        "color_text_header": "#10726e",
+        "select_header_actions_on_mobile": "show_on_homepage",
+        "show_header_actions": false,
+        "show_locale_selector": true,
+        "show_country_selector": false,
+        "show_social_icons": true
+      }
+    },
+    "gs_notices": {
+      "type": "gs-header-notices",
+      "settings": {
+        "pay_text": "<strong>Peşin fiyatına 3 taksit</strong> — tüm kredi kartlarında vade farksız",
+        "sale_text": "<strong>Aynı gün kargo</strong> — hızlı ve güvenilir teslimat",
+        "interval": 4,
+        "promo_text": "<strong>HOSGELDIN100</strong> koduyla ilk siparişinize <strong>100 TL indirim</strong>",
+        "campaign_text": "<strong>Sepette %40 ve %25 indirim</strong> — seçili modellerde 31 Ekim’e kadar · <a href=\"/#indirimli-favoriler\">Fırsatları gör</a>",
+        "campaign_until": "2026-11-01 00:00"
+      }
+    },
+    "gullu_paper_header": {
+      "type": "gullu-paper-header",
+      "settings": {
+        "enable": true,
+        "style_mobile": true,
+        "ink": "#4A3826"
+      }
+    },
+    "gullu_floating_cart": {
+      "type": "gullu-floating-cart",
+      "settings": {
+        "enable": true,
+        "threshold": 260,
+        "offset_x": 22,
+        "offset_y": 136,
+        "paper_light": "#FFFCF4",
+        "paper_mid": "#F9F2E4",
+        "paper_dark": "#F0E6D3",
+        "handle": "#A9793F",
+        "badge_bg": "#A84479",
+        "badge_text": "#FFFFFF",
+        "accent": "#10726E",
+        "aria": "Sepetim, {n} ürün",
+        "logo_url": "//cdn.shopify.com/s/files/1/0752/7337/1826/files/gullu-shoes-logo.svg"
+      }
+    },
+    "177555698015a1daca": {
+      "type": "_blocks",
+      "blocks": {
+        "ai_gen_block_44e2b97_yzhRVy": {
+          "type": "ai_gen_block_44e2b97",
+          "disabled": true,
+          "settings": {
+            "show_icon": true,
+            "show_flag": true,
+            "font_size": 14,
+            "button_padding": 10,
+            "button_background": "#ffffff",
+            "button_hover_background": "#f5f5f5",
+            "button_text_color": "#000000",
+            "button_hover_text_color": "#000000",
+            "button_border_width": 1,
+            "button_border_color": "#e0e0e0",
+            "button_border_radius": 8,
+            "desktop_width_percent": 100,
+            "show_search": true,
+            "dropdown_alignment": "left",
+            "dropdown_min_width": 280,
+            "dropdown_background": "#ffffff",
+            "dropdown_text_color": "#000000",
+            "dropdown_border_color": "#e0e0e0",
+            "dropdown_hover_background": "#f5f5f5",
+            "dropdown_selected_background": "#d99d4b",
+            "dropdown_border_radius": 8
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "ai_gen_block_44e2b97_yzhRVy"
+      ],
+      "settings": {}
+    }
+  },
+  "order": [
+    "announcement",
+    "gs_notices",
+    "header",
+    "gullu_paper_header",
+    "gullu_floating_cart",
+    "177555698015a1daca"
+  ]
+}

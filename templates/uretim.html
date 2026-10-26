@@ -169,12 +169,17 @@
     </div>
   </div>
 
-  <!-- Otomatik gönderim bildirimi (sipariş hazırla ekranındaki kartın karşılığı) -->
+  <!-- Otomatik gönderim kartı: sipariş hazırla ekranındaki #autoShipMessage kartının birebir karşılığı
+       (ekran ortası, büyük kargo kodu) — kurye kodu ekrandan okur. -->
   <div class="ur-autoship" id="urAutoShip" hidden>
-    <i class="bi bi-lightning-charge-fill"></i>
-    <div>
-      <strong>Otomatik Gönderim</strong>
-      <div>Kargo kodu kopyalandı: <code id="urAutoShipKod"></code></div>
+    <div class="ur-autoship-card">
+      <div class="ur-autoship-head">
+        <h3>Otomatik Gönderim Aktif</h3>
+        <p>Kargo kodu: <span id="urAutoShipKodUst"></span></p>
+      </div>
+      <div class="ur-autoship-kod">
+        <strong id="urAutoShipKod"></strong>
+      </div>
     </div>
   </div>
 </div>
@@ -445,15 +450,26 @@
   .ur-kargo-actions { display:grid; gap:9px; }
   .ur-kargo-actions button { width:100%; justify-content:center; }
   .ur-kargo-hint { display:block; margin-top:11px; color:var(--ur-muted); font-size:.72rem; line-height:1.5; }
+  /* Otomatik gönderim kartı — siparis_hazirla.html #autoShipMessage / .auto-ship-card ile aynı ölçüler */
   .ur-autoship {
-    position:fixed; left:50%; bottom:34px; transform:translateX(-50%); z-index:1060;
-    display:flex; align-items:center; gap:12px; padding:14px 18px; max-width:92vw;
-    background:linear-gradient(45deg,#2fa878,#16865c); color:#fff; border-radius:16px;
-    box-shadow:0 14px 40px rgba(22,134,92,.4); font-size:.85rem;
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:1060;
+    background:rgba(0,0,0,.9); color:#fff; padding:0; border-radius:15px;
+    box-shadow:0 10px 30px rgba(0,0,0,.3); min-width:400px; max-width:500px;
   }
-  .ur-autoship i { font-size:1.3rem; }
-  .ur-autoship strong { display:block; font-size:.9rem; }
-  .ur-autoship code { color:#fff; background:rgba(255,255,255,.18); padding:2px 8px; border-radius:7px; }
+  .ur-autoship-card {
+    background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); border-radius:15px;
+    padding:30px; text-align:center; position:relative; overflow:hidden;
+  }
+  .ur-autoship-card::before {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(45deg,transparent 30%,rgba(255,255,255,.1) 50%,transparent 70%);
+    animation:urShine 2s infinite;
+  }
+  @keyframes urShine { 0% { transform:translateX(-100%); } 100% { transform:translateX(100%); } }
+  .ur-autoship-head h3 { margin:0 0 10px; font-size:1.5rem; font-weight:bold; color:#fff; }
+  .ur-autoship-head p { margin:0 0 20px; font-size:1rem; color:rgba(255,255,255,.8); }
+  .ur-autoship-kod { background:rgba(255,255,255,.1); border:2px solid rgba(255,255,255,.2); border-radius:8px; padding:12px; margin-top:10px; }
+  .ur-autoship-kod strong { font-size:1.5rem; font-weight:bold; color:#fff; letter-spacing:2px; text-shadow:0 2px 4px rgba(0,0,0,.3); }
   .ur-empty {
     background:var(--ur-card); border:1px dashed var(--ur-line); border-radius:18px;
     padding:46px 20px; text-align:center; color:var(--ur-muted);
@@ -470,6 +486,10 @@
     .ur-card-side { flex-direction:row; align-items:center; width:100%; justify-content:flex-end; }
     .ur-settings-inner { padding-left:16px; }
     .ur-appbar-inner { padding:0 14px; }
+    .ur-autoship { min-width:280px; max-width:92%; }
+    .ur-autoship-card { padding:15px; }
+    .ur-autoship-head h3 { font-size:1rem; }
+    .ur-autoship-kod strong { font-size:1.2rem; }
   }
 
   /* Gece modu */
@@ -509,6 +529,9 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/kargo-rozet.js') }}"></script>
 <script src="{{ url_for('static', filename='js/kargo-islem.js') }}"></script>
+<!-- gsToast: yüklenmeyince toast() aşağıda alert()'e düşüyor ve her mesaj kapatılması zorunlu
+     tarayıcı kutusu oluyordu (sipariş hazırla ile aynı kütüphane). -->
+<script src="{{ url_for('static', filename='js/gs-dialog.js') }}"></script>
 <script>
 (function () {
     const POST_HEADERS = { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' };
@@ -901,9 +924,9 @@
         // Barkod kopyala
         const copyBtn = e.target.closest('.ur-copy-btn');
         if (copyBtn) {
+            // Başarıda bildirim yok (Komutan: gereksiz uyarı) — yalnız hata gösterilir
             try {
                 await navigator.clipboard.writeText(copyBtn.getAttribute('data-copy'));
-                toast('Barkod kopyalandı', 'success');
             } catch { toast('Kopyalanamadı', 'error'); }
             return;
         }
@@ -992,7 +1015,9 @@
             body: JSON.stringify({ barcode: urun })
         });
         const data = await res.json();
-        toast(data.message || 'Hata', data.success ? 'success' : 'error');
+        // Başarıda bildirim yok: sayaç/“Doğrulandı” kutusu zaten güncelleniyor (Komutan: gereksiz uyarı).
+        // Yanlış ürün / tamamı okutulmuş gibi hatalar gösterilmeye devam eder.
+        if (!data.success) toast(data.message || 'Hata', 'error');
         girdi.value = '';
         if (!data.success) { girdi.focus(); return; }
         if (data.dogrulanan >= data.gerekli) {
@@ -1080,6 +1105,7 @@
                 cargo_provider: kargoAktif.kargo.cargo_provider || '', sayfa: 'Üretim Siparişleri' })
         }).catch(() => {});
         document.getElementById('urAutoShipKod').textContent = kod;
+        document.getElementById('urAutoShipKodUst').textContent = kod;
         const kart = document.getElementById('urAutoShip');
         kart.hidden = false;
         setTimeout(() => { kart.hidden = true; }, 3000);

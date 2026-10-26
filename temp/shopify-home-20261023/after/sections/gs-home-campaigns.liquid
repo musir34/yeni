@@ -1,0 +1,123 @@
+{%- liquid
+  assign campaign_now = 'now' | date: '%s' | plus: 0
+  assign campaign_end = section.settings.ends_at | date: '%s' | plus: 0
+  assign campaign_start = section.settings.starts_at | date: '%s' | plus: 0
+-%}
+<div id="indirimli-favoriler" class="gs-campaign-anchor"></div>
+{%- if campaign_now >= campaign_start and campaign_now < campaign_end -%}
+  <section class="gs-campaigns" aria-labelledby="gs-campaign-heading-{{ section.id }}">
+    <div class="gs-campaigns__inner">
+      <div class="gs-campaigns__heading">
+        <div>
+          <p class="gs-campaigns__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+          <h2 id="gs-campaign-heading-{{ section.id }}">{{ section.settings.heading | escape }}</h2>
+        </div>
+        <p class="gs-campaigns__date">{{ section.settings.date_label | escape }}</p>
+      </div>
+      <div class="gs-campaigns__grid">
+        {%- for block in section.blocks -%}
+          {%- liquid
+            assign campaign_product = block.settings.product
+            assign campaign_variant = campaign_product.variants | where: 'option1', block.settings.color | where: 'available', true | first
+            assign campaign_image = campaign_variant.featured_image | default: campaign_product.featured_image
+          -%}
+          {%- if campaign_product != blank and campaign_variant != blank -%}
+            <article class="gs-campaigns__card" {{ block.shopify_attributes }}>
+              <a class="gs-campaigns__image" href="{{ campaign_variant.url }}" aria-label="{{ block.settings.title | escape }} — {{ block.settings.color | escape }}">
+                {{ campaign_image | image_url: width: 800 | image_tag: widths: '240, 400, 600, 800', sizes: '(min-width: 990px) 260px, (min-width: 600px) 240px, 42vw', loading: 'eager' }}
+              </a>
+              <div class="gs-campaigns__content">
+                <p class="gs-campaigns__rate">{{ block.settings.offer | escape }}</p>
+                <h3><a href="{{ campaign_variant.url }}">{{ block.settings.title | escape }}</a></h3>
+                <p class="gs-campaigns__scope">{{ block.settings.scope | escape }}</p>
+                <p class="gs-campaigns__price">
+                  <span>{{ section.settings.price_label | escape }}</span>
+                  <strong>{{ campaign_variant.price | money }}</strong>
+                </p>
+                <p class="gs-campaigns__hint">{{ block.settings.hint | escape }}</p>
+                <a class="gs-campaigns__button" href="{{ campaign_variant.url }}">{{ section.settings.button_label | escape }} <span aria-hidden="true">→</span></a>
+              </div>
+            </article>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+      <p class="gs-campaigns__terms">{{ section.settings.terms | escape }}</p>
+    </div>
+  </section>
+{%- endif -%}
+
+{% stylesheet %}
+  .gs-campaign-anchor { scroll-margin-top: 180px; }
+  .gs-campaigns { background: #fbf5ee; color: #263b37; padding: 32px 0; }
+  .gs-campaigns__inner { max-width: 1440px; margin: auto; padding: 0 40px; }
+  .gs-campaigns__heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+  .gs-campaigns__eyebrow { color: #a84479; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 6px; }
+  .gs-campaigns h2 { margin: 0; font-size: clamp(24px, 2.5vw, 34px); line-height: 1.15; }
+  .gs-campaigns__date { margin: 0; font-size: 13px; white-space: nowrap; }
+  .gs-campaigns__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+  .gs-campaigns__card { display: grid; grid-template-columns: 42% minmax(0, 1fr); background: #fff; border: 1px solid #e6dfd4; border-radius: 12px; overflow: hidden; }
+  .gs-campaigns__image { display: block; background: #f2efeb; min-height: 300px; }
+  .gs-campaigns__image img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+  .gs-campaigns__content { display: flex; flex-direction: column; align-items: flex-start; padding: 24px 22px; }
+  .gs-campaigns__rate { color: #b02046; font-size: clamp(22px, 2.2vw, 30px); font-weight: 800; line-height: 1.1; margin: 0 0 12px; }
+  .gs-campaigns h3 { font-size: 19px; line-height: 1.3; margin: 0 0 10px; }
+  .gs-campaigns h3 a { color: inherit; text-decoration: none; }
+  .gs-campaigns__scope { font-size: 13px; line-height: 1.5; margin: 0 0 12px; }
+  .gs-campaigns__price { margin: 0 0 4px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+  .gs-campaigns__price span { font-size: 12px; color: #5b645f; }
+  .gs-campaigns__price strong { font-size: 19px; }
+  .gs-campaigns__hint { font-size: 12px; color: #5b645f; margin: 0 0 18px; }
+  .gs-campaigns__button { display: inline-flex; align-items: center; justify-content: space-between; gap: 16px; background: #10726e; color: #fff; padding: 12px 15px; text-decoration: none; font-size: 13px; font-weight: 700; margin-top: auto; border-radius: 4px; }
+  .gs-campaigns__button:hover { background: #0b5754; color: #fff; }
+  .gs-campaigns a:focus-visible { outline: 3px solid #a84479; outline-offset: 3px; }
+  .gs-campaigns__terms { margin: 16px 0 0; font-size: 12px; line-height: 1.5; color: #5b645f; text-align: center; }
+  @media (max-width: 989px) {
+    .gs-campaigns__grid { grid-template-columns: 1fr; gap: 16px; }
+    .gs-campaigns__inner { max-width: 720px; padding: 0 24px; }
+    .gs-campaigns__image { min-height: 260px; }
+  }
+  @media (max-width: 599px) {
+    .gs-campaigns { padding: 24px 0; }
+    .gs-campaigns__inner { padding: 0 16px; }
+    .gs-campaigns__heading { display: block; margin-bottom: 18px; }
+    .gs-campaigns__date { margin-top: 8px; }
+    .gs-campaigns__content { padding: 18px 14px; }
+    .gs-campaigns__rate { font-size: 24px; }
+    .gs-campaigns h3 { font-size: 17px; }
+    .gs-campaigns__image { min-height: 280px; }
+    .gs-campaigns__button { gap: 8px; padding: 11px 12px; font-size: 12px; width: 100%; }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "GS Ana Sayfa Kampanyaları",
+  "settings": [
+    {"type":"text","id":"eyebrow","label":"Üst başlık"},
+    {"type":"text","id":"heading","label":"Başlık"},
+    {"type":"text","id":"date_label","label":"Tarih metni"},
+    {"type":"text","id":"starts_at","label":"Başlangıç (ISO 8601)"},
+    {"type":"text","id":"ends_at","label":"Bitiş (ISO 8601)"},
+    {"type":"text","id":"price_label","label":"Fiyat açıklaması"},
+    {"type":"text","id":"button_label","label":"Buton metni"},
+    {"type":"textarea","id":"terms","label":"Kampanya koşulları"}
+  ],
+  "blocks": [
+    {
+      "type":"offer",
+      "name":"Kampanyalı ürün",
+      "settings":[
+        {"type":"product","id":"product","label":"Ürün"},
+        {"type":"text","id":"color","label":"Vitrin rengi (Renk ilk ürün seçeneği olmalı)"},
+        {"type":"text","id":"title","label":"Kart başlığı"},
+        {"type":"text","id":"offer","label":"İndirim başlığı"},
+        {"type":"textarea","id":"scope","label":"Kapsam"},
+        {"type":"text","id":"hint","label":"Fiyat altı açıklama"}
+      ]
+    }
+  ],
+  "max_blocks":2,
+  "enabled_on":{"templates":["index"]},
+  "presets":[{"name":"GS Ana Sayfa Kampanyaları"}]
+}
+{% endschema %}
