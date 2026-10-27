@@ -54,6 +54,7 @@ def register_blueprints(app):
     from kargo_mutabakat import kargo_mutabakat_bp  # 🚚 KARGO MUTABAKAT
     from mng_kargo.routes import kargo_gonderi_bp  # 🚚 MNG GİDEN GÖNDERİLER
     from iade_yonetimi import iade_yonetimi_bp  # 📦 SİTE İADE YÖNETİMİ
+    from gelen_yorumlar import gelen_yorumlar_bp  # 💬 GELEN YORUMLAR (Güllü Yorum, salt okunur)
     from whatsapp_baglanti import whatsapp_baglanti_bp  # 📱 WHATSAPP COEXISTENCE BAĞLANTISI
     from whatsapp_webhook import whatsapp_webhook_bp  # 📱 WHATSAPP WEBHOOK (public, Coexistence şartı)
     from whatsapp_duyuru import whatsapp_duyuru_bp  # 📣 WHATSAPP DUYURU
@@ -116,6 +117,7 @@ def register_blueprints(app):
         kargo_mutabakat_bp,  # 🚚 KARGO MUTABAKAT
         kargo_gonderi_bp,  # 🚚 MNG GİDEN GÖNDERİLER
         iade_yonetimi_bp,  # 📦 SİTE İADE YÖNETİMİ
+        gelen_yorumlar_bp,  # 💬 GELEN YORUMLAR (Güllü Yorum, salt okunur)
         whatsapp_baglanti_bp,  # 📱 WHATSAPP COEXISTENCE BAĞLANTISI
         whatsapp_webhook_bp,  # 📱 WHATSAPP WEBHOOK (public, Coexistence şartı)
         whatsapp_duyuru_bp,  # 📣 WHATSAPP DUYURU

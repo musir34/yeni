@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Gelen Yorumlar - Güllü Shoes{% endblock %}
+{% block extra_css %}
+<style>
+  .gy-card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.06); margin-bottom: 1.5rem; }
+  .gy-stat { text-align: center; padding: 1.1rem .5rem; }
+  .gy-stat .gy-sayi { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+  .gy-stat .gy-etiket { font-size: .85rem; color: #6c757d; margin-top: .25rem; }
+  .gy-stat .gy-yuzde { font-size: .8rem; color: #6c757d; }
+  .gy-table td, .gy-table th { font-size: .85rem; white-space: nowrap; vertical-align: middle; }
+  .gy-table-wrap { overflow-x: auto; }
+  .gy-bos { color: #adb5bd; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+  <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm me-3"><i class="fas fa-home"></i> Anasayfa</a>
+  <h3 class="mb-0">💬 Gelen Yorumlar</h3>
+  <span class="text-muted ms-3">Güllü Yorum e-posta gönderimleri · bakan · yorum yapan</span>
+</div>
+
+{% if hata %}
+<div class="alert alert-warning" role="alert">
+  <i class="fas fa-exclamation-triangle me-2"></i>{{ hata }}
+</div>
+{% endif %}
+
+<div class="row">
+  <div class="col-6 col-lg-3">
+    <div class="card gy-card gy-stat">
+      <div class="gy-sayi">{{ ozet.gonderilen }}</div>
+      <div class="gy-etiket"><i class="fas fa-paper-plane me-1"></i>Gönderilen</div>
+      <div class="gy-yuzde">{% if ozet.hatirlatma_giden %}{{ ozet.hatirlatma_giden }} hatırlatma{% else %}&nbsp;{% endif %}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card gy-card gy-stat">
+      <div class="gy-sayi text-warning">{{ ozet.bakan }}</div>
+      <div class="gy-etiket"><i class="fas fa-eye me-1"></i>Bakan</div>
+      <div class="gy-yuzde">%{{ ozet.bakan_yuzde }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card gy-card gy-stat">
+      <div class="gy-sayi text-success">{{ ozet.yorum_yapan }}</div>
+      <div class="gy-etiket"><i class="fas fa-comment-dots me-1"></i>Yorum yapan</div>
+      <div class="gy-yuzde">%{{ ozet.yorum_yuzde }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card gy-card gy-stat">
+      <div class="gy-sayi text-primary">{{ ozet.iade_bekleyen }}</div>
+      <div class="gy-etiket"><i class="fas fa-undo me-1"></i>İade bekleyen</div>
+      <div class="gy-yuzde">{% if ozet.iade_bekleyen %}{{ ozet.iade_bekleyen_tutar }} TL{% else %}&nbsp;{% endif %}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card gy-card">
+  <div class="card-header fw-bold d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span>📋 Gönderim Listesi <span class="text-muted fw-normal">({{ satirlar|length }})</span></span>
+    <div class="btn-group btn-group-sm" role="group">
+      <a href="{{ url_for('gelen_yorumlar_bp.gelen_yorumlar_page') }}" class="btn {{ 'btn-primary' if not sadece_yorum else 'btn-outline-primary' }}">Hepsi</a>
+      <a href="{{ url_for('gelen_yorumlar_bp.gelen_yorumlar_page', filtre='yorum') }}" class="btn {{ 'btn-primary' if sadece_yorum else 'btn-outline-primary' }}">Yalnız yorum yapanlar</a>
+    </div>
+  </div>
+  <div class="card-body p-0 gy-table-wrap">
+    <table class="table table-hover gy-table mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Sipariş</th>
+          <th>Müşteri</th>
+          <th>E-posta</th>
+          <th>Gönderim</th>
+          <th>İlk bakış</th>
+          <th>Yorum tarihi</th>
+          <th>Durum</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in satirlar %}
+        <tr>
+          <td class="fw-bold">{{ s.order_name }}</td>
+          <td>{{ s.customer_name }}</td>
+          <td class="text-muted">{{ s.email_maskeli }}</td>
+          <td>{{ s.sent_at | ist }}{% if s.reminder_sent_at %}<span class="badge bg-light text-dark ms-1" title="Hatırlatma: {{ s.reminder_sent_at | ist }}"><i class="fas fa-bell"></i></span>{% endif %}</td>
+          <td>{% if s.first_viewed_at %}{{ s.first_viewed_at | ist }}{% else %}<span class="gy-bos">Bakmadı</span>{% endif %}</td>
+          <td>{% if s.reviewed_at %}{{ s.reviewed_at | ist }}{% if s.yorum_sayisi > 1 %} <span class="badge bg-success">{{ s.yorum_sayisi }} ürün</span>{% endif %}{% else %}<span class="gy-bos">Yorum yok</span>{% endif %}</td>
+          <td>
+            <span class="badge bg-{{ s.durum_renk }}">{{ s.durum_etiketi }}</span>
+            {% if s.iade_bekliyor %}<span class="badge bg-primary ms-1">{{ s.incentive_amount }} TL iade bekliyor</span>{% endif %}
+            {% if s.refunded_at %}<span class="badge bg-info text-dark ms-1" title="{{ s.refunded_at | ist }}">İade yapıldı</span>{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted py-4">{% if hata %}Veri yok{% elif sadece_yorum %}Henüz yorum yapan yok{% else %}Henüz gönderim yok{% endif %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

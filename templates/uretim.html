@@ -398,7 +398,7 @@
     display:flex; align-items:center; gap:13px; padding:11px 13px;
     background:#fafbfc; border:1px solid var(--ur-line); border-radius:13px;
   }
-  .ur-detail-img { width:56px; height:56px; border-radius:11px; object-fit:cover; background:#f2f3f5; flex:0 0 56px; display:block; }
+  .ur-detail-img { width:56px; height:56px; border-radius:11px; object-fit:cover; background:#f2f3f5; flex:0 0 56px; display:block; cursor:zoom-in; }
   .ur-detail-img--bos { display:grid; place-items:center; color:#a3a7af; font-size:1.2rem; }
   .ur-detail-main { flex:1; min-width:0; }
   .ur-detail-main > strong { display:block; font-size:.88rem; letter-spacing:-.01em; }
@@ -406,9 +406,8 @@
   .ur-detail-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
   .ur-chip2 { padding:3px 9px; border-radius:999px; background:var(--ur-rose-soft); color:var(--ur-rose-dark); font-size:.7rem; font-weight:700; }
   .ur-detail-barcode { display:inline-flex; align-items:center; gap:6px; margin-top:7px; font-size:.74rem; color:var(--ur-muted); font-family:monospace; }
-  .ur-copy-btn { width:24px; height:24px; display:grid; place-items:center; border:0; border-radius:7px; background:transparent; color:var(--ur-muted); cursor:pointer; padding:0; }
-  .ur-copy-btn:hover { background:var(--ur-rose-soft); color:var(--ur-rose-dark); }
-  .ur-copy-btn--ok, .ur-copy-btn--ok:hover { background:var(--ur-green-soft); color:var(--ur-green); }
+  .ur-yaz-btn { width:24px; height:24px; display:grid; place-items:center; border:0; border-radius:7px; background:transparent; color:var(--ur-muted); cursor:pointer; padding:0; }
+  .ur-yaz-btn:hover { background:var(--ur-rose-soft); color:var(--ur-rose-dark); }
   .ur-detail-qty { flex:0 0 auto; text-align:center; padding:6px 13px; border-radius:11px; background:#fff; border:1px solid var(--ur-line); font-size:1rem; font-weight:750; }
   .ur-detail-qty span { display:block; font-size:.62rem; font-weight:700; color:var(--ur-muted); text-transform:uppercase; letter-spacing:.06em; }
   .ur-meta { display:flex; flex-wrap:wrap; gap:6px 16px; color:var(--ur-muted); font-size:.76rem; }
@@ -627,7 +626,7 @@
         return kalemListesi(r).map(u => `
             <div class="ur-detail-item${(u.uretim === false ? !u.toplandi : (Number(u.dogrulanan) || 0) < (Number(u.quantity) || 1)) ? ' ur-detail-item--bekliyor' : ''}">
                 ${u.image_url
-                    ? `<a href="${esc(u.image_url)}" target="_blank" rel="noopener"><img src="${esc(u.image_url)}" alt="Ürün" class="ur-detail-img"></a>`
+                    ? `<img src="${esc(u.image_url)}" alt="Ürün" class="ur-detail-img" data-buyut="${esc(u.image_url)}" title="Büyütmek için tıkla">`
                     : '<span class="ur-detail-img ur-detail-img--bos"><i class="bi bi-image"></i></span>'}
                 <div class="ur-detail-main">
                     <strong>${esc(u.model_code || u.sku) || 'N/A'}</strong>
@@ -639,7 +638,7 @@
                     </div>
                     <div class="ur-detail-barcode">
                         <span>${esc(u.barcode) || 'N/A'}</span>
-                        ${u.barcode ? `<button type="button" class="ur-copy-btn" data-copy="${esc(u.barcode)}" title="Barkodu kopyala"><i class="far fa-copy"></i></button>` : ''}
+                        ${u.barcode ? `<button type="button" class="ur-yaz-btn" data-yaz="${esc(u.barcode)}" title="Barkodu okutma kutusuna yaz"><i class="bi bi-box-arrow-in-down"></i></button>` : ''}
                     </div>
                     ${okutmaHtml(r, u)}
                 </div>
@@ -925,21 +924,20 @@
             else { await rafOkutGonder(kutu); }
             return;
         }
-        // Barkod kopyala
-        const copyBtn = e.target.closest('.ur-copy-btn');
-        if (copyBtn) {
-            // Bildirim kutusu yok: tuşun kendisi 1.5 sn "kopyalandı" (yeşil tik) olur, sonra eski haline döner
-            try {
-                await navigator.clipboard.writeText(copyBtn.getAttribute('data-copy'));
-                copyBtn.classList.add('ur-copy-btn--ok');
-                copyBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
-                copyBtn.title = 'Kopyalandı';
-                setTimeout(() => {
-                    copyBtn.classList.remove('ur-copy-btn--ok');
-                    copyBtn.innerHTML = '<i class="far fa-copy"></i>';
-                    copyBtn.title = 'Barkodu kopyala';
-                }, 1500);
-            } catch { toast('Kopyalanamadı', 'error'); }
+        // Barkodu okutma kutusuna yaz (kopyala-yapıştır yerine): doğrulama kutusuysa hemen doğrular,
+        // raf okutma kutusuysa raf alanına geçer; kutu yoksa (kalem tamamlanmış) panoya kopyalar
+        const yazBtn = e.target.closest('.ur-yaz-btn');
+        if (yazBtn) {
+            const barkod = yazBtn.getAttribute('data-yaz');
+            const kutu = yazBtn.closest('.ur-detail-item')?.querySelector('.ur-okut');
+            const girdi = kutu?.querySelector('.ur-okut-urun');
+            if (!girdi) {
+                try { await navigator.clipboard.writeText(barkod); } catch { toast('Kopyalanamadı', 'error'); }
+                return;
+            }
+            girdi.value = barkod;
+            if (kutu.hasAttribute('data-dogrula')) { await urunDogrulaGonder(kutu); }
+            else { kutu.querySelector('.ur-okut-raf').focus(); }
             return;
         }
         // Kargo çıktısı diyaloğu
@@ -1002,6 +1000,21 @@
             });
         }
     }
+    // Otomatik doğrulama: okuyucu barkodu basınca Doğrula'ya basmak gerekmez — yazım durunca gönderilir.
+    // Hata olursa kutu boşalır ve yeni okutmaya kadar tekrar denenmez (urunDogrulaGonder).
+    const OTO_DOGRULA_BEKLEME_MS = 350;
+    const OTO_DOGRULA_MIN_UZUNLUK = 8;
+    let otoDogrulaZamanlayici = null;
+    document.getElementById('urList').addEventListener('input', (e) => {
+        if (!e.target.classList.contains('ur-okut-urun')) return;
+        const kutu = e.target.closest('.ur-okut');
+        if (!kutu || !kutu.hasAttribute('data-dogrula')) return;
+        clearTimeout(otoDogrulaZamanlayici);
+        if (e.target.value.trim().length < OTO_DOGRULA_MIN_UZUNLUK) return;
+        otoDogrulaZamanlayici = setTimeout(() => {
+            if (kutu.isConnected && e.target.value.trim()) urunDogrulaGonder(kutu);
+        }, OTO_DOGRULA_BEKLEME_MS);
+    });
     document.getElementById('urList').addEventListener('keydown', (e) => {
         if (e.key !== 'Enter') return;
         if (e.target.classList.contains('ur-okut-urun')) {
@@ -1017,16 +1030,25 @@
 
     // ── Üretim kalemi doğrulama: ürün barkodu adet adet okutulur (stok düşümü yok) ──
     async function urunDogrulaGonder(kutu) {
-        if (!kutu) return;
+        if (!kutu || kutu.dataset.gonderiliyor) return;
         const kayitId = kutu.getAttribute('data-kayit');
         const girdi = kutu.querySelector('.ur-okut-urun');
         const urun = girdi.value.trim();
         if (!urun) { toast('Ürün barkodunu okutun.', 'error'); girdi.focus(); return; }
-        const res = await fetch(`/uretim/api/urun-dogrula/${kayitId}`, {
-            method: 'POST', headers: POST_HEADERS,
-            body: JSON.stringify({ barcode: urun })
-        });
-        const data = await res.json();
+        clearTimeout(otoDogrulaZamanlayici);
+        kutu.dataset.gonderiliyor = '1';
+        let data;
+        try {
+            const res = await fetch(`/uretim/api/urun-dogrula/${kayitId}`, {
+                method: 'POST', headers: POST_HEADERS,
+                body: JSON.stringify({ barcode: urun })
+            });
+            data = await res.json();
+        } catch {
+            data = { success: false, message: 'Sunucuya ulaşılamadı' };
+        } finally {
+            delete kutu.dataset.gonderiliyor;
+        }
         // Başarıda bildirim yok: sayaç/“Doğrulandı” kutusu zaten güncelleniyor (Komutan: gereksiz uyarı).
         // Yanlış ürün / tamamı okutulmuş gibi hatalar gösterilmeye devam eder.
         if (!data.success) toast(data.message || 'Hata', 'error');

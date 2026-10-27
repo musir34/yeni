@@ -8,6 +8,22 @@
   .kg-sayac .badge { font-size: .95rem; padding: .5rem .9rem; }
   .kg-hata { max-width: 320px; white-space: normal; font-size: .78rem; }
   .kg-mini { font-size: .78rem; }
+  /* Mobil: 11 sütunlu tablo kaydırmak yerine her gönderi bir kart; başlıklar data-label'dan */
+  @media (max-width: 767.98px) {
+    .kg-table thead { display: none; }
+    .kg-table, .kg-table tbody, .kg-table tr, .kg-table td { display: block; width: 100%; }
+    .kg-table tr { border: 1px solid #dee2e6; border-radius: 10px; margin: .6rem; padding: .25rem 0; background: #fff; }
+    .kg-table td { display: flex; justify-content: space-between; align-items: flex-start; gap: .75rem; border: 0; padding: .3rem .75rem; text-align: right; white-space: normal !important; }  /* mobile.css .table nowrap'ını kart içinde aç */
+    .kg-table td::before { content: attr(data-label); font-weight: 600; color: #6c757d; text-align: left; flex: 0 0 6.5rem; }
+    .kg-table td.kg-islem { justify-content: flex-start; flex-wrap: wrap; gap: .4rem; text-align: left; border-top: 1px solid #f1f3f5; margin-top: .25rem; padding-top: .5rem; }
+    .kg-table td.kg-islem::before { flex-basis: 100%; }
+    .kg-table td.kg-islem .btn { padding: .35rem .9rem; }                 /* parmakla basılır boy */
+    .kg-table td.kg-islem form.kg-adres { display: flex !important; flex-wrap: wrap; gap: .35rem; width: 100%; }
+    .kg-table td.kg-islem form.kg-adres input { width: 100% !important; }
+    .kg-table td.kg-islem form.kg-adres button { flex: 1 1 auto; }
+    .kg-table td.kg-m-gizle { display: none; }
+    .kg-hata { max-width: none; }
+  }
 </style>
 {% endblock %}
 {% block content %}
@@ -89,34 +105,34 @@
       <tbody>
         {% for k in kayitlar %}
         <tr>
-          <td>{{ kaynak_ad.get(k.kaynak, k.kaynak) }}<br><span class="text-muted kg-mini">{{ k.olusturuldu_at | ist('%d.%m %H:%M') }}</span></td>
-          <td><strong>{{ k.kaynak_ad or k.kaynak_ref }}</strong></td>
-          <td>{{ k.alici_ad }}<br><span class="text-muted kg-mini">{{ k.alici_telefon }}</span></td>
-          <td>{{ k.il or '-' }}{% if k.ilce %} / {{ k.ilce }}{% endif %}</td>
-          <td><code>{{ k.referans }}</code></td>
-          <td>
+          <td data-label="Kaynak">{{ kaynak_ad.get(k.kaynak, k.kaynak) }}<br><span class="text-muted kg-mini">{{ k.olusturuldu_at | ist('%d.%m %H:%M') }}</span></td>
+          <td data-label="Sipariş"><strong>{{ k.kaynak_ad or k.kaynak_ref }}</strong></td>
+          <td data-label="Alıcı">{{ k.alici_ad }}<br><span class="text-muted kg-mini">{{ k.alici_telefon }}</span></td>
+          <td data-label="İl / İlçe"{% if not k.il %} class="kg-m-gizle"{% endif %}>{{ k.il or '-' }}{% if k.ilce %} / {{ k.ilce }}{% endif %}</td>
+          <td data-label="Referans"><code>{{ k.referans }}</code></td>
+          <td data-label="Takip No"{% if not k.shipment_id %} class="kg-m-gizle"{% endif %}>
             {% if k.shipment_id %}
               {% if k.takip_url %}<a href="{{ k.takip_url }}" target="_blank" rel="noopener">{{ k.shipment_id }}</a>{% else %}{{ k.shipment_id }}{% endif %}
               {% if k.barkod %}<br><span class="text-muted kg-mini">barkod {{ k.barkod }}</span>{% endif %}
             {% else %}-{% endif %}
           </td>
-          <td>
+          <td data-label="Durum">
             <span class="badge bg-{{ rozet(k.durum) }}">{{ etiket(k.durum) }}</span>
             {% if k.mng_durum_metni %}<br><span class="text-muted kg-mini">{{ k.mng_durum_metni }}</span>{% endif %}
             {% if k.teslim_alan %}<br><span class="text-muted kg-mini">alan: {{ k.teslim_alan }}</span>{% endif %}
           </td>
-          <td>
+          <td data-label="Kapıda Ödeme"{% if not k.kapida_odeme_tutari %} class="kg-m-gizle"{% endif %}>
             {% if k.kapida_odeme_tutari %}
               {{ k.kapida_odeme_tutari }} TL
               {% if k.tahsil_edildi %}<span class="badge bg-success">tahsil</span>{% else %}<span class="badge bg-warning text-dark">bekliyor</span>{% endif %}
             {% else %}-{% endif %}
           </td>
-          <td class="kg-mini">{{ k.son_sorgu_at | ist('%d.%m %H:%M') if k.son_sorgu_at else '-' }}</td>
-          <td class="kg-hata text-danger">{{ k.hata or '' }}</td>
-          <td class="text-end text-nowrap">
+          <td data-label="Son Sorgu" class="kg-mini{% if not k.son_sorgu_at %} kg-m-gizle{% endif %}">{{ k.son_sorgu_at | ist('%d.%m %H:%M') if k.son_sorgu_at else '-' }}</td>
+          <td data-label="Hata" class="kg-hata text-danger{% if not k.hata %} kg-m-gizle{% endif %}">{{ k.hata or '' }}</td>
+          <td data-label="İşlem" class="text-end text-nowrap kg-islem">
             {# siparis_acildi + hata notu (varış şubesi çözülmedi): adres düzeltme formu burada da açık #}
             {% if k.durum in ('bekliyor', 'hata') or (k.durum == 'siparis_acildi' and k.hata and not k.shipment_id) %}
-              <form method="post" action="{{ url_for('kargo_gonderi.yeniden_dene', gonderi_id=k.id) }}" class="d-inline-flex gap-1 align-items-center">
+              <form method="post" action="{{ url_for('kargo_gonderi.yeniden_dene', gonderi_id=k.id) }}" class="d-inline-flex gap-1 align-items-center kg-adres">
                 <input type="text" name="il" placeholder="İl" value="{{ k.il or '' }}" class="form-control form-control-sm" style="width:7rem">
                 <input type="text" name="ilce" placeholder="İlçe" value="{{ k.ilce or '' }}" class="form-control form-control-sm" style="width:7rem"
                        {% if ilceler and k.il in ilceler %}list="ilce-{{ loop.index }}" title="MNG ilçe listesinden seçin"{% endif %}>

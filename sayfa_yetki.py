@@ -122,6 +122,7 @@ SAYFALAR: tuple[Sayfa, ...] = (
           endpoints=("shopify.price_compare_dashboard", "shopify.price_compare_api", "shopify.price_compare_export", "shopify.price_compare_sync")),
     Sayfa("shopify_siparisler", "Shopify Siparişler", "Paneller", blueprints=("shopify",)),
     Sayfa("site_iade", "Site İade Yönetimi", "Paneller", blueprints=("iade_yonetimi",)),
+    Sayfa("gelen_yorumlar", "Gelen Yorumlar (Güllü Yorum)", "Paneller", blueprints=("gelen_yorumlar_bp",), roller=SADECE_ADMIN),
     Sayfa("idefix", "Idefix", "Paneller", blueprints=("idefix",)),
     Sayfa("hepsiburada", "Hepsiburada", "Paneller", blueprints=("hepsiburada",)),
     Sayfa("amazon", "Amazon", "Paneller", blueprints=("amazon",), menu_disi=True),  # satış kapalı, menüde yok (/amazon/)

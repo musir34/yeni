@@ -79,7 +79,7 @@ def liste():
         kalip = f"%{aranan}%"
         sorgu = sorgu.filter((KargoGonderi.referans.ilike(kalip)) | (KargoGonderi.shipment_id.ilike(kalip))
                              | (KargoGonderi.kaynak_ad.ilike(kalip)) | (KargoGonderi.alici_ad.ilike(kalip)))
-    kayitlar = sorgu.order_by(KargoGonderi.id.desc()).limit(LISTE_LIMIT).all()
+    kayitlar = sorgu.order_by(KargoGonderi.olusturuldu_at.desc(), KargoGonderi.id.desc()).limit(LISTE_LIMIT).all()  # en yeni üstte
     sayac = {d: 0 for d in ("bekliyor", "hata", "siparis_acildi", "hazirlandi", "kargoda", "dagitimda", "teslim")}
     for k in KargoGonderi.query.with_entities(KargoGonderi.durum, db.func.count()).group_by(KargoGonderi.durum).all():
         if k[0] in sayac:

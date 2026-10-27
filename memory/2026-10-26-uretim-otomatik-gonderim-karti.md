@@ -51,3 +51,18 @@ ZPL günlük PDF'e Labelary ile eklenir).
   (`PARCA_KAYDET_BEKLEME_MS`) — görseldeki "Parcayi Kaydet aktif edilemedi" hatası buydu.
 - Eklenti yükleme: chrome://extensions → Geliştirici modu → Güncelle (paketlenmemiş). Panel: pull+restart.
 - Not: adet "satır" sayısıdır (adet 2 olan tek kalem = 1); sipariş hazırla ile tutarlı, Komutan'a bildirildi.
+
+## 2026-10-27 — Ürün Özellikleri görseli sayfa içinde büyür
+- Panel içindeki küçük görsel `<a target="_blank">` ile yeni sekmede açılıyordu; kart görselindeki
+  `data-buyut` lightbox'ına (`#urImgOverlay`) bağlandı. Overlay'in herhangi bir yerine tıklamak
+  (ya da Esc) kapatır — bu davranış zaten vardı, yalnızca görsel ona yönlendirildi.
+- Dosya: templates/uretim.html (detayHtml + `.ur-detail-img` cursor:zoom-in).
+
+## 2026-10-27 — Doğrulama kutusu otomatik + "kutuya yaz" düğmesi
+- Üretim kalemi doğrulama kutusu (`.ur-okut[data-dogrula]`) artık yazım durunca (350 ms, ≥8 karakter)
+  kendiliğinden gönderir; Enter ve Doğrula düğmesi de çalışmaya devam eder. `data-gonderiliyor`
+  kilidi çift gönderimi önler; hata olursa kutu boşalır, yeni okutmaya kadar tekrar denemez.
+- Ürün Özellikleri'ndeki barkod yanı "kopyala" düğmesi kaldırıldı; yerine `.ur-yaz-btn[data-yaz]`:
+  barkodu aynı kalemin okutma kutusuna yazar ve doğrulamayı başlatır (raf okutma kutusuysa raf
+  alanına geçer; kutu yoksa panoya kopyalar). `.ur-copy-btn--ok` tik stili buna bağlı olarak kalktı.
+- Dosya: templates/uretim.html.

@@ -440,6 +440,7 @@
         <a class="btn btn-warning m-1" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="fas fa-archive"></i> Raflar</a>
         <a class="btn btn-secondary m-1" href="{{ url_for('display_archive') }}"><i class="fas fa-box"></i> Arşiv</a>
         <a class="btn btn-danger m-1" href="{{ url_for('iade_yonetimi.index') }}"><i class="fas fa-box-open"></i> Site İadeleri</a>
+        {% if sayfa_erisebilir('gelen_yorumlar') %}<a class="btn btn-primary m-1" href="{{ url_for('gelen_yorumlar_bp.gelen_yorumlar_page') }}"><i class="fas fa-comment-dots"></i> Gelen Yorumlar</a>{% endif %}
       </div>
     </div>
 

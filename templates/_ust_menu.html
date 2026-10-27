@@ -107,6 +107,7 @@
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Shopify (Site)</div></li>
         {% if sayfa_erisebilir('shopify_siparisler') %}<li><a class="dropdown-item" href="{{ url_for('shopify.orders_dashboard') }}"><i class="fab fa-shopify me-2" style="color:#96bf48"></i>Shopify Siparişler</a></li>{% endif %}
         {% if sayfa_erisebilir('site_iade') %}<li><a class="dropdown-item" href="{{ url_for('iade_yonetimi.index') }}"><i class="fas fa-box-open me-2" style="color:#96bf48"></i>Site İade Yönetimi</a></li>{% endif %}
+        {% if sayfa_erisebilir('gelen_yorumlar') %}<li><a class="dropdown-item" href="{{ url_for('gelen_yorumlar_bp.gelen_yorumlar_page') }}"><i class="fas fa-comment-dots me-2" style="color:#96bf48"></i>Gelen Yorumlar</a></li>{% endif %}
         {% if sayfa_erisebilir('shopify_fiyat') %}<li><a class="dropdown-item" href="{{ url_for('shopify.price_compare_dashboard') }}"><i class="fas fa-balance-scale me-2" style="color:#96bf48"></i>Shopify ↔ Trendyol Fiyat</a></li>{% endif %}
         <li><hr class="dropdown-divider"></li>
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Diğer Pazaryerleri</div></li>
