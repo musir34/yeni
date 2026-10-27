@@ -26,6 +26,13 @@ DURUM_ETIKETLERI = {
     DURUM_BAKTI: ("Baktı, yazmadı", "warning"),
     DURUM_ACMADI: ("Açmadı", "secondary"),
 }
+# reviews_cache.status (Shopify metaobject durumu) → ekran etiketi + renk
+YORUM_DURUM_ETIKETLERI = {
+    "approved": ("Yayında", "success"),
+    "pending": ("Onay bekliyor", "warning"),
+    "rejected": ("Reddedildi", "danger"),
+}
+YILDIZLAR = (5, 4, 3, 2, 1)
 
 OZET_SQL = """
 SELECT
@@ -59,6 +66,22 @@ LEFT JOIN submissions s ON s.order_id = r.order_id
 WHERE r.delivered = 1
 GROUP BY r.order_id
 ORDER BY r.sent_at DESC
+"""
+
+
+# Brif §4 (27 Ekim 15:20 eki): yorumun kendisi reviews_cache'te (Shopify'ın yerel kopyası; compile ile tazelenir)
+YORUMLAR_SQL = """
+SELECT
+  c.review_id, c.order_id, c.order_name, c.product_title, c.variant_title, c.display_name,
+  c.rating, c.title, c.body, c.status, c.reply, c.photo_count, c.submitted_at,
+  r.incentive_amount, r.refunded_at
+FROM reviews_cache c
+LEFT JOIN requests r ON r.order_id = c.order_id
+ORDER BY c.submitted_at DESC
+"""
+
+YILDIZ_SQL = """
+SELECT rating, COUNT(*) AS adet FROM reviews_cache WHERE status = 'approved' GROUP BY rating
 """
 
 
@@ -110,6 +133,58 @@ class Satir:
     def iade_bekliyor(self) -> bool:
         """Teşvikli + yorum yapmış + iade henüz işaretlenmemiş."""
         return self.incentive_amount > 0 and self.durum == DURUM_YORUM and self.refunded_at is None
+
+
+@dataclass(frozen=True)
+class Yorum:
+    review_id: str
+    order_name: str
+    product_title: str
+    variant_title: str
+    display_name: str
+    rating: int
+    title: str
+    body: str               # müşteri metni — şablonda otomatik kaçırma, asla |safe
+    status: str
+    reply: str
+    photo_count: int
+    submitted_at: datetime | None
+    incentive_amount: int
+    refunded_at: datetime | None
+
+    @property
+    def durum_etiketi(self) -> str:
+        return YORUM_DURUM_ETIKETLERI.get(self.status, (self.status or "?", "secondary"))[0]
+
+    @property
+    def durum_renk(self) -> str:
+        return YORUM_DURUM_ETIKETLERI.get(self.status, ("", "secondary"))[1]
+
+    @property
+    def yildiz_metni(self) -> str:
+        """'★★★★☆' (1–5 dışı değer → boş)."""
+        r = self.rating
+        return "★" * r + "☆" * (5 - r) if 1 <= r <= 5 else ""
+
+    @property
+    def iade_bekliyor(self) -> bool:
+        return self.incentive_amount > 0 and self.refunded_at is None
+
+
+@dataclass(frozen=True)
+class YildizDagilimi:
+    adetler: dict            # {5: n, 4: n, ..., 1: n} — yalnız approved
+
+    @property
+    def toplam(self) -> int:
+        return sum(self.adetler.values())
+
+    @property
+    def ortalama(self) -> float:
+        return round(sum(y * a for y, a in self.adetler.items()) / self.toplam, 1) if self.toplam else 0.0
+
+    def yuzde(self, yildiz: int) -> int:
+        return _yuzde(self.adetler.get(yildiz, 0), self.toplam)
 
 
 # ──────────────────────────── Yardımcılar ────────────────────────────
@@ -170,6 +245,25 @@ def _satir_yap(row) -> Satir:
     )
 
 
+def _yorum_yap(row) -> Yorum:
+    return Yorum(
+        review_id=str(row["review_id"] or ""),
+        order_name=row["order_name"] or "",
+        product_title=row["product_title"] or "",
+        variant_title=row["variant_title"] or "",
+        display_name=row["display_name"] or "",
+        rating=int(row["rating"] or 0),
+        title=row["title"] or "",
+        body=row["body"] or "",
+        status=row["status"] or "",
+        reply=row["reply"] or "",
+        photo_count=int(row["photo_count"] or 0),
+        submitted_at=utc_parse(row["submitted_at"]),
+        incentive_amount=int(row["incentive_amount"] or 0),
+        refunded_at=utc_parse(row["refunded_at"]),
+    )
+
+
 # ──────────────────────────── Okuma ────────────────────────────
 
 def _baglan(db_yolu: str) -> sqlite3.Connection:
@@ -201,3 +295,28 @@ def oku(db_yolu: str | None = None, sadece_yorum: bool = False) -> tuple[Ozet, l
     if sadece_yorum:
         satirlar = [s for s in satirlar if s.durum == DURUM_YORUM]
     return ozet, satirlar
+
+
+def oku_yorumlar(db_yolu: str | None = None) -> tuple[list[Yorum], YildizDagilimi]:
+    """reviews_cache: yorum metinleri + onaylı yıldız dağılımı. Tablo henüz yoksa (eski Güllü Yorum
+    sürümü) boş döner — gönderim sekmesi çalışmaya devam eder; dosya sorunu yine GelenYorumHata."""
+    yol = db_yolu or DB_YOLU
+    conn = _baglan(yol)
+    try:
+        try:
+            var = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='reviews_cache'").fetchone()
+            if not var:
+                return [], YildizDagilimi({})
+            rows = conn.execute(YORUMLAR_SQL).fetchall()
+            yildiz_rows = conn.execute(YILDIZ_SQL).fetchall()
+        except sqlite3.Error as e:
+            raise GelenYorumHata(f"Güllü Yorum yorum sorgusu başarısız: {e}") from e
+    finally:
+        conn.close()
+    adetler = {y: 0 for y in YILDIZLAR}
+    for r in yildiz_rows:
+        try:
+            adetler[int(r["rating"])] = int(r["adet"] or 0)
+        except (TypeError, ValueError, KeyError):
+            continue
+    return [_yorum_yap(r) for r in rows], YildizDagilimi(adetler)

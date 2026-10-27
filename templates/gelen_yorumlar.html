@@ -10,10 +10,18 @@
   .gy-table td, .gy-table th { font-size: .85rem; white-space: nowrap; vertical-align: middle; }
   .gy-table-wrap { overflow-x: auto; }
   .gy-bos { color: #adb5bd; }
+  .gy-yildiz { color: #f5a623; letter-spacing: .05em; font-size: 1.05rem; }
+  .gy-yorum { border-bottom: 1px solid #f1f3f5; padding: 1rem 1.25rem; }
+  .gy-yorum:last-child { border-bottom: 0; }
+  .gy-yorum-metin { white-space: pre-wrap; font-size: .95rem; margin: .4rem 0 0; }
+  .gy-yanit { background: #f8f9fa; border-left: 3px solid #96bf48; padding: .5rem .75rem; margin-top: .6rem; font-size: .9rem; border-radius: 0 8px 8px 0; }
+  .gy-dagilim .progress { height: .6rem; }
+  .gy-dagilim td { font-size: .85rem; padding: .2rem .4rem; border: 0; vertical-align: middle; }
+  .gy-sekme .nav-link { font-weight: 600; }
 </style>
 {% endblock %}
 {% block content %}
-<div class="d-flex align-items-center mb-4">
+<div class="d-flex align-items-center mb-4 flex-wrap gap-2">
   <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm me-3"><i class="fas fa-home"></i> Anasayfa</a>
   <h3 class="mb-0">💬 Gelen Yorumlar</h3>
   <span class="text-muted ms-3">Güllü Yorum e-posta gönderimleri · bakan · yorum yapan</span>
@@ -56,9 +64,24 @@
   </div>
 </div>
 
+<ul class="nav nav-tabs gy-sekme mb-3" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link {{ 'active' if sekme == 'gonderimler' }}" data-bs-toggle="tab" data-bs-target="#sekme-gonderimler" type="button" role="tab">
+      <i class="fas fa-paper-plane me-1"></i>Gönderimler <span class="badge bg-secondary ms-1">{{ satirlar|length }}</span>
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link {{ 'active' if sekme == 'yorumlar' }}" data-bs-toggle="tab" data-bs-target="#sekme-yorumlar" type="button" role="tab">
+      <i class="fas fa-star me-1"></i>Yorumlar <span class="badge bg-secondary ms-1">{{ yorumlar|length }}</span>
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content">
+<div class="tab-pane fade {{ 'show active' if sekme == 'gonderimler' }}" id="sekme-gonderimler" role="tabpanel">
 <div class="card gy-card">
   <div class="card-header fw-bold d-flex align-items-center justify-content-between flex-wrap gap-2">
-    <span>📋 Gönderim Listesi <span class="text-muted fw-normal">({{ satirlar|length }})</span></span>
+    <span>📋 Gönderim Listesi</span>
     <div class="btn-group btn-group-sm" role="group">
       <a href="{{ url_for('gelen_yorumlar_bp.gelen_yorumlar_page') }}" class="btn {{ 'btn-primary' if not sadece_yorum else 'btn-outline-primary' }}">Hepsi</a>
       <a href="{{ url_for('gelen_yorumlar_bp.gelen_yorumlar_page', filtre='yorum') }}" class="btn {{ 'btn-primary' if sadece_yorum else 'btn-outline-primary' }}">Yalnız yorum yapanlar</a>
@@ -98,5 +121,66 @@
       </tbody>
     </table>
   </div>
+</div>
+</div>
+
+<div class="tab-pane fade {{ 'show active' if sekme == 'yorumlar' }}" id="sekme-yorumlar" role="tabpanel">
+<div class="row">
+  <div class="col-lg-4">
+    <div class="card gy-card">
+      <div class="card-header fw-bold">⭐ Yıldız Dağılımı <span class="text-muted fw-normal">(yayındaki yorumlar)</span></div>
+      <div class="card-body gy-dagilim">
+        {% if yildiz.toplam %}
+        <div class="d-flex align-items-baseline gap-2 mb-2">
+          <span class="fs-2 fw-bold">{{ yildiz.ortalama }}</span>
+          <span class="gy-yildiz">★</span>
+          <span class="text-muted small">{{ yildiz.toplam }} yorum</span>
+        </div>
+        <table class="w-100">
+          {% for y in yildizlar %}
+          <tr>
+            <td class="text-nowrap" style="width:3.5rem">{{ y }} <span class="gy-yildiz">★</span></td>
+            <td><div class="progress"><div class="progress-bar bg-warning" style="width: {{ yildiz.yuzde(y) }}%"></div></div></td>
+            <td class="text-end text-muted" style="width:3rem">{{ yildiz.adetler.get(y, 0) }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+        {% else %}
+        <div class="text-muted">Henüz yayında yorum yok.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card gy-card">
+      <div class="card-header fw-bold">💬 Yorumlar <span class="text-muted fw-normal">(yeniden eskiye)</span></div>
+      <div class="card-body p-0">
+        {% for y in yorumlar %}
+        <div class="gy-yorum">
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="gy-yildiz" title="{{ y.rating }} / 5">{{ y.yildiz_metni }}</span>
+            <span class="fw-bold">{{ y.rating }}/5</span>
+            <span class="badge bg-{{ y.durum_renk }}">{{ y.durum_etiketi }}</span>
+            {% if y.photo_count %}<span class="badge bg-light text-dark" title="Fotoğraflar Shopify'da"><i class="fas fa-camera me-1"></i>{{ y.photo_count }}</span>{% endif %}
+            {% if y.iade_bekliyor %}<span class="badge bg-primary">{{ y.incentive_amount }} TL iade bekliyor</span>{% endif %}
+            {% if y.refunded_at %}<span class="badge bg-info text-dark" title="{{ y.refunded_at | ist }}">İade yapıldı</span>{% endif %}
+            <span class="ms-auto text-muted small">{{ y.submitted_at | ist }}</span>
+          </div>
+          <div class="text-muted small mt-1">
+            <span class="fw-bold text-dark">{{ y.order_name }}</span> · {{ y.display_name }} · {{ y.product_title }}{% if y.variant_title %} <span class="badge bg-light text-dark">{{ y.variant_title }}</span>{% endif %}
+          </div>
+          {% if y.title %}<div class="fw-bold mt-2">{{ y.title }}</div>{% endif %}
+          {# müşteri metni: otomatik kaçırma açık, |safe YOK #}
+          <p class="gy-yorum-metin">{{ y.body }}</p>
+          {% if y.reply %}<div class="gy-yanit"><i class="fas fa-reply me-1"></i><strong>Mağaza yanıtı:</strong> {{ y.reply }}</div>{% endif %}
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4">{% if hata %}Veri yok{% else %}Henüz yorum yok{% endif %}</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+</div>
 </div>
 {% endblock %}

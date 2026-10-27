@@ -21,6 +21,7 @@ from gelen_yorumlar_service import (  # noqa: E402
     GelenYorumHata,
     email_maskele,
     oku,
+    oku_yorumlar,
     utc_parse,
 )
 
@@ -31,6 +32,12 @@ CREATE TABLE requests (
   incentive_amount INTEGER, refunded_at TEXT, first_viewed_at TEXT);
 CREATE TABLE submissions (
   handle TEXT PRIMARY KEY, order_id INTEGER, product_id INTEGER, submitted_at TEXT, updated_at TEXT);
+"""
+SEMA_YORUM = """
+CREATE TABLE reviews_cache (
+  review_id TEXT PRIMARY KEY, product_id INTEGER, product_title TEXT, order_id INTEGER, order_name TEXT,
+  display_name TEXT, rating INTEGER, title TEXT, body TEXT, variant_title TEXT, status TEXT, reply TEXT,
+  photo_count INTEGER, submitted_at TEXT, synced_at TEXT);
 """
 
 
@@ -65,6 +72,23 @@ def db(tmp_path):
     conn.commit()
     conn.close()
     return str(yol)
+
+
+@pytest.fixture
+def db_yorumlu(db):
+    conn = sqlite3.connect(db)
+    conn.executescript(SEMA_YORUM)
+    conn.executemany(
+        "INSERT INTO reviews_cache VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        [
+            ("901", 10, "Taba Bot", 1, "#1372", "Ayşe Y.", 5, "Harika", "<b>Çok</b> rahat & şık", "Taba / 39", "approved", "Teşekkürler!", 2, "2026-10-27T12:05:00Z", "2026-10-27T12:10:00Z"),
+            ("902", 11, "Siyah Çizme", 1, "#1372", "Ayşe Y.", 4, "", "İyi", "Siyah / 39", "approved", None, 0, "2026-10-27T12:06:00Z", None),
+            ("903", 12, "Bej Sandalet", 4, "#1375", "Ali B.", 2, "", "Dar geldi", "Bej / 42", "pending", None, 0, "2026-10-26T12:30:00Z", None),
+        ],
+    )
+    conn.commit()
+    conn.close()
+    return db
 
 
 def test_ozet_brif_sorgusuyla_ayni(db):
@@ -111,3 +135,22 @@ def test_yardimcilar():
     assert utc_parse(None) is None and utc_parse("bozuk") is None
     assert email_maskele("a@b.com") == "a***@b.com"
     assert email_maskele("") == ""
+
+
+def test_yorumlar_ve_yildiz_dagilimi(db_yorumlu):
+    yorumlar, yildiz = oku_yorumlar(db_yorumlu)
+    assert [y.review_id for y in yorumlar] == ["902", "901", "903"]           # submitted_at DESC
+    y901 = next(y for y in yorumlar if y.review_id == "901")
+    assert y901.yildiz_metni == "★★★★★" and y901.durum_etiketi == "Yayında"
+    assert y901.body == "<b>Çok</b> rahat & şık"                            # ham tutulur; kaçırma şablonda
+    assert y901.reply == "Teşekkürler!" and y901.photo_count == 2
+    assert y901.iade_bekliyor                                               # #1372 teşvikli, iade yok
+    y903 = next(y for y in yorumlar if y.review_id == "903")
+    assert not y903.iade_bekliyor and y903.durum_renk == "warning"          # #1375 iadesi yapılmış, pending
+    assert yildiz.adetler == {5: 1, 4: 1, 3: 0, 2: 0, 1: 0}                 # pending sayılmaz
+    assert yildiz.toplam == 2 and yildiz.ortalama == 4.5 and yildiz.yuzde(5) == 50
+
+
+def test_reviews_cache_tablosu_yoksa_bos_doner(db):
+    yorumlar, yildiz = oku_yorumlar(db)                                     # eski Güllü Yorum sürümü
+    assert yorumlar == [] and yildiz.toplam == 0 and yildiz.ortalama == 0.0
