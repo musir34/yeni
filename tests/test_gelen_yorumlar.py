@@ -20,6 +20,7 @@ from gelen_yorumlar_service import (  # noqa: E402
     DURUM_YORUM,
     GelenYorumHata,
     email_maskele,
+    iade_isaretle,
     oku,
     oku_yorumlar,
     utc_parse,
@@ -154,3 +155,28 @@ def test_yorumlar_ve_yildiz_dagilimi(db_yorumlu):
 def test_reviews_cache_tablosu_yoksa_bos_doner(db):
     yorumlar, yildiz = oku_yorumlar(db)                                     # eski Güllü Yorum sürümü
     assert yorumlar == [] and yildiz.toplam == 0 and yildiz.ortalama == 0.0
+
+
+def test_iade_isaretle_gullu_yorum_mark_refunded_ile_ayni(db):
+    # #1372: teşvikli + yorum yapmış + iade yok → işaretlenir, Güllü Yorum biçiminde UTC damga
+    assert iade_isaretle("#1372", db) is True
+    conn = sqlite3.connect(db)
+    damga = conn.execute("SELECT refunded_at FROM requests WHERE order_name = '#1372'").fetchone()[0]
+    digerleri = conn.execute("SELECT order_name, refunded_at FROM requests WHERE order_name != '#1372' ORDER BY order_id").fetchall()
+    conn.close()
+    assert damga and damga.endswith("Z") and utc_parse(damga) is not None
+    assert digerleri == [("#1373", None), ("#1374", None), ("#1375", "2026-10-28T08:00:00Z"), ("#1376", None)]
+    ozet, satirlar = oku(db)
+    assert ozet.iade_bekleyen == 0
+    assert not next(s for s in satirlar if s.order_name == "#1372").iade_bekliyor
+    # ikinci kez → zaten işaretli, False; olmayan sipariş / boş ad → False
+    assert iade_isaretle("#1372", db) is False
+    assert iade_isaretle("#9999", db) is False
+    assert iade_isaretle("", db) is False
+
+
+def test_iade_isaretle_dosya_yoksa_hata_ve_olusturmaz(tmp_path):
+    yok = tmp_path / "yok.sqlite3"
+    with pytest.raises(GelenYorumHata):
+        iade_isaretle("#1", str(yok))
+    assert not yok.exists()                                                 # mode=rw: dosya yaratılmaz

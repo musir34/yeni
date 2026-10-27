@@ -2,6 +2,8 @@
 # Güllü Yorum panelle aynı sunucuda ayrı bir uygulamadır; e-posta gönderimlerini kendi SQLite
 # dosyasında tutar (requests / submissions). Bu modül o dosyayı yalnızca okur:
 #  - Hiçbir tabloya yazılmaz, Güllü Yorum'un .env'i okunmaz, Shopify'a gidilmez.
+#  - TEK İSTİSNA (Komutan kararı 2026-10-27): `iade_isaretle` — Güllü Yorum'un `mark-refunded`
+#    komutuyla birebir aynı UPDATE (requests.refunded_at damgası); ayrı rw bağlantı, başka hiçbir yazma yok.
 #  - Bağlantı her çağrıda açılıp kapanır (gunicorn worker'ında tutulmaz).
 #  - Dosya yoksa / açılamazsa GelenYorumHata fırlatılır; sayfa "ulaşılamadı" gösterir.
 # Flask/DB bağımlılığı yok → saf testlenebilir (tests/test_gelen_yorumlar.py).
@@ -295,6 +297,36 @@ def oku(db_yolu: str | None = None, sadece_yorum: bool = False) -> tuple[Ozet, l
     if sadece_yorum:
         satirlar = [s for s in satirlar if s.durum == DURUM_YORUM]
     return ozet, satirlar
+
+
+def iade_isaretle(order_name: str, db_yolu: str | None = None) -> bool:
+    """'#1372' siparişini iade yapıldı olarak damgalar. Güllü Yorum `db.mark_refunded` ile AYNI sorgu:
+    yalnız teşvikli (incentive_amount > 0) ve henüz işaretlenmemiş satır; eşleşme yoksa False.
+    Zaman damgası Güllü Yorum biçiminde UTC ISO ('%Y-%m-%dT%H:%M:%SZ'). mode=rw → dosya yoksa oluşturmaz."""
+    ad = (order_name or "").strip()
+    if not ad:
+        return False
+    yol = db_yolu or DB_YOLU
+    if not os.path.isfile(yol):
+        raise GelenYorumHata(f"Güllü Yorum veri dosyası yok: {yol}")
+    simdi = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        conn = sqlite3.connect(f"file:{yol}?mode=rw", uri=True, timeout=BAGLANTI_ZAMAN_ASIMI_SN)
+    except sqlite3.Error as e:
+        raise GelenYorumHata(f"Güllü Yorum veri tabanı yazma için açılamadı: {e}") from e
+    try:
+        try:
+            cur = conn.execute(
+                "UPDATE requests SET refunded_at = ? WHERE order_name = ? AND incentive_amount > 0 AND refunded_at IS NULL",
+                (simdi, ad),
+            )
+            conn.commit()
+        except sqlite3.Error as e:
+            conn.rollback()
+            raise GelenYorumHata(f"İade işareti yazılamadı: {e}") from e
+    finally:
+        conn.close()
+    return cur.rowcount > 0
 
 
 def oku_yorumlar(db_yolu: str | None = None) -> tuple[list[Yorum], YildizDagilimi]:

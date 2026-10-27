@@ -39,3 +39,14 @@ yorum e-postası gitti, kaçı bağlantıyı açtı (sipariş numarasıyla), ka�
   mağaza yanıtı). `?sekme=yorumlar` ile açılışta o sekme.
 - Müşteri metni (`body`, `title`, `reply`) otomatik kaçırma ile basılır, `|safe` yok; testte `<b>` → `&lt;b&gt;` doğrulandı.
 - Testler: 7 (reviews_cache'li fixture + tablo-yok senaryosu). Brif §7 güncel beklenti: gonderilen 34, bakan 3, yorum_yapan 2, reviews_cache 3 satır (biri #1488 test).
+
+## "İade Edildi" düğmesi — brif §6'ya KOMUTAN KARARIYLA tek istisna (2026-10-27)
+- Komutan: "iadeyi sağladığımızda bir butonla iade edildi gibi bir seçenek olsa". Brif bunu "panelden
+  işaretleme istenirse ayrı karar" diye bırakmıştı; karar verildi.
+- Güllü Yorum `db.mark_refunded` tek UPDATE: `requests.refunded_at = UTC-ISO WHERE order_name=? AND
+  incentive_amount>0 AND refunded_at IS NULL`. Panel `gelen_yorumlar_service.iade_isaretle` birebir aynı
+  sorguyu ayrı `mode=rw` bağlantıyla (dosya yoksa oluşturmaz) çalıştırır; başka hiçbir yazma yok, okumalar ro.
+- Rota: POST `/gelen-yorumlar/iade-edildi` (admin, confirm, flash, log_user_action UPDATE). Düğme hem
+  gönderim tablosunda hem yorum kartında, yalnız "iade bekliyor" rozeti olan satırda; işaretlenince
+  "İade yapıldı" rozetine döner. Zaten işaretli/teşviksiz → uyarı, değişiklik yok.
+- Güllü Yorum'un `refund-list` / `mark-refunded` komutları aynı alanı okuduğundan iki taraf tutarlı kalır.

@@ -18,6 +18,7 @@
   .gy-dagilim .progress { height: .6rem; }
   .gy-dagilim td { font-size: .85rem; padding: .2rem .4rem; border: 0; vertical-align: middle; }
   .gy-sekme .nav-link { font-weight: 600; }
+  .gy-table td form { vertical-align: middle; }
 </style>
 {% endblock %}
 {% block content %}
@@ -26,6 +27,15 @@
   <h3 class="mb-0">💬 Gelen Yorumlar</h3>
   <span class="text-muted ms-3">Güllü Yorum e-posta gönderimleri · bakan · yorum yapan</span>
 </div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
+      {{ msg }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endwith %}
 
 {% if hata %}
 <div class="alert alert-warning" role="alert">
@@ -111,7 +121,8 @@
           <td>{% if s.reviewed_at %}{{ s.reviewed_at | ist }}{% if s.yorum_sayisi > 1 %} <span class="badge bg-success">{{ s.yorum_sayisi }} ürün</span>{% endif %}{% else %}<span class="gy-bos">Yorum yok</span>{% endif %}</td>
           <td>
             <span class="badge bg-{{ s.durum_renk }}">{{ s.durum_etiketi }}</span>
-            {% if s.iade_bekliyor %}<span class="badge bg-primary ms-1">{{ s.incentive_amount }} TL iade bekliyor</span>{% endif %}
+            {% if s.iade_bekliyor %}<span class="badge bg-primary ms-1">{{ s.incentive_amount }} TL iade bekliyor</span>
+              <form method="post" action="{{ url_for('gelen_yorumlar_bp.iade_edildi') }}" class="d-inline" onsubmit="return confirm('{{ s.order_name }} için {{ s.incentive_amount }} TL teşvik iadesi yapıldı olarak işaretlensin mi?');"><input type="hidden" name="order_name" value="{{ s.order_name }}"><input type="hidden" name="sekme" value="gonderimler"><button type="submit" class="btn btn-sm btn-outline-success py-0 ms-1" title="İade yapıldı olarak işaretle"><i class="fas fa-check me-1"></i>İade Edildi</button></form>{% endif %}
             {% if s.refunded_at %}<span class="badge bg-info text-dark ms-1" title="{{ s.refunded_at | ist }}">İade yapıldı</span>{% endif %}
           </td>
         </tr>
@@ -162,7 +173,8 @@
             <span class="fw-bold">{{ y.rating }}/5</span>
             <span class="badge bg-{{ y.durum_renk }}">{{ y.durum_etiketi }}</span>
             {% if y.photo_count %}<span class="badge bg-light text-dark" title="Fotoğraflar Shopify'da"><i class="fas fa-camera me-1"></i>{{ y.photo_count }}</span>{% endif %}
-            {% if y.iade_bekliyor %}<span class="badge bg-primary">{{ y.incentive_amount }} TL iade bekliyor</span>{% endif %}
+            {% if y.iade_bekliyor %}<span class="badge bg-primary">{{ y.incentive_amount }} TL iade bekliyor</span>
+              <form method="post" action="{{ url_for('gelen_yorumlar_bp.iade_edildi') }}" class="d-inline" onsubmit="return confirm('{{ y.order_name }} için {{ y.incentive_amount }} TL teşvik iadesi yapıldı olarak işaretlensin mi?');"><input type="hidden" name="order_name" value="{{ y.order_name }}"><input type="hidden" name="sekme" value="yorumlar"><button type="submit" class="btn btn-sm btn-outline-success py-0 ms-1" title="İade yapıldı olarak işaretle"><i class="fas fa-check me-1"></i>İade Edildi</button></form>{% endif %}
             {% if y.refunded_at %}<span class="badge bg-info text-dark" title="{{ y.refunded_at | ist }}">İade yapıldı</span>{% endif %}
             <span class="ms-auto text-muted small">{{ y.submitted_at | ist }}</span>
           </div>
