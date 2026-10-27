@@ -66,3 +66,9 @@ ZPL günlük PDF'e Labelary ile eklenir).
   barkodu aynı kalemin okutma kutusuna yazar ve doğrulamayı başlatır (raf okutma kutusuysa raf
   alanına geçer; kutu yoksa panoya kopyalar). `.ur-copy-btn--ok` tik stili buna bağlı olarak kalktı.
 - Dosya: templates/uretim.html.
+
+## 2026-10-27 — Hazırlayan filtresinde ayrılan işçi
+- "Hazırlayan" çipleri kayıtlardaki `hazirlayan` damgasından türediği için onayı kaldırılan
+  kullanıcı (nurcan) listede kalıyordu. index() artık status='active' kullanıcı adlarını şablona
+  verir (`aktif_kullanicilar`), çipler yalnız bunlarla kurulur. Kayıtlardaki ad silinmedi;
+  "Tümü" seçiliyken o siparişler yine görünür. Dosyalar: uretim_routes.py, templates/uretim.html.

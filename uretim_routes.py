@@ -12,7 +12,7 @@ from datetime import datetime
 
 from flask import Blueprint, jsonify, render_template, request, session
 
-from models import db, UretimSiparis
+from models import db, UretimSiparis, User
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,10 @@ def _to_dict(r: UretimSiparis, urun_map: dict | None = None) -> dict:
 
 @uretim_bp.route("/", methods=["GET"])
 def index():
-    return render_template("uretim.html")
+    # Hazırlayan filtresi yalnız panelde onaylı kullanıcıları gösterir; işten ayrılan
+    # (onayı kaldırılan) kullanıcının adı kayıtlarda kalır ama çip olarak çıkmaz.
+    aktif_kullanicilar = [u.username for u in User.query.filter_by(status="active").all()]
+    return render_template("uretim.html", aktif_kullanicilar=aktif_kullanicilar)
 
 
 @uretim_bp.route("/api/liste", methods=["GET"])

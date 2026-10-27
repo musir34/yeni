@@ -755,11 +755,13 @@
         topluBarGuncelle();
     }
 
-    // Hazırlayan chip'leri: tüm sekmelerdeki satırlardan kullanıcı adları toplanır
+    // Hazırlayan chip'leri: tüm sekmelerdeki satırlardan kullanıcı adları toplanır;
+    // yalnız panelde onaylı (aktif) kullanıcılar listelenir, ayrılan işçinin adı çıkmaz
+    const AKTIF_KULLANICILAR = new Set({{ (aktif_kullanicilar or []) | tojson }});
     function hazirChipleriYenile() {
         const isimler = new Set();
         Object.values(durumRows).forEach(rows =>
-            rows.forEach(r => { if (r.hazirlayan) isimler.add(r.hazirlayan); }));
+            rows.forEach(r => { if (r.hazirlayan && AKTIF_KULLANICILAR.has(r.hazirlayan)) isimler.add(r.hazirlayan); }));
         const bar = document.getElementById('urHazirBar');
         if (!isimler.size) { bar.hidden = true; aktifHazirlayan = ''; return; }
         bar.hidden = false;
