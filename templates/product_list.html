@@ -29,6 +29,7 @@
         .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;font-size:.9rem;font-weight:600;padding:.7rem 1.3rem;border:1px solid transparent;border-radius:var(--border-radius);cursor:pointer;transition:var(--transition);text-decoration:none}
         .header-actions .btn{background:var(--color-white);color:var(--color-secondary);border-color:#495057}
         .header-actions .btn:hover{transform:translateY(-2px);box-shadow:0 4px 10px rgba(0,0,0,.2);border-color:var(--color-white)}
+        .header-actions .btn-danger{background:var(--color-danger);color:#fff;border-color:var(--color-danger)}
         .btn-primary{background:linear-gradient(45deg,var(--color-primary),var(--color-primary-dark));color:var(--color-white);border:none}
         .btn-primary:hover{transform:translateY(-2px);box-shadow:0 4px 10px rgba(0,0,0,.2)}
         .btn i{margin-right:.2rem}
@@ -74,7 +75,10 @@
         .btn-copy:hover{color:#B76E79}
         .btn-copy .fa-check{color:#3ac47d}
 
-        .pagination-container{display:flex;justify-content:center;align-items:center;padding:2.5rem 0 1rem}
+        .pagination-container{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;padding:2.5rem 0 1rem}
+        .sayfa-git{display:flex;align-items:center;gap:6px;margin:0 0 1rem 1rem;font-size:.9rem;color:#495057}
+        .sayfa-git label{margin:0;font-weight:600}
+        .sayfa-git input{width:80px;padding:.35rem .5rem;border:1px solid var(--color-border);border-radius:6px;text-align:center}
         .pagination{display:flex;align-items:center;gap:.5rem;list-style:none}
         .pagination li a{display:block;color:var(--color-secondary);background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--border-radius);padding:.6rem 1rem;text-decoration:none;transition:var(--transition);font-weight:600;min-width:44px;text-align:center}
         .pagination li a:hover{background:#f1f3f5;box-shadow:var(--shadow-sm)}
@@ -193,6 +197,24 @@
         .takip-edit-renk input[type=text]{flex:1}
         .takip-edit-btns{display:flex;gap:6px;margin-top:4px}
         .takip-bos{color:#8a8f98;font-size:.82rem;padding:6px 0}
+        /* Takip Notları — gece modu */
+        html.gs-dark .takip-panel{background:#1e1e1e;border-color:#333}
+        html.gs-dark .takip-toggle{color:#ddd}
+        html.gs-dark .takip-count,
+        html.gs-dark .takip-rozet--uretim{background:#3a2a2d;color:#e5a9b3}
+        html.gs-dark .takip-body{border-top-color:#333}
+        html.gs-dark .takip-card,
+        html.gs-dark .takip-card-btns button{background:#242424;border-color:#333}
+        html.gs-dark .takip-card-img{background:#2a2a2a}
+        html.gs-dark .takip-renk{background:#2a2a2a;color:#ccc}
+        html.gs-dark .takip-not,
+        html.gs-dark .takip-edit label{color:#ddd}
+        html.gs-dark .takip-renk-not{color:#aaa}
+        html.gs-dark .takip-edit textarea,
+        html.gs-dark .takip-edit input[type=text]{background:#2a2a2a;color:#ddd;border-color:#444}
+        /* Sayfaya git — gece modu */
+        html.gs-dark .sayfa-git{color:#ccc}
+        html.gs-dark .sayfa-git input{background:#2a2a2a;color:#ddd;border-color:#444}
         @media (max-width:991px){
             .container{padding:10px;max-width:none}
             .model-grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}
@@ -235,25 +257,20 @@
 </head>
 <body>
 <div class="container">
+    {% set tf = tedarikci_filter|default('') %}
     <div class="text-center mb-4"><h1>Güllü Ayakkabı Ürün Yönetimi</h1></div>
 
     <div class="header-actions">
         <a href="{{ url_for('home.home') }}" class="btn btn-sm btn-outline-secondary">Ana Sayfa</a>
-        <a href="{{ url_for('siparis_hazirla.index') }}" class="btn btn-info"><i class="fas fa-box"></i> Sipariş Hazırla</a>
+        <a href="{{ url_for('siparis_hazirla.index') }}" class="btn btn-danger"><i class="fas fa-box"></i> Sipariş Hazırla</a>
         <a href="{{ url_for('raf.raf_yonetimi') }}" class="btn btn-warning"><i class="fas fa-warehouse"></i> Raf Yönetimi</a>
-
-        <div class="dropdown" id="updateDropdown">
-            <button class="btn btn-primary dropdown-toggle"><i class="fas fa-sync-alt"></i> Güncelle</button>
-            <div class="dropdown-content">
-                <form action="{{ url_for('get_products.update_products_route') }}" method="post" style="margin:0;">
-                    <button type="submit"><i class="fas fa-cubes"></i> Ürünleri Güncelle</button>
-                </form>
-            </div>
-        </div>
 
         <div class="dropdown" id="toolsDropdown">
             <button class="btn dropdown-toggle"><i class="fas fa-tools"></i> Araçlar</button>
             <div class="dropdown-content">
+                <form action="{{ url_for('get_products.update_products_route') }}" method="post" style="margin:0;">
+                    <button type="submit"><i class="fas fa-cubes"></i> Ürünleri Güncelle</button>
+                </form>
                 <a href="/product_label"><i class="fas fa-barcode"></i> Basit Barkod</a>
                 <a href="/image_manager"><i class="fas fa-images"></i> Görsel Yöneticisi</a>
                 <a href="{{ url_for('siparis_fisi_bp.tedarikci_sayfasi') }}"><i class="fas fa-truck"></i> Tedarikçi Yönetimi</a>
@@ -275,7 +292,20 @@
             <option value="none" {% if marketplace_filter == 'none' %}selected{% endif %}>❌ Hiçbir Pazaryeri Yok</option>
         </select>
         {% if marketplace_filter %}
-        <a href="{{ url_for('get_products.product_list') }}" class="btn btn-sm btn-outline-secondary ml-2" title="Filtreyi Temizle">
+        <a href="{{ url_for('get_products.product_list', tedarikci=tf or none) }}" class="btn btn-sm btn-outline-secondary ml-2" title="Filtreyi Temizle">
+            <i class="fas fa-times"></i>
+        </a>
+        {% endif %}
+
+        <label class="mr-2 ms-3"><i class="fas fa-truck"></i> Tedarikçi:</label>
+        <select id="tedarikciFilter" class="form-control d-inline-block" style="width: auto; min-width: 180px;" onchange="filterByTedarikci()">
+            <option value="" {% if not tf %}selected{% endif %}>Tümü</option>
+            {% for t in tedarikciler|default([]) %}
+            <option value="{{ t.kod }}" {% if tf == t.kod %}selected{% endif %}>{{ t.adi or t.kod }}</option>
+            {% endfor %}
+        </select>
+        {% if tf %}
+        <a href="{{ url_for('get_products.product_list', marketplace=marketplace_filter if marketplace_filter else none) }}" class="btn btn-sm btn-outline-secondary ml-2" title="Tedarikçi Filtresini Temizle">
             <i class="fas fa-times"></i>
         </a>
         {% endif %}
@@ -283,6 +313,7 @@
 
     <form action="{{ url_for('get_products.search_products') }}" method="GET" class="search-container">
         {% if marketplace_filter %}<input type="hidden" name="marketplace" value="{{ marketplace_filter }}">{% endif %}
+        {% if tf %}<input type="hidden" name="tedarikci" value="{{ tf }}">{% endif %}
         <select name="search_type" id="search_type">
             <option value="model_code" {% if search_type == 'model_code' %}selected{% endif %}>Model Kodu</option>
             <option value="barcode" {% if search_type == 'barcode' %}selected{% endif %}>Barkod</option>
@@ -291,7 +322,7 @@
         <input type="text" name="query" placeholder="Ara..." required value="{{ search_query or '' }}">
         <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
         {% if search_mode %}
-        <a href="{{ url_for('get_products.product_list', marketplace=marketplace_filter if marketplace_filter else none) }}" class="btn" title="Aramayı Temizle"><i class="fas fa-times"></i></a>
+        <a href="{{ url_for('get_products.product_list', marketplace=marketplace_filter if marketplace_filter else none, tedarikci=tf or none) }}" class="btn" title="Aramayı Temizle"><i class="fas fa-times"></i></a>
         {% endif %}
     </form>
 
@@ -464,37 +495,45 @@
         <nav aria-label="Sayfalar">
             <ul class="pagination">
                 {% if pagination.has_prev %}
-                <li class="page-item"><a class="page-link" href="{{ url_for('get_products.product_list', page=1, marketplace=marketplace_filter if marketplace_filter else none) }}">&laquo;</a></li>
-                <li class="page-item"><a class="page-link" href="{{ url_for('get_products.product_list', page=pagination.prev_num, marketplace=marketplace_filter if marketplace_filter else none) }}">Önceki</a></li>
+                <li class="page-item"><a class="page-link" href="{{ url_for('get_products.product_list', page=1, marketplace=marketplace_filter if marketplace_filter else none, tedarikci=tf or none) }}">&laquo;</a></li>
+                <li class="page-item"><a class="page-link" href="{{ url_for('get_products.product_list', page=pagination.prev_num, marketplace=marketplace_filter if marketplace_filter else none, tedarikci=tf or none) }}">Önceki</a></li>
                 {% endif %}
 
                 {% set window_start = [1, pagination.page - 2]|max %}
                 {% set window_end = [pagination.pages, pagination.page + 2]|min %}
 
                 {% if window_start > 1 %}
-                <li class="page-item"><a class="page-link" href="{{ url_for('get_products.product_list', page=1, marketplace=marketplace_filter if marketplace_filter else none) }}">1</a></li>
+                <li class="page-item"><a class="page-link" href="{{ url_for('get_products.product_list', page=1, marketplace=marketplace_filter if marketplace_filter else none, tedarikci=tf or none) }}">1</a></li>
                 {% if window_start > 2 %}
                 <li class="page-item disabled"><a class="page-link">...</a></li>
                 {% endif %}
                 {% endif %}
 
                 {% for p in range(window_start, window_end + 1) %}
-                <li class="page-item {{ 'active' if p == pagination.page }}"><a class="page-link" href="{{ url_for('get_products.product_list', page=p, marketplace=marketplace_filter if marketplace_filter else none) }}">{{ p }}</a></li>
+                <li class="page-item {{ 'active' if p == pagination.page }}"><a class="page-link" href="{{ url_for('get_products.product_list', page=p, marketplace=marketplace_filter if marketplace_filter else none, tedarikci=tf or none) }}">{{ p }}</a></li>
                 {% endfor %}
 
                 {% if window_end < pagination.pages %}
                 {% if window_end < pagination.pages - 1 %}
                 <li class="page-item disabled"><a class="page-link">...</a></li>
                 {% endif %}
-                <li class="page-item"><a class="page-link" href="{{ url_for('get_products.product_list', page=pagination.pages, marketplace=marketplace_filter if marketplace_filter else none) }}">{{ pagination.pages }}</a></li>
+                <li class="page-item"><a class="page-link" href="{{ url_for('get_products.product_list', page=pagination.pages, marketplace=marketplace_filter if marketplace_filter else none, tedarikci=tf or none) }}">{{ pagination.pages }}</a></li>
                 {% endif %}
 
                 {% if pagination.has_next %}
-                <li class="page-item"><a class="page-link" href="{{ url_for('get_products.product_list', page=pagination.next_num, marketplace=marketplace_filter if marketplace_filter else none) }}">Sonraki</a></li>
-                <li class="page-item"><a class="page-link" href="{{ url_for('get_products.product_list', page=pagination.pages, marketplace=marketplace_filter if marketplace_filter else none) }}">&raquo;</a></li>
+                <li class="page-item"><a class="page-link" href="{{ url_for('get_products.product_list', page=pagination.next_num, marketplace=marketplace_filter if marketplace_filter else none, tedarikci=tf or none) }}">Sonraki</a></li>
+                <li class="page-item"><a class="page-link" href="{{ url_for('get_products.product_list', page=pagination.pages, marketplace=marketplace_filter if marketplace_filter else none, tedarikci=tf or none) }}">&raquo;</a></li>
                 {% endif %}
             </ul>
         </nav>
+        {# Sayfa numarası yazıp Enter → doğrudan o sayfaya (sınır dışı değeri sunucu kırpar) #}
+        <form class="sayfa-git" method="GET" action="{{ url_for('get_products.product_list') }}">
+            {% if marketplace_filter %}<input type="hidden" name="marketplace" value="{{ marketplace_filter }}">{% endif %}
+            {% if tf %}<input type="hidden" name="tedarikci" value="{{ tf }}">{% endif %}
+            <label for="sayfaGitInput">Sayfa:</label>
+            <input type="number" id="sayfaGitInput" name="page" min="1" max="{{ pagination.pages }}" placeholder="{{ pagination.page }}" required>
+            <span>/ {{ pagination.pages }}</span>
+        </form>
     </div>
     {% endif %}
 </div>
@@ -937,6 +976,19 @@ function filterByMarketplace() {
         url.searchParams.set('marketplace', value);
     } else {
         url.searchParams.delete('marketplace');
+    }
+    url.searchParams.delete('page'); // Sayfa 1'e dön
+    window.location.href = url.toString();
+}
+
+// Tedarikçi filtresi (pazaryeri ve diğer parametreler korunur)
+function filterByTedarikci() {
+    const value = document.getElementById('tedarikciFilter').value;
+    const url = new URL(window.location.href);
+    if (value) {
+        url.searchParams.set('tedarikci', value);
+    } else {
+        url.searchParams.delete('tedarikci');
     }
     url.searchParams.delete('page'); // Sayfa 1'e dön
     window.location.href = url.toString();

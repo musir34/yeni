@@ -804,6 +804,32 @@ def _apply_marketplace_filter(query, marketplace):
     return query
 
 
+def _get_tedarikci_filter():
+    return request.args.get('tedarikci', '').strip()
+
+
+def _apply_tedarikci_filter(query, tedarikci):
+    if tedarikci:
+        return query.filter(Product.tedarikci_kodu == tedarikci)
+    return query
+
+
+def _tedarikci_listesi():
+    """Ürünü olan tedarikçiler (filtre seçenekleri; profit.py ile aynı kaynak)."""
+    try:
+        rows = (
+            db.session.query(Product.tedarikci_kodu, Product.tedarikci_adi)
+            .filter(Product.tedarikci_kodu.isnot(None), Product.tedarikci_kodu != '')
+            .distinct()
+            .order_by(Product.tedarikci_adi)
+            .all()
+        )
+        return [{'kod': r[0], 'adi': r[1]} for r in rows]
+    except Exception as e:
+        logging.getLogger(__name__).error("Tedarikçi listesi çekilirken hata: %s", e, exc_info=True)
+        return []
+
+
 def _page_bounds(page, per_page, total):
     total_pages = (total + per_page - 1) // per_page if total else 0
     if page < 1:
@@ -820,12 +846,14 @@ def product_list():
         page = request.args.get('page', 1, type=int)
         per_page = 12
         marketplace_filter = _get_marketplace_filter()
+        tedarikci_filter = _get_tedarikci_filter()
 
         base_query = Product.query.filter(
             Product.product_main_id.isnot(None),
             Product.product_main_id != ''
         )
         base_query = _apply_marketplace_filter(base_query, marketplace_filter)
+        base_query = _apply_tedarikci_filter(base_query, tedarikci_filter)
 
         model_query = (
             base_query
@@ -911,6 +939,8 @@ def product_list():
             pagination=pagination,
             search_mode=False,
             marketplace_filter=marketplace_filter,
+            tedarikci_filter=tedarikci_filter,
+            tedarikciler=_tedarikci_listesi(),
             uretim_models=uretim_models,
             takip_models=takip_models
         )
@@ -919,7 +949,8 @@ def product_list():
         logger = logging.getLogger(__name__)
         logger.error(f"Ürün listesi oluşturulurken hata: {e}", exc_info=True)
         flash("Ürün listesi yüklenirken bir hata oluştu.", "danger")
-        return render_template('product_list.html', grouped_products={}, pagination=None, marketplace_filter='')
+        return render_template('product_list.html', grouped_products={}, pagination=None, marketplace_filter='',
+                               tedarikci_filter='', tedarikciler=[])
 
 
 
@@ -1026,12 +1057,15 @@ def search_products():
     query = request.args.get('query', '').strip()
     search_type = request.args.get('search_type', 'model_code').strip()
     marketplace_filter = _get_marketplace_filter()
+    tedarikci_filter = _get_tedarikci_filter()
 
     if not query:
-        return redirect(url_for('get_products.product_list', marketplace=marketplace_filter or None))
+        return redirect(url_for('get_products.product_list', marketplace=marketplace_filter or None,
+                                tedarikci=tedarikci_filter or None))
 
     # Ürünleri bul
     products_query = _apply_marketplace_filter(Product.query, marketplace_filter)
+    products_query = _apply_tedarikci_filter(products_query, tedarikci_filter)
     if search_type == 'model_code':
         found_products = products_query.filter(func.lower(Product.product_main_id) == query.lower()).all()
     elif search_type == 'barcode':
@@ -1069,7 +1103,9 @@ def search_products():
         search_mode=True,
         search_query=query,
         search_type=search_type,
-        marketplace_filter=marketplace_filter
+        marketplace_filter=marketplace_filter,
+        tedarikci_filter=tedarikci_filter,
+        tedarikciler=_tedarikci_listesi()
     )
 
 

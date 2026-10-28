@@ -28,7 +28,7 @@ FUNCTIONS = {
     '_get_per_page', '_sort_clause', '_group_sort_clause', '_normalize_details',
     '_append_details', '_page_bounds', '_merge_order_rows', '_overdue_order_numbers',
     '_decorate_order_priority', 'get_order_list', 'process_order_details',
-    'get_filtered_orders',
+    'get_filtered_orders', 'get_archived_order_list',
 }
 
 
@@ -198,6 +198,24 @@ class OrderListArchiveTests(unittest.TestCase):
                 with self.subTest(source=source, status=status):
                     result = self.listing(f'kaynak={source}&search=Test', status=status)
                     self.assertEqual({o.order_number for o in result['orders']}, expected)
+
+    def test_archived_status_filter_lists_only_archives(self):
+        self.add('OrderCreated', 'LIVE-1')
+        self.add('OrderDelivered', 'LIVE-2')
+        self.add('OrderCreated', 'ARCH-1', details=json.dumps([{'barcode': 'STALE', 'quantity': 9}]))
+        self.add('Archive', 'ARCH-1', customer_name='Ayse')
+        self.add('Archive', 'SH-2')
+        with self.app.test_request_context('/order-list/archived'):
+            result = self.ns['get_archived_order_list']()
+        self.assertEqual(result['active_list'], 'archived')
+        self.assertEqual({o.order_number for o in result['orders']}, {'ARCH-1', 'SH-2'})
+        self.assertTrue(all(o.is_archived for o in result['orders']))
+        for query, expected in (('kaynak=trendyol', {'ARCH-1'}), ('kaynak=shopify', {'SH-2'}),
+                                ('search=Ayse', {'ARCH-1'})):
+            with self.subTest(query=query):
+                with self.app.test_request_context('/order-list/archived?' + query):
+                    result = self.ns['get_archived_order_list']()
+                self.assertEqual({o.order_number for o in result['orders']}, expected)
 
     def render_card(self, card):
         source = (ROOT / 'templates/order_list.html').read_text(encoding='utf-8')

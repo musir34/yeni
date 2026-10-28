@@ -643,6 +643,82 @@ def get_filtered_orders(status):
         return redirect(url_for('siparis_hazirla.index'))
 
 
+def get_archived_order_list():
+    """Durum filtresi 'Arşivlenenler': yalnız arşiv kayıtları, aynı kart/sayfalama düzeniyle."""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = _get_per_page()
+        search_query = request.args.get('search', None)
+        sort_key = _get_sort_key()
+        kaynak = _get_kaynak()
+        overdue_orders = _get_overdue_orders()
+        AllOrders = aliased(_with_archived_orders(get_union_all_orders()).subquery())
+        q = db.session.query(AllOrders).filter(AllOrders.c.status_name == 'Archived')
+        if kaynak == 'shopify':
+            q = q.filter(AllOrders.c.order_number.like('SH-%'))
+        elif kaynak == 'trendyol':
+            q = q.filter(~AllOrders.c.order_number.like('SH-%'))
+
+        if search_query:
+            search_query = search_query.strip()
+            q = q.filter(
+                or_(
+                    AllOrders.c.order_number.ilike(f"%{search_query}%"),
+                    AllOrders.c.customer_name.ilike(f"%{search_query}%"),
+                    AllOrders.c.customer_surname.ilike(f"%{search_query}%"),
+                    (AllOrders.c.customer_name + ' ' + AllOrders.c.customer_surname).ilike(f"%{search_query}%")
+                )
+            )
+
+        grouped_orders = (
+            q.with_entities(AllOrders.c.order_number.label('order_number'))
+            .group_by(AllOrders.c.order_number)
+        )
+        total_orders_count = grouped_orders.count()
+        page, total_pages, offset = _page_bounds(page, per_page, total_orders_count)
+        page_order_rows = (
+            grouped_orders
+            .order_by(*_group_sort_clause(
+                sort_key, AllOrders.c.order_date,
+                AllOrders.c.agreed_delivery_date, AllOrders.c.estimated_delivery_end
+            ))
+            .offset(offset)
+            .limit(per_page)
+            .all()
+        ) if total_orders_count else []
+        page_order_numbers = [r.order_number for r in page_order_rows]
+
+        rows = []
+        if page_order_numbers:
+            order_index = {order_number: idx for idx, order_number in enumerate(page_order_numbers)}
+            rows = (
+                q.filter(AllOrders.c.order_number.in_(page_order_numbers))
+                .order_by(*_sort_clause(
+                    sort_key, AllOrders.c.order_date,
+                    AllOrders.c.agreed_delivery_date, AllOrders.c.estimated_delivery_end
+                ))
+                .all()
+            )
+            rows.sort(key=lambda r: order_index.get(r.order_number, len(order_index)))
+
+        orders = _merge_order_rows(rows, lambda r: r.status_name)
+        process_order_details(orders)
+        _decorate_order_priority(orders)
+
+        return render_template(
+            'order_list.html', orders=orders, page=page, total_pages=total_pages,
+            total_orders_count=total_orders_count, search_query=search_query,
+            sort_key=sort_key, overdue_orders=overdue_orders, kaynak=kaynak,
+            active_list='archived', per_page=per_page, per_page_options=PER_PAGE_OPTIONS,
+            show_overdue=False,
+            order_pull_enabled=_get_order_pull_enabled()
+        )
+    except Exception as e:
+        logger.error(f"Hata: get_archived_order_list - {e}")
+        flash("Arşivlenen siparişler yüklenirken hata oluştu.", "danger")
+        return redirect(url_for('siparis_hazirla.index'))
+
+
 def search_order_by_number(order_number):
     try:
         logger.debug(f"Sipariş aranıyor: {order_number}")
@@ -677,7 +753,10 @@ def order_list_shipped(): return get_filtered_orders('Kargoda')
 def order_list_delivered(): return get_filtered_orders('Teslim Edildi')
 
 @order_list_service_bp.route('/order-list/cancelled')
-def order_list_cancelled(): return get_filtered_orders('İptal Edildi') 
+def order_list_cancelled(): return get_filtered_orders('İptal Edildi')
+
+@order_list_service_bp.route('/order-list/archived', methods=['GET'])
+def order_list_archived(): return get_archived_order_list()
 
 @order_list_service_bp.route('/order-label', methods=['POST'])
 def order_label():
