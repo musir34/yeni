@@ -38,15 +38,15 @@
         .bg-orange { background-color: #fd7e14 !important; }
 
         /* Filtreler: tek satır, açılır menü (durum renkleri korunur) */
-        .filtre-bar h5 { font-size: 1rem; font-weight: 700; white-space: nowrap; }
+        .list-toolbar-actions h5 { font-size: 1rem; font-weight: 700; white-space: nowrap; }
         .filtre-dd .btn { white-space: nowrap; font-weight: 600; }
         .filtre-dd .dropdown-menu { min-width: 220px; border-radius: 10px; padding: .35rem; }
         .filtre-dd .dropdown-item { border-radius: 8px; padding: .45rem .75rem; font-size: .9rem; }
         .filtre-dd .dropdown-item.active-filter { font-weight: 700; background: rgba(183,110,121,.10); }
         .filtre-dd .dropdown-header { font-size: .72rem; text-transform: uppercase; letter-spacing: .4px; }
         .durum-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: .55rem; flex: 0 0 11px; box-shadow: 0 0 0 2px rgba(0,0,0,.06); }
-        .list-toolbar-actions .btn, .list-toolbar-actions .form-select { padding: .3rem .6rem; font-size: .85rem; }
-        .list-toolbar-actions .form-select { height: calc(1.5em + .6rem + 2px); }
+        .list-toolbar-actions .btn, .filtre-bar .form-select { padding: .3rem .6rem; font-size: .85rem; }
+        .filtre-bar .form-select { height: calc(1.5em + .6rem + 2px); }
 
         .order-search-form { flex: 1 1 320px; max-width: 420px; }
         .order-search-group .form-control { min-width: 0; }
@@ -184,32 +184,25 @@
             .filtre-bar { width: 100%; }
             .filtre-bar .btn { width: auto; }
 
-            .d-flex.justify-content-between.align-items-center.my-4 {
+            .list-toolbar .filtre-bar,
+            .list-toolbar-actions,
+            .list-toolbar-actions > .d-flex {
                 flex-direction: column;
-                gap: 0.75rem;
                 align-items: stretch !important;
-            }
-            .d-flex.justify-content-between.align-items-center.my-4 .d-flex.gap-2 {
-                flex-direction: column;
                 width: 100%;
             }
-            .d-flex.justify-content-between.align-items-center.my-4 .d-flex.gap-2 form {
-                width: 100%;
-            }
-            .d-flex.justify-content-between.align-items-center.my-4 .d-flex.gap-2 .btn {
+            .list-toolbar form,
+            .list-toolbar-actions .btn {
                 width: 100%;
             }
             .list-toolbar .form-select,
             .list-toolbar .input-group {
                 width: 100% !important;
             }
-            .list-toolbar-actions {
-                width: 100%;
-            }
             .order-search-form { flex-basis: auto; max-width: none; }
             .list-toolbar .order-search-group { display: flex; flex-wrap: nowrap; }
             .list-toolbar .order-search-group .form-control { width: auto !important; flex: 1 1 auto; }
-            .d-flex.justify-content-between.align-items-center.my-4 .d-flex.gap-2 .order-search-submit {
+            .list-toolbar .order-search-submit {
                 flex: 0 0 48px; width: 48px;
             }
 
@@ -296,17 +289,18 @@
             {{ url_for(request.endpoint, page=page_no, search=request.args.get('search', ''), sort=sort_key, per_page=per_page, show_overdue=(1 if show_overdue else none), kaynak=kaynak_param) }}
         {%- endmacro %}
         <div class="page-header d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center">
-                <img src="/static/logo/gullu.png" alt="Güllü Logo" style="height:40px; margin-right: 15px;">
-                <h2 class="mb-0">Sipariş Takip</h2>
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="d-flex align-items-center">
+                    <img src="/static/logo/gullu.png" alt="Güllü Logo" style="height:40px; margin-right: 15px;">
+                    <h2 class="mb-0">Sipariş Listesi</h2>
+                </div>
+                {% if overdue_orders %}
+                <a class="overdue-pill" href="{{ url_for('order_list_service.order_list_all', sort='deadline_asc', show_overdue=1, search=request.args.get('search', ''), per_page=per_page, kaynak=kaynak_param) }}" title="Geciken siparişleri teslim süresine göre göster">
+                    <i class="fas fa-exclamation-triangle"></i> Geciken: {{ overdue_orders|length }}
+                </a>
+                {% endif %}
             </div>
-            {% if overdue_orders %}
-            <a class="overdue-pill" href="{{ url_for('order_list_service.order_list_all', sort='deadline_asc', show_overdue=1, search=request.args.get('search', ''), per_page=per_page, kaynak=kaynak_param) }}" title="Geciken siparişleri teslim süresine göre göster">
-                <i class="fas fa-exclamation-triangle"></i> Geciken: {{ overdue_orders|length }}
-            </a>
-            {% endif %}
-            <div class="user-actions d-flex align-items-center gap-3">
-                <span><i class="fas fa-user-circle"></i> {{ session['first_name'] }} {{ session['last_name'] }}</span>
+            <div class="user-actions d-flex align-items-center gap-2">
                 <button id="btnToggleOrderPull" class="btn btn-sm {% if order_pull_enabled %}btn-success{% else %}btn-danger{% endif %} text-white" title="Otomatik sipariş çekmeyi aç/kapat">
                     <i id="orderPullIcon" class="fas {% if order_pull_enabled %}fa-play-circle{% else %}fa-pause-circle{% endif %}"></i>
                     <span id="orderPullLabel">Oto Çekme: {% if order_pull_enabled %}Aktif{% else %}Kapalı{% endif %}</span>
@@ -314,7 +308,14 @@
                 <a href="{{ url_for('siparis_hazirla.index') }}" class="btn btn-sm btn-primary text-white"><i class="fas fa-box"></i> Sipariş Hazırla</a>
                 <a href="{{ url_for('siparis_zaman.page') }}" class="btn btn-sm btn-dark text-white"><i class="fas fa-clock"></i> Sipariş Takip</a>
                 <a href="{{ url_for('home.home') }}" class="btn btn-sm btn-outline-secondary">Ana Sayfa</a>
-                <form method="POST" action="{{ url_for('logout') }}" class="mb-0"><button type="submit" class="btn btn-sm btn-danger">Çıkış Yap</button></form>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-user-circle"></i> {{ session['first_name'] }} {{ session['last_name'] }}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li><form method="POST" action="{{ url_for('logout') }}" class="mb-0"><button type="submit" class="dropdown-item text-danger"><i class="fas fa-sign-out-alt me-2"></i>Çıkış Yap</button></form></li>
+                    </ul>
+                </div>
             </div>
         </div>
 
@@ -338,9 +339,19 @@
         {% set ns2 = namespace(aktif=kaynaklar[0]) %}
         {% for k in kaynaklar %}{% if k[0] == kaynak %}{% set ns2.aktif = k %}{% endif %}{% endfor %}
 
-        <div class="list-toolbar d-flex justify-content-between align-items-center my-4 gap-3">
+        {# Araç çubuğu: üst satır arama + tüm filtreler, alt satır toplam + eylemler #}
+        <div class="list-toolbar my-4">
              <div class="filtre-bar d-flex align-items-center gap-2 flex-wrap">
-                <h5 class="mb-0 me-1">Toplam Sipariş: <span id="orderTotalCount">{{ total_orders_count }}</span></h5>
+                <form id="orderSearchForm" class="order-search-form" method="GET" action="{{ url_for(request.endpoint) }}">
+                    <input type="hidden" name="sort" value="{{ sort_key }}">
+                    <input type="hidden" name="per_page" value="{{ per_page }}">
+                    {% if kaynak_param %}<input type="hidden" name="kaynak" value="{{ kaynak_param }}">{% endif %}
+                    {% if show_overdue %}<input type="hidden" name="show_overdue" value="1">{% endif %}
+                    <div class="input-group order-search-group">
+                        <input type="text" class="form-control" name="search" placeholder="Sipariş No veya Müşteri Adı" value="{{ request.args.get('search', '') }}">
+                        <button class="btn btn-secondary order-search-submit" type="submit" title="Sipariş ara" aria-label="Sipariş ara"><i class="fas fa-search"></i></button>
+                    </div>
+                </form>
 
                 <div class="dropdown filtre-dd">
                     <button class="btn btn-sm {{ ns.aktif[3] }} dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Sipariş durumu">
@@ -373,19 +384,6 @@
                     </ul>
                 </div>
 
-                <a href="{{ url_for('new_orders_service.prepare_new_orders') }}" class="btn btn-sm btn-info text-white" title="Yeni siparişleri toplu hazırla"><i class="fas fa-boxes me-1"></i>Toplu Ürün Hazırla</a>
-             </div>
-             <div class="list-toolbar-actions d-flex gap-2 flex-wrap align-items-center">
-                {# Toplu kargo firması değiştirme — yalnız kargoya verilmemiş Trendyol siparişleri seçilebilir #}
-                <div class="kargo-toplu-wrap">
-                    <label title="Bu sayfadaki seçilebilir siparişlerin tümünü seç"><input type="checkbox" id="kargoHepsiSec"> Tümünü seç</label>
-                    <button type="button" class="btn btn-outline-dark" id="btnKargoDegistir" disabled title="Seçili siparişlerin kargo firmasını Trendyol'da değiştir">
-                        <i class="fas fa-truck"></i> Kargo Firmasını Değiştir <span class="badge bg-dark" id="kargoSeciliSayi">0</span>
-                    </button>
-                </div>
-                <form method="POST" action="{{ url_for('order_service.fetch_trendyol_orders_route') }}">
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-sync-alt"></i> Siparişleri Güncelle</button>
-                </form>
                 <select class="form-select w-auto" aria-label="Sıralama" onchange="applySort(this.value)">
                     <option value="date_desc" {% if sort_key == 'date_desc' or not sort_key %}selected{% endif %}>Sipariş Tarihi (Yeni → Eski)</option>
                     <option value="deadline_asc" {% if sort_key == 'deadline_asc' %}selected{% endif %}>Teslimata Kalan Süre (Az → Çok)</option>
@@ -396,16 +394,22 @@
                     <option value="{{ option }}" {% if per_page == option %}selected{% endif %}>{{ option }} / sayfa</option>
                     {% endfor %}
                 </select>
-                <form id="orderSearchForm" class="order-search-form" method="GET" action="{{ url_for(request.endpoint) }}">
-                    <input type="hidden" name="sort" value="{{ sort_key }}">
-                    <input type="hidden" name="per_page" value="{{ per_page }}">
-                    {% if kaynak_param %}<input type="hidden" name="kaynak" value="{{ kaynak_param }}">{% endif %}
-                    {% if show_overdue %}<input type="hidden" name="show_overdue" value="1">{% endif %}
-                    <div class="input-group order-search-group">
-                        <input type="text" class="form-control" name="search" placeholder="Sipariş No veya Müşteri Adı" value="{{ request.args.get('search', '') }}">
-                        <button class="btn btn-secondary order-search-submit" type="submit" title="Sipariş ara" aria-label="Sipariş ara"><i class="fas fa-search"></i></button>
+             </div>
+             <div class="list-toolbar-actions d-flex justify-content-between align-items-center gap-2 flex-wrap mt-3">
+                <h5 class="mb-0">Toplam Sipariş: <span id="orderTotalCount">{{ total_orders_count }}</span></h5>
+                <div class="d-flex gap-2 flex-wrap align-items-center">
+                    <form method="POST" action="{{ url_for('order_service.fetch_trendyol_orders_route') }}" class="mb-0">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-sync-alt"></i> Siparişleri Güncelle</button>
+                    </form>
+                    <a href="{{ url_for('new_orders_service.prepare_new_orders') }}" class="btn btn-info text-white" title="Yeni siparişleri toplu hazırla"><i class="fas fa-boxes me-1"></i>Toplu Ürün Hazırla</a>
+                    {# Toplu kargo firması değiştirme — yalnız kargoya verilmemiş Trendyol siparişleri seçilebilir #}
+                    <div class="kargo-toplu-wrap">
+                        <label title="Bu sayfadaki seçilebilir siparişlerin tümünü seç"><input type="checkbox" id="kargoHepsiSec"> Tümünü seç</label>
+                        <button type="button" class="btn btn-outline-dark" id="btnKargoDegistir" disabled title="Seçili siparişlerin kargo firmasını Trendyol'da değiştir">
+                            <i class="fas fa-truck"></i> Kargo Firmasını Değiştir <span class="badge bg-dark" id="kargoSeciliSayi">0</span>
+                        </button>
                     </div>
-                </form>
+                </div>
              </div>
         </div>
 

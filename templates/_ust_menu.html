@@ -24,17 +24,13 @@
        title="Sipariş Hazırla" id="siparisHazirlaBtn">
       <i class="fas fa-box-open"></i> Sipariş Hazırla
     </a>
-    {# 📱 Telefon eşlik: telefonda açılır, PC'deki sipariş hazırla ekranının QR'ını okutur #}
+    {# 📱 Telefon eşlik: telefonda açılır, PC'deki sipariş hazırla ekranının QR'ını okutur (anasayfada gösterilmez) #}
+    {% if request.endpoint != 'home.home' %}
     <a href="{{ url_for('hazirla_telefon.sayfa') }}" class="btn btn-info text-white" title="Telefonda aç: sipariş hazırla ekranına QR ile bağlan">
       <i class="fas fa-mobile-alt"></i> Telefon Eşlik
     </a>
-{% endif %}
-
-    {% if sayfa_erisebilir('alissa') %}
-    <a href="{{ url_for('alissa.index') }}" class="btn btn-dark" title="Muhammet Alissa haftalık hesap">
-      <i class="fas fa-handshake"></i> Muhammet Alissa
-    </a>
     {% endif %}
+{% endif %}
 
     <div class="dropdown">
       <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Siparişler</button>
@@ -91,7 +87,9 @@
         {% if finans_sayfalari %}
         <li><hr class="dropdown-divider"></li>
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Finans</div></li>
-        {% for s in finans_sayfalari %}
+        {# Alt sayfalar (Cari, Kart, Excel) menüde ayrı çıkmaz; panelin içinden girilir. Yalnız alt sayfa yetkisi olana ilki gösterilir. #}
+        {% set finans_menu = finans_sayfalari|selectattr('kod', 'in', ['finans', 'kasa'])|list or finans_sayfalari[:1] %}
+        {% for s in finans_menu %}
         <li><a class="dropdown-item" href="{{ url_for(s.menu_endpoint) }}"><i class="fas {{ 'fa-cash-register' if s.kod == 'kasa' else 'fa-wallet' }} me-2"></i>{{ s.menu_etiketi }}</a></li>
         {% endfor %}
         {% endif %}
@@ -116,30 +114,7 @@
       </ul>
     </div>
 
-{% if sayfa_erisebilir('ai_asistan') %}
-    <a href="{{ url_for('ai_asistan.sayfa') }}" class="btn btn-dark" title="AI Asistan"><i class="fas fa-robot"></i> AI Asistan</a>
-{% endif %}
-
-    <div class="dropdown">
-      <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Kullanıcı</button>
-      <ul class="dropdown-menu dropdown-menu-end">
-        <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Yönetim</div></li>
-        {% if sayfa_erisebilir('kullanici_yonetimi') %}<li><a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a></li>{% endif %}
-        {% if sayfa_erisebilir('kullanici_hareketleri') %}
-        <li><a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}"><i class="fas fa-history me-2"></i>Kullanıcı Hareketleri</a></li>
-        {% endif %}
-        {% if sayfa_erisebilir('whatsapp_mesajlari') %}
-        <li><hr class="dropdown-divider"></li>
-        <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Mesajlar</div></li>
-        <li><a class="dropdown-item" href="{{ url_for('whatsapp_duyuru.sayfa') }}"><i class="fab fa-whatsapp me-2"></i>WhatsApp Mesajları</a></li>
-        {% endif %}
-        <li><hr class="dropdown-divider"></li>
-        <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Hesabım</div></li>
-        <li><a class="dropdown-item" href="{{ url_for('login_logout.cihazlarim') }}"><i class="fas fa-mobile-alt me-2"></i>Cihazlarım</a></li>
-      </ul>
-    </div>
-
-    <!-- Ayarlar -->
+    <!-- Ayarlar (AI Asistan ve eski Kullanıcı menüsü de burada) -->
     <div class="dropdown">
       <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"
               style="background:linear-gradient(135deg,#495057,#212529);color:white;">
@@ -156,7 +131,31 @@
         <li><button class="dropdown-item d-flex align-items-center gap-2 gs-dm-opt" data-dm="auto" onclick="window.GS&&GS.setDarkMode('auto')">
           <i class="fas fa-clock" style="color:#0ea5e9"></i> Otomatik
         </button></li>
+        {% if sayfa_erisebilir('ai_asistan') %}
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="{{ url_for('ai_asistan.sayfa') }}"><i class="fas fa-robot me-2"></i>AI Asistan</a></li>
+        {% endif %}
+        <li><hr class="dropdown-divider"></li>
+        <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Yönetim</div></li>
+        {% if sayfa_erisebilir('kullanici_yonetimi') %}<li><a class="dropdown-item" href="{{ url_for('approve_users') }}">Kullanıcı Yönetimi</a></li>{% endif %}
+        {% if sayfa_erisebilir('kullanici_hareketleri') %}
+        <li><a class="dropdown-item" href="{{ url_for('user_logs.view_logs') }}"><i class="fas fa-history me-2"></i>Kullanıcı Hareketleri</a></li>
+        {% endif %}
+        {% if sayfa_erisebilir('whatsapp_mesajlari') %}
+        <li><hr class="dropdown-divider"></li>
+        <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Mesajlar</div></li>
+        <li><a class="dropdown-item" href="{{ url_for('whatsapp_duyuru.sayfa') }}"><i class="fab fa-whatsapp me-2"></i>WhatsApp Mesajları</a></li>
+        {% endif %}
+        <li><hr class="dropdown-divider"></li>
+        <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Hesabım</div></li>
+        <li><a class="dropdown-item" href="{{ url_for('login_logout.cihazlarim') }}"><i class="fas fa-mobile-alt me-2"></i>Cihazlarım</a></li>
       </ul>
     </div>
+
+    {% if sayfa_erisebilir('alissa') %}
+    <a href="{{ url_for('alissa.index') }}" class="btn btn-dark" title="Muhammet Alissa haftalık hesap">
+      <i class="fas fa-handshake"></i> Muhammet Alissa
+    </a>
+    {% endif %}
   </div>
 

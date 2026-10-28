@@ -113,6 +113,8 @@
     /* 📱 Telefon eşlik: üst çubuk düğmesi + durum rozeti; telefondan okutulan kutu mavi çerçeveli */
     #telefonBtn{background:linear-gradient(135deg,#0d6efd,#0a58ca);display:inline-flex;align-items:center;gap:8px;padding:8px 14px;font-size:.85rem}
     #telefonBtn.bagli{background:linear-gradient(135deg,#198754,#146c43)}
+    .telefon-split{background:linear-gradient(135deg,#0a58ca,#084298);color:#fff;padding:8px 10px}
+    #telefonBtn.bagli + .telefon-split{background:linear-gradient(135deg,#146c43,#0f5132)}
     .telefon-rozet{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:700;background:rgba(255,255,255,.25);color:#fff;font-variant-numeric:tabular-nums}
     .telefon-rozet.bekliyor{background:#ffc107;color:#000}
     .telefon-rozet.bagli{background:#fff;color:#146c43}
@@ -461,6 +463,7 @@
       }
       .btn-group-top .dropdown{flex:1 1 auto}
       .btn-group-top .dropdown .btn{width:100%}
+      .btn-group-top .dropdown .telefon-split{width:auto;flex:0 0 auto}
       .dropdown-menu{left:auto!important;right:0!important;min-width:auto;width:auto}
       .dropdown-item{font-size:.78rem}
       .custom-switch{margin-top:4px}
@@ -629,7 +632,6 @@
         <a class="dropdown-item" href="{{ url_for('degisim_talep') }}"><i class="fas fa-exchange-alt me-2"></i>Değişim Talepleri</a>
         <a class="dropdown-item" href="{{ url_for('uretim.index') }}"><i class="fas fa-industry me-2"></i>Üretim Siparişleri</a>
         <a class="dropdown-item" href="{{ url_for('kargo_mutabakat_bp.kargo_mutabakat_page') }}"><i class="fas fa-truck me-2"></i>Kargo Mutabakat</a>
-        <a class="dropdown-item" href="{{ url_for('hazirla_telefon.sayfa') }}"><i class="fas fa-mobile-alt me-2"></i>Telefon Eşlik (telefonda aç)</a>
         <hr class="dropdown-divider">
         <div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Geçmiş &amp; Takip</div>
         <a class="dropdown-item" href="{{ url_for('display_archive') }}"><i class="fas fa-box me-2"></i>Arşiv</a>
@@ -661,17 +663,20 @@
 
 
 
-    {% if session['role'] in ['admin','manager'] %}
-    <a href="{{ url_for('kasa.kasa_sayfasi') }}" class="btn btn-dark">
-      <i class="fas fa-cash-register"></i> Kasa
-    </a>
-    {% endif %}
-
-    <!-- 📱 Telefon eşlik: QR ile telefonu bu ekrana bağla (hazirla-telefon-pc.js) -->
-    <button type="button" class="btn" id="telefonBtn" title="Telefonu bu ekrana bağla">
-      <i class="fas fa-mobile-alt"></i> Telefon
-      <span class="telefon-rozet kapali" id="telefonDurum">Bağlı değil</span>
-    </button>
+    <!-- 📱 Telefon eşlik: QR ile telefonu bu ekrana bağla (hazirla-telefon-pc.js);
+         yanındaki ok, telefonda açılacak Telefon Eşlik sayfasının bağlantısını verir -->
+    <div class="btn-group dropdown">
+      <button type="button" class="btn" id="telefonBtn" title="Telefonu bu ekrana bağla">
+        <i class="fas fa-mobile-alt"></i> Telefon
+        <span class="telefon-rozet kapali" id="telefonDurum">Bağlı değil</span>
+      </button>
+      <button type="button" class="btn dropdown-toggle dropdown-toggle-split telefon-split" data-bs-toggle="dropdown" aria-expanded="false" title="Telefon Eşlik">
+        <span class="visually-hidden">Telefon menüsü</span>
+      </button>
+      <div class="dropdown-menu dropdown-menu-end">
+        <a class="dropdown-item" href="{{ url_for('hazirla_telefon.sayfa') }}"><i class="fas fa-mobile-alt me-2"></i>Telefon Eşlik (telefonda aç)</a>
+      </div>
+    </div>
 
     <!-- Ayarlar -->
     <div class="dropdown">
