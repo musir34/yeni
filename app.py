@@ -141,6 +141,10 @@ app.register_blueprint(ai_asistan_bp)
 from urun_yukleme.routes import urun_yukleme_bp
 app.register_blueprint(urun_yukleme_bp)
 
+# Agentation görsel geri bildirim çubuğu (yalnız sahip + 2FA görür)
+from agentation_cubugu import agentation_bp
+app.register_blueprint(agentation_bp)
+
 # 🔎 Sipariş audit log: tablo + event listener'lar
 try:
     from order_audit import ensure_table_exists as _audit_ensure, install_listeners as _audit_install
