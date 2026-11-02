@@ -5,11 +5,15 @@ Komutan kararı (2026-10-07): üretim modu dışındaki modeller iki grupta erit
 Alissa (TED-003) modelleri kapsam dışı, listelere yazılmaz. Model listeleri sabittir;
 stok rakamları her açılışta central_stock'tan canlı okunur.
 """
+import json
 import logging
+from datetime import datetime, timedelta
 
 from sqlalchemy import func
 
-from models import db, CentralStock, Product
+from models import (db, CentralStock, Product, OrderCreated, OrderHazirlaniyor,
+                    OrderPicking, OrderShipped, OrderDelivered)
+from time_utils import IST, ist_to_utc
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +39,57 @@ AGIR_GIDEN_MODELLER = [
 ]
 
 
+# Bugünkü sipariş sayımı: anasayfa günlük sipariş kutucuğuyla aynı 5 tablo.
+# İptaller (orders_cancelled) bilinçle dışarıda (Komutan kararı 2026-11-02).
+_BUGUN_TABLOLARI = (OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped, OrderDelivered)
+
+
+def _bugun_utc_araligi(simdi: datetime | None = None) -> tuple[datetime, datetime]:
+    """İstanbul bugünü 00:00–23:59 → naive UTC [başlangıç, bitiş) (order_date naive UTC saklanır)."""
+    simdi = (simdi or datetime.now(IST)).astimezone(IST)
+    gun_basi = datetime(simdi.year, simdi.month, simdi.day)
+    return ist_to_utc(gun_basi), ist_to_utc(gun_basi + timedelta(days=1))
+
+
+def _siparis_barkodlari(details) -> set[str]:
+    try:
+        det = json.loads(details) if isinstance(details, str) else details
+    except (json.JSONDecodeError, TypeError):
+        return set()
+    if not isinstance(det, list):
+        return set()
+    return {str(d.get("barcode") or "").strip() for d in det if isinstance(d, dict)} - {""}
+
+
+def _bugunku_siparisler(modeller: list[str]) -> dict[str, int]:
+    """Model kodu → bugün (İstanbul) gelen benzersiz Trendyol sipariş sayısı.
+    Sipariş, kalem barkodundan ya da product_main_id kolonundan modele bağlanır;
+    aynı sipariş bir modele bir kez sayılır. Hata → boş sözlük (kart düşmez)."""
+    try:
+        hedef = set(modeller)
+        barkod_model = {str(bc).strip(): str(m).strip() for bc, m in
+                        (db.session.query(Product.barcode, Product.product_main_id)
+                         .filter(Product.product_main_id.in_(modeller)).all()) if bc}
+        bas, bit = _bugun_utc_araligi()
+        model_siparis: dict[str, set[str]] = {}
+        for M in _BUGUN_TABLOLARI:
+            for no, details, main_id in (db.session.query(M.order_number, M.details, M.product_main_id)
+                                         .filter(M.order_date >= bas, M.order_date < bit).all()):
+                bagli = {barkod_model[bc] for bc in _siparis_barkodlari(details) if bc in barkod_model}
+                bagli |= {x.strip() for x in str(main_id or "").split(",")} & hedef
+                for m in bagli:
+                    model_siparis.setdefault(m, set()).add(str(no))
+        return {m: len(n) for m, n in model_siparis.items()}
+    except Exception:
+        logger.warning("[ERITME] bugünkü siparişler okunamadı", exc_info=True)
+        db.session.rollback()
+        return {}
+
+
 def _grup_stoklari(modeller: list[str]) -> dict:
     """Verilen modellerin merkezi stoğunu model bazında toplar.
 
-    Dönüş: {'modeller': [{'kod', 'stok'}...] (liste sırası korunur), 'toplam': int}
+    Dönüş: {'modeller': [{'kod', 'stok', 'bugun'}...] (liste sırası korunur), 'toplam': int}
     Hata → sıfırlar (anasayfa bu yüzden düşmez).
     """
     try:
@@ -52,7 +103,8 @@ def _grup_stoklari(modeller: list[str]) -> dict:
         logger.warning("[ERITME] grup stoğu okunamadı", exc_info=True)
         db.session.rollback()
         stok = {}
-    liste = [{'kod': m, 'stok': stok.get(m, 0)} for m in modeller]
+    bugun = _bugunku_siparisler(modeller)
+    liste = [{'kod': m, 'stok': stok.get(m, 0), 'bugun': bugun.get(m, 0)} for m in modeller]
     return {'modeller': liste, 'toplam': sum(x['stok'] for x in liste)}
 
 

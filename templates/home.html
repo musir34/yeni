@@ -93,6 +93,10 @@
     }
     .eritme-model small { color:#777; }
     .eritme-model--sifir { opacity:.45; text-decoration:line-through; }
+    .eritme-model__bugun { font-size:.72rem; font-weight:700; border-radius:8px; padding:0 5px; background:#e8f5e9; color:#2e7d32; }
+    .eritme-model__bugun--yok { background:transparent; color:#aaa; font-weight:400; }
+    html.gs-dark .eritme-model__bugun { background:rgba(76,175,80,.2); color:#8fd694; }
+    html.gs-dark .eritme-model__bugun--yok { background:transparent; color:#888; }
     html.gs-dark .eritme-grup { border-color:#333; }
     html.gs-dark .eritme-grup__baslik, html.gs-dark .eritme-model { color:#ddd; }
     html.gs-dark .eritme-model { background:rgba(255,255,255,.08); }
@@ -451,7 +455,7 @@
     <div class="card-soft p-3 mt-3 eritme-card">
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
         <h5 class="mb-0">🎯 Görev: Bu Modeller Eritilecek</h5>
-        <span class="text-muted small">Hedef: elde 1 çift kalmayacak · stoklar canlı</span>
+        <span class="text-muted small">Hedef: elde 1 çift kalmayacak · stoklar canlı · 🛒 bugünkü sipariş</span>
       </div>
       <div class="input-group input-group-sm mb-3">
         <span class="input-group-text"><i class="fas fa-search" aria-hidden="true"></i></span>
@@ -488,8 +492,9 @@
             <div class="collapse" id="eritme-{{ key }}">
               <div class="eritme-modeller mt-2">
                 {% for m in grup.modeller %}
-                <span class="eritme-model{% if m.stok == 0 %} eritme-model--sifir{% endif %}" data-model-kodu="{{ m.kod }}" title="Model {{ m.kod }} · {{ m.stok }} çift">
+                <span class="eritme-model{% if m.stok == 0 %} eritme-model--sifir{% endif %}" data-model-kodu="{{ m.kod }}" title="Model {{ m.kod }} · {{ m.stok }} çift · bugün {{ m.bugun }} sipariş">
                   <strong>{{ m.kod }}</strong><small>{{ m.stok }}</small>
+                  <span class="eritme-model__bugun{% if not m.bugun %} eritme-model__bugun--yok{% endif %}" title="Bugün (00:00–23:59) gelen sipariş">🛒{{ m.bugun }}</span>
                 </span>
                 {% endfor %}
               </div>
