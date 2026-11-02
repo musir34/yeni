@@ -11,6 +11,23 @@ from logger_config import app_logger as logger
 
 gelen_yorumlar_bp = Blueprint('gelen_yorumlar_bp', __name__)
 
+SAYFA_BOYU = 100  # Gönderim listesi ve yorumlar sayfa başına kayıt (Komutan emri 2026-11-02)
+
+
+def _sayfa_no(deger) -> int:
+    try:
+        return max(1, int(deger))
+    except (TypeError, ValueError):
+        return 1
+
+
+def _sayfala(liste: list, sayfa: int) -> tuple[list, int, int]:
+    """(dilim, geçerli sayfa, toplam sayfa); taşan sayfa no son sayfaya çekilir."""
+    toplam_sayfa = max(1, -(-len(liste) // SAYFA_BOYU))
+    sayfa = min(sayfa, toplam_sayfa)
+    bas = (sayfa - 1) * SAYFA_BOYU
+    return liste[bas:bas + SAYFA_BOYU], sayfa, toplam_sayfa
+
 
 @gelen_yorumlar_bp.route('/gelen-yorumlar', methods=['GET'])
 @login_required
@@ -26,9 +43,15 @@ def gelen_yorumlar_page():
         logger.warning(f"[GELEN-YORUMLAR] Güllü Yorum verisine ulaşılamadı: {e}")
         ozet, satirlar, yorumlar, yildiz = Ozet(), [], [], YildizDagilimi({})
         hata = "Güllü Yorum verisine ulaşılamadı"
+    satir_toplam, yorum_toplam = len(satirlar), len(yorumlar)
+    satirlar, sayfa, sayfa_toplam = _sayfala(satirlar, _sayfa_no(request.args.get('sayfa')))
+    yorumlar, ysayfa, ysayfa_toplam = _sayfala(yorumlar, _sayfa_no(request.args.get('ysayfa')))
     return render_template('gelen_yorumlar.html', ozet=ozet, satirlar=satirlar, yorumlar=yorumlar,
                            yildiz=yildiz, yildizlar=YILDIZLAR, sekme=sekme,
-                           sadece_yorum=sadece_yorum, hata=hata)
+                           sadece_yorum=sadece_yorum, hata=hata,
+                           satir_toplam=satir_toplam, yorum_toplam=yorum_toplam,
+                           sayfa=sayfa, sayfa_toplam=sayfa_toplam,
+                           ysayfa=ysayfa, ysayfa_toplam=ysayfa_toplam)
 
 
 @gelen_yorumlar_bp.route('/gelen-yorumlar/iade-edildi', methods=['POST'])
@@ -38,7 +61,11 @@ def iade_edildi():
     """Teşvik iadesi yapıldı düğmesi — Güllü Yorum `mark-refunded` ile aynı tek güncelleme (Komutan kararı)."""
     order_name = (request.form.get('order_name') or '').strip()
     sekme = request.form.get('sekme') or 'gonderimler'
-    geri = redirect(url_for('gelen_yorumlar_bp.gelen_yorumlar_page', sekme=sekme))
+    # İşaretlemeden sonra aynı sayfaya (ve filtreye) dönülsün
+    geri = redirect(url_for('gelen_yorumlar_bp.gelen_yorumlar_page', sekme=sekme,
+                            filtre=request.form.get('filtre') or None,
+                            sayfa=_sayfa_no(request.form.get('sayfa')),
+                            ysayfa=_sayfa_no(request.form.get('ysayfa'))))
     if not order_name:
         flash('Sipariş numarası eksik', 'danger')
         return geri

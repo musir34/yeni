@@ -22,6 +22,26 @@
 </style>
 {% endblock %}
 {% block content %}
+{# Sayfalama (100'erli): param = 'sayfa' (gönderimler) | 'ysayfa' (yorumlar); diğer sekmenin sayfası korunur #}
+{% macro sayfalama(param, gecerli, toplam, sekme_adi) %}
+{% if toplam > 1 %}
+{% set ortak = {'sekme': sekme_adi, 'filtre': 'yorum' if sadece_yorum else None, 'sayfa': sayfa, 'ysayfa': ysayfa} %}
+<nav class="d-flex justify-content-center py-3" aria-label="Sayfalama">
+  <ul class="pagination pagination-sm mb-0 flex-wrap">
+    <li class="page-item {{ 'disabled' if gecerli <= 1 }}"><a class="page-link" href="{{ url_for('gelen_yorumlar_bp.gelen_yorumlar_page', **dict(ortak, **{param: gecerli - 1})) }}">&laquo; Önceki</a></li>
+    {% for n in range(1, toplam + 1) %}
+      {% if n == 1 or n == toplam or (n - gecerli)|abs <= 2 %}
+      <li class="page-item {{ 'active' if n == gecerli }}"><a class="page-link" href="{{ url_for('gelen_yorumlar_bp.gelen_yorumlar_page', **dict(ortak, **{param: n})) }}">{{ n }}</a></li>
+      {% elif (n - gecerli)|abs == 3 %}
+      <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% endif %}
+    {% endfor %}
+    <li class="page-item {{ 'disabled' if gecerli >= toplam }}"><a class="page-link" href="{{ url_for('gelen_yorumlar_bp.gelen_yorumlar_page', **dict(ortak, **{param: gecerli + 1})) }}">Sonraki &raquo;</a></li>
+  </ul>
+</nav>
+{% endif %}
+{% endmacro %}
+{% set iade_sayfa_alanlari %}<input type="hidden" name="sayfa" value="{{ sayfa }}"><input type="hidden" name="ysayfa" value="{{ ysayfa }}">{% if sadece_yorum %}<input type="hidden" name="filtre" value="yorum">{% endif %}{% endset %}
 <div class="d-flex align-items-center mb-4 flex-wrap gap-2">
   <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm me-3"><i class="fas fa-home"></i> Anasayfa</a>
   <h3 class="mb-0">💬 Gelen Yorumlar</h3>
@@ -77,12 +97,12 @@
 <ul class="nav nav-tabs gy-sekme mb-3" role="tablist">
   <li class="nav-item" role="presentation">
     <button class="nav-link {{ 'active' if sekme == 'gonderimler' }}" data-bs-toggle="tab" data-bs-target="#sekme-gonderimler" type="button" role="tab">
-      <i class="fas fa-paper-plane me-1"></i>Gönderimler <span class="badge bg-secondary ms-1">{{ satirlar|length }}</span>
+      <i class="fas fa-paper-plane me-1"></i>Gönderimler <span class="badge bg-secondary ms-1">{{ satir_toplam }}</span>
     </button>
   </li>
   <li class="nav-item" role="presentation">
     <button class="nav-link {{ 'active' if sekme == 'yorumlar' }}" data-bs-toggle="tab" data-bs-target="#sekme-yorumlar" type="button" role="tab">
-      <i class="fas fa-star me-1"></i>Yorumlar <span class="badge bg-secondary ms-1">{{ yorumlar|length }}</span>
+      <i class="fas fa-star me-1"></i>Yorumlar <span class="badge bg-secondary ms-1">{{ yorum_toplam }}</span>
     </button>
   </li>
 </ul>
@@ -122,7 +142,7 @@
           <td>
             <span class="badge bg-{{ s.durum_renk }}">{{ s.durum_etiketi }}</span>
             {% if s.iade_bekliyor %}<span class="badge bg-primary ms-1">{{ s.incentive_amount }} TL iade bekliyor</span>
-              <form method="post" action="{{ url_for('gelen_yorumlar_bp.iade_edildi') }}" class="d-inline" onsubmit="return confirm('{{ s.order_name }} için {{ s.incentive_amount }} TL teşvik iadesi yapıldı olarak işaretlensin mi?');"><input type="hidden" name="order_name" value="{{ s.order_name }}"><input type="hidden" name="sekme" value="gonderimler"><button type="submit" class="btn btn-sm btn-outline-success py-0 ms-1" title="İade yapıldı olarak işaretle"><i class="fas fa-check me-1"></i>İade Edildi</button></form>{% endif %}
+              <form method="post" action="{{ url_for('gelen_yorumlar_bp.iade_edildi') }}" class="d-inline" onsubmit="return confirm('{{ s.order_name }} için {{ s.incentive_amount }} TL teşvik iadesi yapıldı olarak işaretlensin mi?');"><input type="hidden" name="order_name" value="{{ s.order_name }}"><input type="hidden" name="sekme" value="gonderimler">{{ iade_sayfa_alanlari }}<button type="submit" class="btn btn-sm btn-outline-success py-0 ms-1" title="İade yapıldı olarak işaretle"><i class="fas fa-check me-1"></i>İade Edildi</button></form>{% endif %}
             {% if s.refunded_at %}<span class="badge bg-info text-dark ms-1" title="{{ s.refunded_at | ist }}">İade yapıldı</span>{% endif %}
           </td>
         </tr>
@@ -132,6 +152,7 @@
       </tbody>
     </table>
   </div>
+  {{ sayfalama('sayfa', sayfa, sayfa_toplam, 'gonderimler') }}
 </div>
 </div>
 
@@ -174,7 +195,7 @@
             <span class="badge bg-{{ y.durum_renk }}">{{ y.durum_etiketi }}</span>
             {% if y.photo_count %}<span class="badge bg-light text-dark" title="Fotoğraflar Shopify'da"><i class="fas fa-camera me-1"></i>{{ y.photo_count }}</span>{% endif %}
             {% if y.iade_bekliyor %}<span class="badge bg-primary">{{ y.incentive_amount }} TL iade bekliyor</span>
-              <form method="post" action="{{ url_for('gelen_yorumlar_bp.iade_edildi') }}" class="d-inline" onsubmit="return confirm('{{ y.order_name }} için {{ y.incentive_amount }} TL teşvik iadesi yapıldı olarak işaretlensin mi?');"><input type="hidden" name="order_name" value="{{ y.order_name }}"><input type="hidden" name="sekme" value="yorumlar"><button type="submit" class="btn btn-sm btn-outline-success py-0 ms-1" title="İade yapıldı olarak işaretle"><i class="fas fa-check me-1"></i>İade Edildi</button></form>{% endif %}
+              <form method="post" action="{{ url_for('gelen_yorumlar_bp.iade_edildi') }}" class="d-inline" onsubmit="return confirm('{{ y.order_name }} için {{ y.incentive_amount }} TL teşvik iadesi yapıldı olarak işaretlensin mi?');"><input type="hidden" name="order_name" value="{{ y.order_name }}"><input type="hidden" name="sekme" value="yorumlar">{{ iade_sayfa_alanlari }}<button type="submit" class="btn btn-sm btn-outline-success py-0 ms-1" title="İade yapıldı olarak işaretle"><i class="fas fa-check me-1"></i>İade Edildi</button></form>{% endif %}
             {% if y.refunded_at %}<span class="badge bg-info text-dark" title="{{ y.refunded_at | ist }}">İade yapıldı</span>{% endif %}
             <span class="ms-auto text-muted small">{{ y.submitted_at | ist }}</span>
           </div>
@@ -190,6 +211,7 @@
         <div class="text-center text-muted py-4">{% if hata %}Veri yok{% else %}Henüz yorum yok{% endif %}</div>
         {% endfor %}
       </div>
+      {{ sayfalama('ysayfa', ysayfa, ysayfa_toplam, 'yorumlar') }}
     </div>
   </div>
 </div>
