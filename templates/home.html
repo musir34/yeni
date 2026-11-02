@@ -93,6 +93,8 @@
     }
     .eritme-model small { color:#777; }
     .eritme-model--sifir { opacity:.45; text-decoration:line-through; }
+    .eritme-grup__bugun { font-size:.85rem; color:#2e7d32; margin-top:2px; }
+    html.gs-dark .eritme-grup__bugun { color:#8fd694; }
     .eritme-model__bugun { font-size:.72rem; font-weight:700; border-radius:8px; padding:0 5px; background:#e8f5e9; color:#2e7d32; }
     .eritme-model__bugun--yok { background:transparent; color:#aaa; font-weight:400; }
     html.gs-dark .eritme-model__bugun { background:rgba(76,175,80,.2); color:#8fd694; }
@@ -472,6 +474,7 @@
               <div>
                 <div class="eritme-grup__baslik">{{ ikon }} {{ baslik }}</div>
                 <div class="text-muted small">{{ grup.modeller|length }} model</div>
+                <div class="eritme-grup__bugun" title="Bu gruba bugün (00:00–23:59) gelen sipariş; iptaller hariç, aynı sipariş bir kez sayılır">🛒 Bugün <strong>{{ grup.bugun_toplam }}</strong> sipariş</div>
               </div>
               <div class="text-end">
                 <div class="eritme-grup__stok">{{ "{:,}".format(grup.toplam).replace(",", ".") }}</div>

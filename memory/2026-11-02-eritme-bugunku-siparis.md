@@ -8,3 +8,6 @@
 - home.html: çipte `🛒N` rozeti (0 ise soluk), gece modu rengi, başlıkta açıklama.
 - Shopify site siparişleri sayılmaz (DB'de değil, canlı API). DB değişikliği yok. Deploy bekliyor.
 - Gözlem (dokunulmadı): home.py `_ist_between` naive-UTC kolonu `timezone('Europe/Istanbul', col)` ile İstanbul saati sayıyor olabilir → günlük kutucuk penceresi ~3 saat kayık olabilir.
+- Ek (aynı gün): grup başlıklarına (Çok Satan / Ağır Giden) "🛒 Bugün N sipariş" toplamı. `_bugunku_siparisler` artık
+  model → sipariş no kümesi döner; grup toplamı kümelerin birleşimi (iki modelli sipariş bir kez sayılır, bu yüzden
+  model rozetlerinin toplamından küçük olabilir). `_grup_stoklari` dönüşüne `bugun_toplam` eklendi.

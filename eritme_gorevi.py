@@ -61,10 +61,11 @@ def _siparis_barkodlari(details) -> set[str]:
     return {str(d.get("barcode") or "").strip() for d in det if isinstance(d, dict)} - {""}
 
 
-def _bugunku_siparisler(modeller: list[str]) -> dict[str, int]:
-    """Model kodu → bugün (İstanbul) gelen benzersiz Trendyol sipariş sayısı.
+def _bugunku_siparisler(modeller: list[str]) -> dict[str, set[str]]:
+    """Model kodu → bugün (İstanbul) gelen Trendyol sipariş numaraları kümesi.
     Sipariş, kalem barkodundan ya da product_main_id kolonundan modele bağlanır;
-    aynı sipariş bir modele bir kez sayılır. Hata → boş sözlük (kart düşmez)."""
+    küme olduğu için aynı sipariş bir modele ve grup toplamına bir kez girer.
+    Hata → boş sözlük (kart düşmez)."""
     try:
         hedef = set(modeller)
         barkod_model = {str(bc).strip(): str(m).strip() for bc, m in
@@ -79,7 +80,7 @@ def _bugunku_siparisler(modeller: list[str]) -> dict[str, int]:
                 bagli |= {x.strip() for x in str(main_id or "").split(",")} & hedef
                 for m in bagli:
                     model_siparis.setdefault(m, set()).add(str(no))
-        return {m: len(n) for m, n in model_siparis.items()}
+        return model_siparis
     except Exception:
         logger.warning("[ERITME] bugünkü siparişler okunamadı", exc_info=True)
         db.session.rollback()
@@ -89,7 +90,8 @@ def _bugunku_siparisler(modeller: list[str]) -> dict[str, int]:
 def _grup_stoklari(modeller: list[str]) -> dict:
     """Verilen modellerin merkezi stoğunu model bazında toplar.
 
-    Dönüş: {'modeller': [{'kod', 'stok', 'bugun'}...] (liste sırası korunur), 'toplam': int}
+    Dönüş: {'modeller': [{'kod', 'stok', 'bugun'}...] (liste sırası korunur), 'toplam': int,
+            'bugun_toplam': int (gruba bugün gelen benzersiz sipariş)}
     Hata → sıfırlar (anasayfa bu yüzden düşmez).
     """
     try:
@@ -104,8 +106,9 @@ def _grup_stoklari(modeller: list[str]) -> dict:
         db.session.rollback()
         stok = {}
     bugun = _bugunku_siparisler(modeller)
-    liste = [{'kod': m, 'stok': stok.get(m, 0), 'bugun': bugun.get(m, 0)} for m in modeller]
-    return {'modeller': liste, 'toplam': sum(x['stok'] for x in liste)}
+    liste = [{'kod': m, 'stok': stok.get(m, 0), 'bugun': len(bugun.get(m, ()))} for m in modeller]
+    bugun_toplam = len(set().union(*bugun.values()))
+    return {'modeller': liste, 'toplam': sum(x['stok'] for x in liste), 'bugun_toplam': bugun_toplam}
 
 
 def eritme_ozeti() -> dict:

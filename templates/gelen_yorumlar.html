@@ -19,6 +19,23 @@
   .gy-dagilim td { font-size: .85rem; padding: .2rem .4rem; border: 0; vertical-align: middle; }
   .gy-sekme .nav-link { font-weight: 600; }
   .gy-table td form { vertical-align: middle; }
+  .gy-mobil-bilgi { font-size: .75rem; color: #6c757d; font-weight: 400; line-height: 1.4; margin-top: .15rem; }
+  /* Telefon: tablo satır kırsın (mobile.css + yukarıdaki nowrap sayfayı taşırıyordu); ikincil sütunlar sipariş altına iner */
+  @media (max-width: 767.98px) {
+    .gy-table td, .gy-table th { white-space: normal; font-size: .82rem; padding: .45rem .4rem; }
+    .gy-table .badge { white-space: nowrap; }
+    .gy-table td form .btn { margin-top: .25rem; }
+    .gy-stat { padding: .75rem .4rem; }
+    .gy-stat .gy-sayi { font-size: 1.5rem; }
+    .gy-card { margin-bottom: 1rem; }
+    .gy-yorum { padding: .8rem .85rem; }
+    .gy-yorum-metin { font-size: .9rem; }
+    .gy-baslik-alt { margin-left: 0 !important; flex-basis: 100%; font-size: .85rem; }
+    .gy-sekme .nav-link { padding: .45rem .7rem; }
+    .gy-card > .card-header .btn-group { width: 100%; }
+    .gy-card > .card-header .btn-group .btn { flex: 1 1 0; }
+  }
+  @media (max-width: 575.98px) { .gy-sayfa .row { --bs-gutter-x: .75rem; } }
 </style>
 {% endblock %}
 {% block content %}
@@ -42,10 +59,11 @@
 {% endif %}
 {% endmacro %}
 {% set iade_sayfa_alanlari %}<input type="hidden" name="sayfa" value="{{ sayfa }}"><input type="hidden" name="ysayfa" value="{{ ysayfa }}">{% if sadece_yorum %}<input type="hidden" name="filtre" value="yorum">{% endif %}{% endset %}
+<div class="gy-sayfa">
 <div class="d-flex align-items-center mb-4 flex-wrap gap-2">
   <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm me-3"><i class="fas fa-home"></i> Anasayfa</a>
   <h3 class="mb-0">💬 Gelen Yorumlar</h3>
-  <span class="text-muted ms-3">Güllü Yorum e-posta gönderimleri · bakan · yorum yapan</span>
+  <span class="text-muted ms-3 gy-baslik-alt">Güllü Yorum e-posta gönderimleri · bakan · yorum yapan</span>
 </div>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -122,23 +140,25 @@
       <thead class="table-light">
         <tr>
           <th>Sipariş</th>
-          <th>Müşteri</th>
-          <th>E-posta</th>
-          <th>Gönderim</th>
-          <th>İlk bakış</th>
-          <th>Yorum tarihi</th>
+          <th class="d-none d-md-table-cell">Müşteri</th>
+          <th class="d-none d-md-table-cell">E-posta</th>
+          <th class="d-none d-md-table-cell">Gönderim</th>
+          <th class="d-none d-md-table-cell">İlk bakış</th>
+          <th class="d-none d-md-table-cell">Yorum tarihi</th>
           <th>Durum</th>
         </tr>
       </thead>
       <tbody>
         {% for s in satirlar %}
         <tr>
-          <td class="fw-bold">{{ s.order_name }}</td>
-          <td>{{ s.customer_name }}</td>
-          <td class="text-muted">{{ s.email_maskeli }}</td>
-          <td>{{ s.sent_at | ist }}{% if s.reminder_sent_at %}<span class="badge bg-light text-dark ms-1" title="Hatırlatma: {{ s.reminder_sent_at | ist }}"><i class="fas fa-bell"></i></span>{% endif %}</td>
-          <td>{% if s.first_viewed_at %}{{ s.first_viewed_at | ist }}{% else %}<span class="gy-bos">Bakmadı</span>{% endif %}</td>
-          <td>{% if s.reviewed_at %}{{ s.reviewed_at | ist }}{% if s.yorum_sayisi > 1 %} <span class="badge bg-success">{{ s.yorum_sayisi }} ürün</span>{% endif %}{% else %}<span class="gy-bos">Yorum yok</span>{% endif %}</td>
+          <td class="fw-bold">{{ s.order_name }}
+            <div class="d-md-none gy-mobil-bilgi">{{ s.customer_name }}{% if s.email_maskeli %} · {{ s.email_maskeli }}{% endif %}<br>
+              Gönderim {{ s.sent_at | ist }}{% if s.reminder_sent_at %} · 🔔{% endif %}{% if s.first_viewed_at %}<br>Baktı {{ s.first_viewed_at | ist }}{% endif %}{% if s.reviewed_at %}<br>Yorum {{ s.reviewed_at | ist }}{% if s.yorum_sayisi > 1 %} ({{ s.yorum_sayisi }} ürün){% endif %}{% endif %}</div></td>
+          <td class="d-none d-md-table-cell">{{ s.customer_name }}</td>
+          <td class="text-muted d-none d-md-table-cell">{{ s.email_maskeli }}</td>
+          <td class="d-none d-md-table-cell">{{ s.sent_at | ist }}{% if s.reminder_sent_at %}<span class="badge bg-light text-dark ms-1" title="Hatırlatma: {{ s.reminder_sent_at | ist }}"><i class="fas fa-bell"></i></span>{% endif %}</td>
+          <td class="d-none d-md-table-cell">{% if s.first_viewed_at %}{{ s.first_viewed_at | ist }}{% else %}<span class="gy-bos">Bakmadı</span>{% endif %}</td>
+          <td class="d-none d-md-table-cell">{% if s.reviewed_at %}{{ s.reviewed_at | ist }}{% if s.yorum_sayisi > 1 %} <span class="badge bg-success">{{ s.yorum_sayisi }} ürün</span>{% endif %}{% else %}<span class="gy-bos">Yorum yok</span>{% endif %}</td>
           <td>
             <span class="badge bg-{{ s.durum_renk }}">{{ s.durum_etiketi }}</span>
             {% if s.iade_bekliyor %}<span class="badge bg-primary ms-1">{{ s.incentive_amount }} TL iade bekliyor</span>
@@ -217,4 +237,5 @@
 </div>
 </div>
 </div>
+</div>{# /gy-sayfa #}
 {% endblock %}
