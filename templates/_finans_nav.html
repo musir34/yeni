@@ -21,6 +21,74 @@
   .fn-hafta[aria-expanded="true"] .fn-ok { transform: rotate(90deg); }
   tr.collapse:not(.show) { display: none; }
   tr.collapsing { display: table-row; height: auto; transition: none; }  /* tr yükseklik animasyonu titrer */
+
+  /* ── Telefon (≤767px) — Komutan finans'ı çoğunlukla mobilden kullanıyor (2026-11-02).
+     Masaüstü görünümüne dokunulmaz; ikincil sütunlar şablonlarda d-none d-md-table-cell ile gizlenip
+     ana hücrenin altındaki d-md-none bilgi satırına taşınır. */
+  @media (max-width: 767.98px) {
+    /* mobile.css tüm .table'lara nowrap veriyor → finans tablolarında satır kırılsın, sayfa yana taşmasın */
+    .fn-table { white-space: normal; }
+    .fn-table td, .fn-table th { font-size: .82rem; padding: .45rem .35rem; }
+    .fn-table .fn-num, .fn-table .text-nowrap { white-space: nowrap; }
+    .fn-table .fn-num .fn-mini { white-space: normal; }
+    .fn-table td.fn-actions { white-space: normal !important; width: 1%; }
+    .fn-table td.fn-actions .btn { padding: .25rem .45rem; margin: .1rem 0; white-space: nowrap; font-size: .78rem; }
+    .fn-mobil-bilgi { font-size: .74rem; color: var(--bs-secondary-color); margin-top: .15rem; line-height: 1.35; }
+    .fn-mobil-bilgi .badge { font-size: .68rem; }
+    /* Sekmeler tek satır, yana kaydırılır (4 satır yer kaplamasın) */
+    .fn-tabs { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+    .fn-tabs::-webkit-scrollbar { display: none; }
+    .fn-tabs .nav-link { white-space: nowrap; padding: .4rem .7rem; font-size: .88rem; }
+    .fn-bakiye { font-size: 1.35rem; }
+    /* mobile.css .d-flex.justify-content-between'i dikey diziyor; kart içi "etiket … tutar" satırları yan yana kalsın */
+    .fn-card .card-body > .d-flex.justify-content-between { flex-direction: row !important; gap: .5rem !important; }
+    .fn-card { margin-bottom: 1rem; }
+    .fn-card > .card-header .btn-group .btn { white-space: nowrap; }
+    /* Kart başlığındaki filtre formu tam satır; seçimler eşit paylaşır */
+    .fn-filtre { width: 100%; flex-wrap: wrap; }
+    .fn-filtre .form-select { flex: 1 1 0; min-width: 0; }
+    .fn-filtre > .btn-group { flex: 1 0 100%; }
+    /* Yıllık rapor: ay sütunu yana kaydırırken sabit kalır */
+    .fn-rapor th:first-child, .fn-rapor td:first-child { position: sticky; left: 0; z-index: 1; background: var(--bs-body-bg); white-space: nowrap; }
+    /* Cari grup başlığı: TL ve $ toplamları alt alta kırılabilsin (hesap adı sütunu ezilmesin) */
+    .fn-table tr.fn-cari-grup th.text-nowrap { white-space: normal !important; }
+    .fn-table tr.fn-cari-grup th.text-nowrap > span { white-space: nowrap; display: inline-block; }
+    /* Mal Girişi / Satış kalem satırı: ad tam satır, adet · birim · tutar · sil alt satırda */
+    .fn-kalem-tablo, .fn-kalem-tablo tbody, .fn-kalem-tablo tfoot { display: block; width: 100%; }
+    .fn-kalem-tablo thead { display: none; }
+    .fn-kalem-tablo tfoot tr { display: flex; justify-content: flex-end; gap: .5rem; }
+    .fn-kalem-tablo tbody td.fn-satir-tutar { text-align: left; }
+    .fn-kalem-tablo tbody tr { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: .35rem; align-items: end;
+                               padding: .5rem 0; border-bottom: 1px solid var(--bs-border-color); }
+    .fn-kalem-tablo tbody td { display: block; border: 0; padding: 0; }
+    .fn-kalem-tablo tbody td:first-child { grid-column: 1 / -1; }
+    .fn-kalem-tablo tbody td:nth-child(2)::before { content: 'Adet'; }
+    .fn-kalem-tablo tbody td:nth-child(3)::before { content: 'Birim fiyat'; }
+    .fn-kalem-tablo tbody td:nth-child(4)::before { content: 'Tutar'; }
+    .fn-kalem-tablo tbody td::before { display: block; font-size: .7rem; color: var(--bs-secondary-color); text-align: left; }
+    .fn-kalem-tablo tbody td.fn-satir-tutar { padding-bottom: .35rem; font-weight: 600; }
+    .fn-kalem-tablo tfoot td { border: 0; }
+    /* Kredi kartı ekstre önizlemesi: her satır küçük kart (seç · tarih · tutar / açıklama / tür · kategori / durum) */
+    .fn-kart-tablo thead tr { display: flex; align-items: center; gap: .5rem; }
+    .fn-kart-tablo thead th:not(:first-child) { display: none; }
+    .fn-kart-tablo thead th:first-child { width: auto !important; white-space: nowrap; }
+    .fn-kart-tablo thead th:first-child::after { content: ' Tümünü seç'; font-weight: 400; font-size: .8rem; }
+    .fn-kart-tablo tbody tr { display: grid; grid-template-columns: 2rem 1fr 1fr; gap: .3rem .4rem; align-items: center;
+                              padding: .5rem .35rem; border-bottom: 1px solid var(--bs-border-color); }
+    .fn-kart-tablo tbody td { display: block; border: 0; padding: 0; }
+    .fn-kart-tablo tbody td:nth-child(1) { grid-area: 1 / 1; }
+    .fn-kart-tablo tbody td:nth-child(2) { grid-area: 1 / 2; }
+    .fn-kart-tablo tbody td:nth-child(4) { grid-area: 1 / 3; text-align: right; font-size: .95rem; }
+    .fn-kart-tablo tbody td:nth-child(3) { grid-area: 2 / 2 / 3 / 4; }
+    .fn-kart-tablo tbody td:nth-child(5) { grid-area: 3 / 2; }
+    .fn-kart-tablo tbody td:nth-child(6) { grid-area: 3 / 3; }
+    .fn-kart-tablo tbody td:nth-child(7) { grid-area: 4 / 2 / 5 / 4; }
+    .fn-kart-tablo tbody td .form-select, .fn-kart-tablo tbody td .form-control { min-width: 0; }
+  }
+  /* Küçük telefonda mobile.css .container dolgusunu 6px'e indiriyor; .row negatif payı ekranı 4px taşırıyordu */
+  @media (max-width: 575.98px) {
+    .container:has(.fn-tabs) .row { --bs-gutter-x: .75rem; }
+  }
 </style>
 <div class="d-flex align-items-center flex-wrap mb-3 gap-2">
   <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-home"></i> Anasayfa</a>
@@ -37,7 +105,7 @@
   <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'finans.kucuk_gider' }}" href="{{ url_for('finans.kucuk_gider') }}"><i class="fas fa-receipt me-1"></i>Günlük Harcamalar</a></li>
   <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'finans.ana_gider' }}" href="{{ url_for('finans.ana_gider') }}"><i class="fas fa-calendar-check me-1"></i>Düzenli Ödemeler</a></li>
   <li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle {{ 'active' if ep == 'finans.defter' }}" data-bs-toggle="dropdown" href="#"><i class="fas fa-book me-1"></i>Defter</a>
+    <a class="nav-link dropdown-toggle {{ 'active' if ep == 'finans.defter' }}" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' href="#"><i class="fas fa-book me-1"></i>Defter</a>
     <ul class="dropdown-menu">
       {% for h in fn_hesaplar %}
       <li><a class="dropdown-item" href="{{ url_for('finans.defter', hesap_kodu=h.kod) }}">{{ h.ad }} <span class="fn-mini">({{ h.bakiye | tl_format }} ₺)</span></a></li>

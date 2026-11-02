@@ -73,7 +73,7 @@
     <div class="card fn-card">
       <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
         <span class="fw-bold">🧾 {{ fn_donem_etiket(donem) }} günlük harcamaları</span>
-        <form method="GET" class="d-flex gap-1 align-items-center">
+        <form method="GET" class="d-flex gap-1 align-items-center fn-filtre">
           <input type="hidden" name="donem" value="{{ donem }}">
           <select name="hesap" class="form-select form-select-sm" onchange="this.form.submit()">
             <option value="">Tüm hesaplar</option>
@@ -92,14 +92,15 @@
       </div>
       <div class="card-body p-0 fn-table-wrap">
         <table class="table table-sm table-hover fn-table mb-0">
-          <thead><tr><th>Tarih</th><th>Hesap</th><th>Kategori</th><th>Açıklama</th><th class="fn-num">Tutar</th><th></th></tr></thead>
+          <thead><tr><th class="d-none d-md-table-cell">Tarih</th><th class="d-none d-md-table-cell">Hesap</th><th class="d-none d-md-table-cell">Kategori</th><th>Açıklama</th><th class="fn-num">Tutar</th><th></th></tr></thead>
           <tbody>
           {% for i in islemler %}
             <tr>
-              <td class="text-nowrap">{{ i.tarih | ist('%d.%m.%Y') }}</td>
-              <td>{{ i.hesap.ad }}</td>
-              <td>{{ i.kategori.ad if i.kategori else '—' }}{% if i.gider_adi %} <span class="fn-mini">/ {{ i.gider_adi.ad }}</span>{% endif %}</td>
-              <td>{{ i.aciklama or '' }}</td>
+              <td class="text-nowrap d-none d-md-table-cell">{{ i.tarih | ist('%d.%m.%Y') }}</td>
+              <td class="d-none d-md-table-cell">{{ i.hesap.ad }}</td>
+              <td class="d-none d-md-table-cell">{{ i.kategori.ad if i.kategori else '—' }}{% if i.gider_adi %} <span class="fn-mini">/ {{ i.gider_adi.ad }}</span>{% endif %}</td>
+              <td>{{ i.aciklama or '' }}{% if not i.aciklama %}<span class="d-md-none">{{ i.gider_adi.ad if i.gider_adi else (i.kategori.ad if i.kategori else '—') }}</span>{% endif %}
+                <div class="d-md-none fn-mobil-bilgi">{{ i.tarih | ist('%d.%m.%Y') }} · {{ i.hesap.ad }} · {{ i.kategori.ad if i.kategori else '—' }}{% if i.gider_adi %} / {{ i.gider_adi.ad }}{% endif %}</div></td>
               <td class="fn-num fn-neg">{{ i.tutar | tl_format }} ₺</td>
               <td class="fn-actions text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick='fnIptal({{ i.id }}, {{ (i.aciklama or '') | tojson }})'>✕</button></td>
             </tr>
@@ -108,7 +109,7 @@
           {% endfor %}
           </tbody>
           {% if islemler %}
-          <tfoot><tr class="fw-bold"><td colspan="4">Toplam</td><td class="fn-num fn-neg">{{ toplam | tl_format }} ₺</td><td></td></tr></tfoot>
+          <tfoot><tr class="fw-bold"><td colspan="4" class="d-none d-md-table-cell">Toplam</td><td class="d-md-none">Toplam</td><td class="fn-num fn-neg">{{ toplam | tl_format }} ₺</td><td></td></tr></tfoot>
           {% endif %}
         </table>
       </div>

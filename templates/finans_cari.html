@@ -47,7 +47,7 @@
     <div class="card fn-card">
       <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
         <span class="fw-bold">📒 Cari Hesaplar <span class="fn-mini fw-normal">({{ cariler | length }} hesap · gruplar tıklayınca açılır/kapanır)</span></span>
-        <form method="GET" class="d-flex align-items-center gap-2">
+        <form method="GET" class="d-flex align-items-center gap-2 fn-filtre">
           <label class="fn-mini" for="fnCariSira">Sırala</label>
           <select name="sira" id="fnCariSira" class="form-select form-select-sm" onchange="this.form.submit()">
             {% for k, v in siralamalar.items() %}<option value="{{ k }}" {{ 'selected' if k == sira }}>{{ v }}</option>{% endfor %}
@@ -56,26 +56,29 @@
       </div>
       <div class="card-body p-0 fn-table-wrap">
         <table class="table table-sm table-hover fn-table mb-0">
-          <thead><tr><th>Hesap</th><th>Tür</th><th>Telefon</th><th class="fn-num">Bakiye</th><th>Durum</th><th></th></tr></thead>
+          <thead><tr><th>Hesap</th><th class="d-none d-md-table-cell">Tür</th><th class="d-none d-md-table-cell">Telefon</th><th class="fn-num">Bakiye</th><th class="d-none d-md-table-cell">Durum</th><th></th></tr></thead>
           <tbody>
           {% for g in gruplar %}
             <tr class="fn-hafta table-light fn-cari-grup" role="button" tabindex="0" data-bs-toggle="collapse" data-bs-target=".fn-cg-{{ g.kod }}" aria-expanded="true" data-grup="{{ g.kod }}" title="Aç / kapat">
-              <th colspan="3"><span class="fn-ok">▶</span> {{ g.etiket }} <span class="fn-mini fw-normal">· {{ g.cariler | length }} hesap</span></th>
+              <th colspan="3" class="d-none d-md-table-cell"><span class="fn-ok">▶</span> {{ g.etiket }} <span class="fn-mini fw-normal">· {{ g.cariler | length }} hesap</span></th>
+              <th class="d-md-none"><span class="fn-ok">▶</span> {{ g.etiket }} <span class="fn-mini fw-normal">· {{ g.cariler | length }} hesap</span></th>
               <th class="fn-num text-nowrap">
                 {% if g.borc %}<span class="fn-neg">{{ g.borc | tl_format }} ₺</span>{% endif %}
                 {% if g.borc_usd %}<span class="fn-neg"> {{ g.borc_usd | tl_format }} $</span>{% endif %}
                 {% if g.alacak %}<span class="fn-pos"> +{{ g.alacak | tl_format }} ₺</span>{% endif %}
                 {% if g.alacak_usd %}<span class="fn-pos"> +{{ g.alacak_usd | tl_format }} $</span>{% endif %}
               </th>
-              <th colspan="2" class="fn-mini fw-normal">{% if g.kod == 'sahsi' %}kasaya borcum{% elif g.borc or g.borc_usd %}borcumuz{% elif g.alacak or g.alacak_usd %}alacağımız{% else %}sıfır{% endif %}</th>
+              <th class="d-md-none"></th>
+              <th colspan="2" class="fn-mini fw-normal d-none d-md-table-cell">{% if g.kod == 'sahsi' %}kasaya borcum{% elif g.borc or g.borc_usd %}borcumuz{% elif g.alacak or g.alacak_usd %}alacağımız{% else %}sıfır{% endif %}</th>
             </tr>
           {% for c in g.cariler %}
             <tr class="collapse show fn-cg-{{ g.kod }} {{ 'text-muted' if not c.aktif }}">
-              <td><a href="{{ url_for('finans.cari_detay', cari_id=c.id) }}" class="fw-semibold text-decoration-none">{{ c.ad }}</a>{% if c.notlar %}<div class="fn-mini">{{ c.notlar }}</div>{% endif %}</td>
-              <td>{{ tur_etiket.get(c.tur, c.tur) }}{% if c.para_birimi == 'USD' %} <span class="badge bg-info text-dark">$</span>{% endif %}</td>
-              <td class="fn-mini">{{ c.telefon or '' }}</td>
+              <td><a href="{{ url_for('finans.cari_detay', cari_id=c.id) }}" class="fw-semibold text-decoration-none">{{ c.ad }}</a>{% if c.notlar %}<div class="fn-mini">{{ c.notlar }}</div>{% endif %}
+                <div class="d-md-none fn-mobil-bilgi">{{ tur_etiket.get(c.tur, c.tur) }}{% if c.para_birimi == 'USD' %} <span class="badge bg-info text-dark">$</span>{% endif %}{% if c.telefon %} · <a href="tel:{{ c.telefon }}">{{ c.telefon }}</a>{% endif %} · {% if c.bakiye > 0 %}Borçluyuz{% elif c.bakiye < 0 %}{{ 'Kasaya borcum' if c.tur == 'sahsi' else 'Alacaklıyız' }}{% else %}Sıfır{% endif %}{% if not c.aktif %} · <span class="badge bg-secondary">kapalı</span>{% endif %}</div></td>
+              <td class="d-none d-md-table-cell">{{ tur_etiket.get(c.tur, c.tur) }}{% if c.para_birimi == 'USD' %} <span class="badge bg-info text-dark">$</span>{% endif %}</td>
+              <td class="fn-mini d-none d-md-table-cell">{{ c.telefon or '' }}</td>
               <td class="fn-num {{ 'fn-neg' if c.bakiye > 0 else ('fn-pos' if c.bakiye < 0 else '') }}">{{ (c.bakiye | abs) | tl_format }} {{ para_sembol.get(c.para_birimi, '₺') }}</td>
-              <td class="fn-mini">{% if c.bakiye > 0 %}Borçluyuz{% elif c.bakiye < 0 %}{{ 'Kasaya borcum' if c.tur == 'sahsi' else 'Alacaklıyız' }}{% else %}Sıfır{% endif %}{% if not c.aktif %} · <span class="badge bg-secondary">kapalı</span>{% endif %}</td>
+              <td class="fn-mini d-none d-md-table-cell">{% if c.bakiye > 0 %}Borçluyuz{% elif c.bakiye < 0 %}{{ 'Kasaya borcum' if c.tur == 'sahsi' else 'Alacaklıyız' }}{% else %}Sıfır{% endif %}{% if not c.aktif %} · <span class="badge bg-secondary">kapalı</span>{% endif %}</td>
               <td class="fn-actions text-end">
                 <form method="POST" action="{{ url_for('finans.cari_pasif', cari_id=c.id) }}" class="d-inline">
                   <input type="hidden" name="aktif" value="{{ '0' if c.aktif else '1' }}">

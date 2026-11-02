@@ -69,7 +69,7 @@
     </div>
     <div class="card-body p-0 fn-table-wrap">
       <table class="table table-sm table-hover fn-table fn-excel-tablo mb-0">
-        <thead><tr><th style="width:2.5rem"><input type="checkbox" class="form-check-input" id="fnTumu" checked title="Tümünü seç/bırak"></th><th>#</th><th>Tarih</th><th>Açıklama</th><th class="fn-num">Tutar</th><th>Durum</th></tr></thead>
+        <thead><tr><th style="width:2.5rem"><input type="checkbox" class="form-check-input" id="fnTumu" checked title="Tümünü seç/bırak"></th><th class="d-none d-md-table-cell">#</th><th>Tarih</th><th>Açıklama</th><th class="fn-num">Tutar</th><th>Durum</th></tr></thead>
         <tbody>
         {% for s in satirlar %}
           <tr class="{{ '' if s.gecerli else 'fn-gecersiz' }}">
@@ -79,7 +79,7 @@
               <input type="hidden" name="tutar_{{ s.satir }}" value="{{ s.tutar_str }}">
               <input type="hidden" name="aciklama_{{ s.satir }}" value="{{ s.aciklama }}">
               {% endif %}</td>
-            <td class="fn-mini">{{ s.satir }}</td>
+            <td class="fn-mini d-none d-md-table-cell">{{ s.satir }}</td>
             <td class="text-nowrap">{{ s.tarih_str }}</td>
             <td>{{ s.aciklama or '—' }}</td>
             <td class="fn-num {{ 'fn-pos' if s.gecerli }}">{% if s.gecerli %}{{ s.tutar | tl_format }}{% else %}{{ s.tutar_str }}{% endif %}</td>

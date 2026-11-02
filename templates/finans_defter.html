@@ -7,7 +7,7 @@
   <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
     <div><div class="fn-mini">{{ hesap.ad }} — kayıt defteri</div><div class="fn-bakiye">{{ hesap.bakiye | tl_format }} ₺</div>
       {% if hesap.kod != 'kredi_karti' %}<button type="button" class="btn btn-sm btn-warning mt-1" data-bs-toggle="modal" data-bs-target="#fnSayimModal"><i class="fas fa-calculator me-1"></i>Sayım / Mutabakat</button>{% endif %}</div>
-    <form method="GET" class="d-flex flex-wrap gap-2 align-items-end">
+    <form method="GET" class="d-flex flex-wrap gap-2 align-items-end fn-filtre">
       <div><label class="fn-mini">Ay</label><input type="month" name="donem" class="form-control form-control-sm" value="{{ donem }}"></div>
       <div><label class="fn-mini">Tür</label>
         <select name="tur" class="form-select form-select-sm">
@@ -25,20 +25,23 @@
 <div class="card fn-card">
   <div class="card-body p-0 fn-table-wrap">
     <table class="table table-sm table-hover fn-table mb-0">
-      <thead><tr><th>Tarih</th><th>Tür</th><th>Kategori / Kalem</th><th>Açıklama</th>
-        <th class="fn-num">Giriş</th><th class="fn-num">Çıkış</th><th class="fn-num">Önceki</th><th class="fn-num">Sonrası</th><th>Kullanıcı</th><th></th></tr></thead>
+      <thead><tr><th class="d-none d-md-table-cell">Tarih</th><th class="d-none d-md-table-cell">Tür</th><th class="d-none d-md-table-cell">Kategori / Kalem</th><th>Açıklama</th>
+        <th class="fn-num d-none d-md-table-cell">Giriş</th><th class="fn-num d-none d-md-table-cell">Çıkış</th><th class="fn-num d-md-none">Tutar</th><th class="fn-num d-none d-md-table-cell">Önceki</th><th class="fn-num d-none d-md-table-cell">Sonrası</th><th class="d-none d-md-table-cell">Kullanıcı</th><th></th></tr></thead>
       <tbody>
       {% for i in sayfalama.items %}
+        {% set kat_ad = i.kalem.ad if i.kalem else (i.kategori.ad if i.kategori else '—') %}
         <tr class="{{ 'fn-iptal' if i.iptal }}">
-          <td class="text-nowrap">{{ i.tarih | ist('%d.%m.%Y %H:%M') }}</td>
-          <td><span class="badge {{ 'bg-success' if i.yon > 0 else 'bg-danger' }}">{{ fn_tur_etiket.get(i.tur, i.tur) }}</span></td>
-          <td>{{ i.kalem.ad if i.kalem else (i.kategori.ad if i.kategori else '—') }}{% if i.gider_adi %} <span class="fn-mini">/ {{ i.gider_adi.ad }}</span>{% endif %}{% if i.donem %} <span class="fn-mini">({{ fn_donem_etiket(i.donem) }})</span>{% endif %}</td>
-          <td>{{ i.aciklama or '' }}{% if i.iptal %}<div class="fn-mini">İptal: {{ i.iptal_tarihi | ist }} {{ i.iptal_kullanici.username if i.iptal_kullanici else '' }} {{ i.iptal_neden or '' }}</div>{% endif %}</td>
-          <td class="fn-num fn-pos">{% if i.yon > 0 %}{{ i.tutar | tl_format }}{% endif %}</td>
-          <td class="fn-num fn-neg">{% if i.yon < 0 %}{{ i.tutar | tl_format }}{% endif %}</td>
-          <td class="fn-num">{{ i.onceki_bakiye | tl_format }}</td>
-          <td class="fn-num">{{ i.yeni_bakiye | tl_format }}</td>
-          <td class="fn-mini">{{ i.kullanici.username if i.kullanici else '' }}</td>
+          <td class="text-nowrap d-none d-md-table-cell">{{ i.tarih | ist('%d.%m.%Y %H:%M') }}</td>
+          <td class="d-none d-md-table-cell"><span class="badge {{ 'bg-success' if i.yon > 0 else 'bg-danger' }}">{{ fn_tur_etiket.get(i.tur, i.tur) }}</span></td>
+          <td class="d-none d-md-table-cell">{{ kat_ad }}{% if i.gider_adi %} <span class="fn-mini">/ {{ i.gider_adi.ad }}</span>{% endif %}{% if i.donem %} <span class="fn-mini">({{ fn_donem_etiket(i.donem) }})</span>{% endif %}</td>
+          <td>{{ i.aciklama or '' }}{% if not i.aciklama %}<span class="d-md-none">{{ kat_ad }}</span>{% endif %}
+            <div class="d-md-none fn-mobil-bilgi">{{ i.tarih | ist('%d.%m.%Y %H:%M') }} · <span class="badge {{ 'bg-success' if i.yon > 0 else 'bg-danger' }}">{{ fn_tur_etiket.get(i.tur, i.tur) }}</span>{% if i.aciklama %} · {{ kat_ad }}{% endif %}{% if i.gider_adi %} / {{ i.gider_adi.ad }}{% endif %}{% if i.donem %} ({{ fn_donem_etiket(i.donem) }}){% endif %} · bakiye {{ i.yeni_bakiye | tl_format }}{% if i.kullanici %} · {{ i.kullanici.username }}{% endif %}</div>{% if i.iptal %}<div class="fn-mini">İptal: {{ i.iptal_tarihi | ist }} {{ i.iptal_kullanici.username if i.iptal_kullanici else '' }} {{ i.iptal_neden or '' }}</div>{% endif %}</td>
+          <td class="fn-num fn-pos d-none d-md-table-cell">{% if i.yon > 0 %}{{ i.tutar | tl_format }}{% endif %}</td>
+          <td class="fn-num fn-neg d-none d-md-table-cell">{% if i.yon < 0 %}{{ i.tutar | tl_format }}{% endif %}</td>
+          <td class="fn-num d-md-none {{ 'fn-pos' if i.yon > 0 else 'fn-neg' }}">{{ '+' if i.yon > 0 else '−' }}{{ i.tutar | tl_format }}</td>
+          <td class="fn-num d-none d-md-table-cell">{{ i.onceki_bakiye | tl_format }}</td>
+          <td class="fn-num d-none d-md-table-cell">{{ i.yeni_bakiye | tl_format }}</td>
+          <td class="fn-mini d-none d-md-table-cell">{{ i.kullanici.username if i.kullanici else '' }}</td>
           <td class="fn-actions text-end text-nowrap">
             {% if not i.iptal %}
             {% if i.tur in ('gelir', 'kucuk_gider', 'ana_gider') %}
@@ -110,12 +113,12 @@
           <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
           <div class="fw-bold mb-2">Tutar / hesap / tarih <span class="fn-mini">(eski kayıt iptal edilir, yeni kayıt açılır)</span></div>
           <div class="row g-2">
-            <div class="col-4"><input type="text" name="tutar" id="fnDuzeltTutar" class="form-control form-control-sm" inputmode="decimal" placeholder="Tutar"></div>
-            <div class="col-4"><select name="hesap" id="fnDuzeltHesap" class="form-select form-select-sm">
+            <div class="col-6 col-sm-4"><input type="text" name="tutar" id="fnDuzeltTutar" class="form-control form-control-sm" inputmode="decimal" placeholder="Tutar"></div>
+            <div class="col-6 col-sm-4"><select name="hesap" id="fnDuzeltHesap" class="form-select form-select-sm">
               <option value="">Hesap değişmesin</option>
               {% for h in fn_odeme_hesaplari %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}
             </select></div>
-            <div class="col-4"><input type="datetime-local" name="tarih" id="fnDuzeltTarih" class="form-control form-control-sm"></div>
+            <div class="col-12 col-sm-4"><input type="datetime-local" name="tarih" id="fnDuzeltTarih" class="form-control form-control-sm"></div>
           </div>
           <button class="btn btn-sm btn-warning mt-2">Düzelt</button>
         </form>

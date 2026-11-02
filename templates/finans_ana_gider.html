@@ -14,15 +14,17 @@
   </div>
   <div class="card-body p-0 fn-table-wrap">
     <table class="table table-sm table-hover fn-table mb-0">
-      <thead><tr><th>Ödeme</th><th>Hak ediş / Planlanan</th><th>Durum</th><th class="fn-num">Ödenen</th><th class="fn-num">Kalan</th><th></th></tr></thead>
+      <thead><tr><th>Ödeme</th><th class="d-none d-md-table-cell">Hak ediş / Planlanan</th><th class="d-none d-md-table-cell">Durum</th><th class="fn-num d-none d-md-table-cell">Ödenen</th><th class="fn-num">Kalan</th><th></th></tr></thead>
       <tbody>
       {% macro satir(d, sinif='') %}
         {% set k = d.kalem %}{% set o = d.odeme %}
+        {% set durum_rozet %}{% if d.calisan and not d.hakedis %}<span class="badge bg-light text-dark">Planlandı</span>{% elif not d.bekleyen %}<span class="badge bg-success">Tamamlandı</span>{% elif d.odenen %}<span class="badge bg-warning text-dark">Kısmen ödendi</span>{% elif d.belirsiz %}<span class="badge bg-secondary">Tutar bekleniyor</span>{% else %}<span class="badge bg-warning text-dark">Bekliyor</span>{% endif %}{% endset %}
         <tr class="{{ sinif }}">
-          <td>{{ k.ad }}<div class="fn-mini">{{ d.etiket }}</div>{% if d.calisan %}<a class="fn-mini" href="{{ url_for('finans.cari_detay', cari_id=k.calisan_cari_id) }}">{{ k.calisan_cari.ad }} · Cari hesabı</a>{% endif %}</td>
-          <td class="fn-num">{% if d.hak_tutar is not none %}{{ d.hak_tutar | tl_format }} ₺{% else %}<span class="fn-mini">Belirlenecek</span>{% endif %}{% for m in d.mesailer %}<div class="fn-mini">⏱ {{ m.aciklama }} · {{ m.tutar | tl_format }} ₺</div>{% endfor %}</td>
-          <td>{% if d.calisan and not d.hakedis %}<span class="badge bg-light text-dark">Planlandı</span>{% elif not d.bekleyen %}<span class="badge bg-success">Tamamlandı</span>{% elif d.odenen %}<span class="badge bg-warning text-dark">Kısmen ödendi</span>{% elif d.belirsiz %}<span class="badge bg-secondary">Tutar bekleniyor</span>{% else %}<span class="badge bg-warning text-dark">Bekliyor</span>{% endif %}</td>
-          <td class="fn-num">{{ d.odenen | tl_format }} ₺</td>
+          <td>{{ k.ad }}<div class="fn-mini">{{ d.etiket }}</div>{% if d.calisan %}<a class="fn-mini" href="{{ url_for('finans.cari_detay', cari_id=k.calisan_cari_id) }}">{{ k.calisan_cari.ad }} · Cari hesabı</a>{% endif %}
+            <div class="d-md-none fn-mobil-bilgi">{{ durum_rozet }} Hak ediş {% if d.hak_tutar is not none %}{{ d.hak_tutar | tl_format }} ₺{% else %}belirlenecek{% endif %}{% if d.odenen %} · ödenen {{ d.odenen | tl_format }} ₺{% endif %}{% for m in d.mesailer %}<div>⏱ {{ m.aciklama }} · {{ m.tutar | tl_format }} ₺</div>{% endfor %}</div></td>
+          <td class="fn-num d-none d-md-table-cell">{% if d.hak_tutar is not none %}{{ d.hak_tutar | tl_format }} ₺{% else %}<span class="fn-mini">Belirlenecek</span>{% endif %}{% for m in d.mesailer %}<div class="fn-mini">⏱ {{ m.aciklama }} · {{ m.tutar | tl_format }} ₺</div>{% endfor %}</td>
+          <td class="d-none d-md-table-cell">{{ durum_rozet }}</td>
+          <td class="fn-num d-none d-md-table-cell">{{ d.odenen | tl_format }} ₺</td>
           <td class="fn-num">{% if d.kalan is not none %}{{ d.kalan | tl_format }} ₺{% else %}—{% endif %}</td>
           <td class="fn-actions text-end">
             {% if d.calisan %}
@@ -46,8 +48,10 @@
         <tr class="fn-grup table-light"><th colspan="6">🗓️ Haftalıkçılar <span class="fn-mini fw-normal">({{ gruplar.haftalar | length }} hafta)</span></th></tr>
         {% for h in gruplar.haftalar %}
         <tr class="fn-hafta" role="button" tabindex="0" data-bs-toggle="collapse" data-bs-target=".fn-hafta-{{ h.no }}" aria-expanded="{{ 'true' if h.acik else 'false' }}" title="Aç / kapat">
-          <td colspan="3"><span class="fn-ok">▶</span> <b>{{ h.no }}. Hafta</b> <span class="fn-mini">· {{ h.etiket }} · {{ h.satirlar | length }} kişi{% if h.bekleyen_adet %}, {{ h.bekleyen_adet }} bekliyor{% else %}, tamamlandı{% endif %}</span></td>
-          <td class="fn-num">{{ h.odenen | tl_format }} ₺</td>
+          {% set hafta_baslik %}<span class="fn-ok">▶</span> <b>{{ h.no }}. Hafta</b> <span class="fn-mini">· {{ h.etiket }} · {{ h.satirlar | length }} kişi{% if h.bekleyen_adet %}, {{ h.bekleyen_adet }} bekliyor{% else %}, tamamlandı{% endif %}</span>{% endset %}
+          <td colspan="3" class="d-none d-md-table-cell">{{ hafta_baslik }}</td>
+          <td class="d-md-none">{{ hafta_baslik }}</td>
+          <td class="fn-num d-none d-md-table-cell">{{ h.odenen | tl_format }} ₺</td>
           <td class="fn-num">{{ h.kalan | tl_format }} ₺{% if h.belirsiz_adet %}<div class="fn-mini">+ {{ h.belirsiz_adet }} tutar belirlenecek</div>{% endif %}</td>
           <td></td>
         </tr>
@@ -58,7 +62,7 @@
         <tr><td colspan="6" class="text-muted p-3">Bu dönem için ödeme planı yok. Aşağıdan ekleyin.</td></tr>
       {% endif %}
       </tbody>
-      {% if durum %}<tfoot><tr class="fw-bold"><td colspan="3">Toplam</td><td class="fn-num">{{ odenen | tl_format }} ₺</td><td class="fn-num">{{ bekleyen | tl_format }} ₺{% if belirsiz_adet %}<div class="fn-mini">+ {{ belirsiz_adet }} tutar belirlenecek</div>{% endif %}</td><td></td></tr></tfoot>{% endif %}
+      {% if durum %}<tfoot><tr class="fw-bold"><td colspan="3" class="d-none d-md-table-cell">Toplam</td><td class="d-md-none">Toplam<div class="fn-mobil-bilgi fw-normal">ödenen {{ odenen | tl_format }} ₺</div></td><td class="fn-num d-none d-md-table-cell">{{ odenen | tl_format }} ₺</td><td class="fn-num">{{ bekleyen | tl_format }} ₺{% if belirsiz_adet %}<div class="fn-mini">+ {{ belirsiz_adet }} tutar belirlenecek</div>{% endif %}</td><td></td></tr></tfoot>{% endif %}
     </table>
   </div>
 </div>
@@ -82,10 +86,10 @@
             <div class="col-6"><label for="fnYeniSiklik" class="form-label fn-mini">Ne sıklıkla?</label><select name="siklik" id="fnYeniSiklik" class="form-select"><option value="aylik">Aylık</option><option value="haftalik">Haftalık</option></select></div>
             <div class="col-6"><label for="fnYeniTutarTipi" class="form-label fn-mini">Ödeme tutarı</label><select name="tutar_degisken" id="fnYeniTutarTipi" class="form-select"><option value="0">Genellikle sabit</option><option value="1">Her ödemede değişiyor</option></select></div>
             <div class="col-12" data-haftalik-alan hidden><label for="fnYeniIlkOdeme" class="form-label fn-mini">İlk haftalık ödeme günü</label><input type="date" name="ilk_odeme_tarihi" id="fnYeniIlkOdeme" class="form-control" value="{{ bugun }}"><div class="form-text">Bu tarihten başlayarak her 7 günde bir ödeme görünür.</div></div>
-            <div class="col-6"><select name="kategori_id" class="form-select"><option value="">Kategori (isteğe bağlı)</option>{% for k in kategoriler %}<option value="{{ k.id }}">{{ k.ad }}</option>{% endfor %}</select></div>
-            <div class="col-6" data-sabit-tutar><label for="fnYeniTutar" class="form-label fn-mini" data-tutar-etiket>Aylık tutar (₺)</label><input type="text" name="varsayilan_tutar" id="fnYeniTutar" class="form-control" inputmode="decimal" placeholder="0,00"></div>
-            <div class="col-6"><select name="varsayilan_hesap_kodu" class="form-select"><option value="">Varsayılan hesap</option>{% for h in fn_odeme_hesaplari %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}</select></div>
-            <div class="col-6" data-aylik-alan><label for="fnYeniBas" class="form-label fn-mini">Başlangıç ayı</label><input type="month" name="baslangic_donem" id="fnYeniBas" class="form-control" value="{{ donem }}" required></div>
+            <div class="col-12 col-sm-6"><select name="kategori_id" class="form-select"><option value="">Kategori (isteğe bağlı)</option>{% for k in kategoriler %}<option value="{{ k.id }}">{{ k.ad }}</option>{% endfor %}</select></div>
+            <div class="col-12 col-sm-6" data-sabit-tutar><label for="fnYeniTutar" class="form-label fn-mini" data-tutar-etiket>Aylık tutar (₺)</label><input type="text" name="varsayilan_tutar" id="fnYeniTutar" class="form-control" inputmode="decimal" placeholder="0,00"></div>
+            <div class="col-12 col-sm-6"><select name="varsayilan_hesap_kodu" class="form-select"><option value="">Varsayılan hesap</option>{% for h in fn_odeme_hesaplari %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}</select></div>
+            <div class="col-12 col-sm-6" data-aylik-alan><label for="fnYeniBas" class="form-label fn-mini">Başlangıç ayı</label><input type="month" name="baslangic_donem" id="fnYeniBas" class="form-control" value="{{ donem }}" required></div>
             <div class="col-12"><input type="month" name="bitis_donem" class="form-control" title="Bitiş ayı (boş = süresiz)"><div class="fn-mini">Bitiş ayı (boş = süresiz)</div></div>
             <div class="col-12"><input type="text" name="notlar" class="form-control" placeholder="Not (isteğe bağlı)"></div>
           </div>
@@ -99,15 +103,16 @@
       <div class="card-header fw-bold">🗂️ Kalem Tanımları</div>
       <div class="card-body p-0 fn-table-wrap">
         <table class="table table-sm fn-table mb-0">
-          <thead><tr><th>Kalem</th><th>Kategori</th><th>Sıklık</th><th class="fn-num">Her ödeme</th><th>Hesap</th><th>Dönem</th><th></th></tr></thead>
+          <thead><tr><th>Kalem</th><th class="d-none d-md-table-cell">Kategori</th><th class="d-none d-md-table-cell">Sıklık</th><th class="fn-num">Her ödeme</th><th class="d-none d-md-table-cell">Hesap</th><th class="d-none d-md-table-cell">Dönem</th><th></th></tr></thead>
           <tbody>
           {% for k in tum_kalemler %}
             <tr class="{{ 'text-muted' if not k.aktif }}">
-              <td>{{ k.ad }}{% if not k.aktif %} <span class="badge bg-secondary">pasif</span>{% endif %}</td>
-              <td>{{ k.kategori.ad if k.kategori else '—' }}</td>
-              <td>{{ 'Haftalık' if k.siklik == 'haftalik' else 'Aylık' }}{% if k.ilk_odeme_tarihi %}<div class="fn-mini">İlk: {{ k.ilk_odeme_tarihi.strftime('%d.%m.%Y') }}</div>{% endif %}</td><td class="fn-num">{% if k.varsayilan_tutar %}{{ k.varsayilan_tutar | tl_format }} ₺{% else %}<span class="fn-mini">Öderken girilecek</span>{% endif %}</td>
-              <td>{{ k.varsayilan_hesap_kodu or '—' }}</td>
-              <td class="fn-mini">{{ k.baslangic_donem }} → {{ k.bitis_donem or '∞' }}</td>
+              <td>{{ k.ad }}{% if not k.aktif %} <span class="badge bg-secondary">pasif</span>{% endif %}
+                <div class="d-md-none fn-mobil-bilgi">{{ 'Haftalık' if k.siklik == 'haftalik' else 'Aylık' }}{% if k.ilk_odeme_tarihi %} (ilk {{ k.ilk_odeme_tarihi.strftime('%d.%m.%Y') }}){% endif %} · {{ k.kategori.ad if k.kategori else 'kategorisiz' }} · {{ k.varsayilan_hesap_kodu or 'hesap yok' }} · {{ k.baslangic_donem }} → {{ k.bitis_donem or '∞' }}</div></td>
+              <td class="d-none d-md-table-cell">{{ k.kategori.ad if k.kategori else '—' }}</td>
+              <td class="d-none d-md-table-cell">{{ 'Haftalık' if k.siklik == 'haftalik' else 'Aylık' }}{% if k.ilk_odeme_tarihi %}<div class="fn-mini">İlk: {{ k.ilk_odeme_tarihi.strftime('%d.%m.%Y') }}</div>{% endif %}</td><td class="fn-num">{% if k.varsayilan_tutar %}{{ k.varsayilan_tutar | tl_format }} ₺{% else %}<span class="fn-mini">Öderken girilecek</span>{% endif %}</td>
+              <td class="d-none d-md-table-cell">{{ k.varsayilan_hesap_kodu or '—' }}</td>
+              <td class="fn-mini d-none d-md-table-cell">{{ k.baslangic_donem }} → {{ k.bitis_donem or '∞' }}</td>
               <td class="fn-actions text-end text-nowrap">
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#fnKalemModal"
                         data-id="{{ k.id }}" data-ad="{{ k.ad }}" data-calisan="{{ '1' if k.calisan_cari_id else '0' }}" data-cari="{{ k.calisan_cari_id or '' }}" data-cari-ad="{{ k.calisan_cari.ad if k.calisan_cari else '' }}" data-siklik="{{ k.siklik }}" data-ilk-odeme="{{ k.ilk_odeme_tarihi or '' }}" data-degisken="{{ '1' if k.tutar_degisken else '0' }}" data-kategori="{{ k.kategori_id or '' }}" data-tutar="{{ '%.2f' | format(k.varsayilan_tutar) if k.varsayilan_tutar else '' }}"
@@ -183,10 +188,10 @@
           <div class="col-6"><label for="fnKlSiklik" class="form-label fn-mini">Ne sıklıkla?</label><select name="siklik" id="fnKlSiklik" class="form-select"><option value="aylik">Aylık</option><option value="haftalik">Haftalık</option></select></div>
           <div class="col-6"><label for="fnKlDegisken" class="form-label fn-mini">Ödeme tutarı</label><select name="tutar_degisken" id="fnKlDegisken" class="form-select"><option value="0">Genellikle sabit</option><option value="1">Her ödemede değişiyor</option></select></div>
           <div class="col-12" data-haftalik-alan hidden><label for="fnKlIlkOdeme" class="form-label fn-mini">İlk haftalık ödeme günü</label><input type="date" name="ilk_odeme_tarihi" id="fnKlIlkOdeme" class="form-control"><div class="form-text">Her 7 günde bir tekrarlanır. Aylıktan geçişte ödenmiş son aydan sonraki bir tarihi seçin.</div></div>
-          <div class="col-6"><select name="kategori_id" id="fnKlKat" class="form-select"><option value="">Kategori yok</option>{% for k in kategoriler %}<option value="{{ k.id }}">{{ k.ad }}</option>{% endfor %}</select></div>
-          <div class="col-6" data-sabit-tutar><label for="fnKlTutar" class="form-label fn-mini" data-tutar-etiket>Aylık tutar (₺)</label><input type="text" name="varsayilan_tutar" id="fnKlTutar" class="form-control" inputmode="decimal" placeholder="0,00"></div>
-          <div class="col-6"><select name="varsayilan_hesap_kodu" id="fnKlHesap" class="form-select"><option value="">Varsayılan hesap</option>{% for h in fn_odeme_hesaplari %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}</select></div>
-          <div class="col-6" data-aylik-alan><label for="fnKlBas" class="form-label fn-mini">Başlangıç ayı</label><input type="month" name="baslangic_donem" id="fnKlBas" class="form-control" required></div>
+          <div class="col-12 col-sm-6"><select name="kategori_id" id="fnKlKat" class="form-select"><option value="">Kategori yok</option>{% for k in kategoriler %}<option value="{{ k.id }}">{{ k.ad }}</option>{% endfor %}</select></div>
+          <div class="col-12 col-sm-6" data-sabit-tutar><label for="fnKlTutar" class="form-label fn-mini" data-tutar-etiket>Aylık tutar (₺)</label><input type="text" name="varsayilan_tutar" id="fnKlTutar" class="form-control" inputmode="decimal" placeholder="0,00"></div>
+          <div class="col-12 col-sm-6"><select name="varsayilan_hesap_kodu" id="fnKlHesap" class="form-select"><option value="">Varsayılan hesap</option>{% for h in fn_odeme_hesaplari %}<option value="{{ h.kod }}">{{ h.ad }}</option>{% endfor %}</select></div>
+          <div class="col-12 col-sm-6" data-aylik-alan><label for="fnKlBas" class="form-label fn-mini">Başlangıç ayı</label><input type="month" name="baslangic_donem" id="fnKlBas" class="form-control" required></div>
           <div class="col-12"><input type="month" name="bitis_donem" id="fnKlBit" class="form-control"><div class="fn-mini">Bitiş ayı (boş = süresiz)</div></div>
           <div class="col-12"><input type="text" name="notlar" id="fnKlNot" class="form-control" placeholder="Not"></div>
         </div>
