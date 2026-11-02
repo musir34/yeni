@@ -98,6 +98,55 @@ class SahsiCariTest(unittest.TestCase):
         self.assertEqual(o['alacak'], Decimal('0.00'))
         self.assertEqual(o['borc'], Decimal('100'))
 
+    # ── Kasaya borç verdim (komutan kararı 2026-11-02) ─────────────────────
+    def test_borc_verme_secilen_hesaba_girer_kasa_bize_borclanir(self):
+        c = self.sahsi()
+        h = cs.tahsilat_al(c.id, Decimal('1000'), T, '', 1, tur='borc_verme', hesap_kodu='elde')
+        self.assertEqual(h.tur, 'borc_verme')
+        self.assertEqual(c.bakiye, Decimal('1000'))            # kasanın bize borcu
+        self.assertEqual(fs.hesap_getir('elde').bakiye, Decimal('11000'))
+        self.assertEqual(fs.hesap_getir('beyazit').bakiye, Decimal('0'))
+        self.assertEqual(h.islem.tur, 'cari_tahsilat')
+        self.assertEqual(cs.sahsi_kasa_borcu(c.id), Decimal('0.00'))
+        self.tutarli()
+
+    def test_borc_verme_once_kasaya_borcu_kapatir(self):
+        c = self.sahsi()
+        cs.odeme_yap(c.id, 'elde', Decimal('500'), T, '', 1, tur='borc_alma')
+        cs.tahsilat_al(c.id, Decimal('800'), T, '', 1, tur='borc_verme', hesap_kodu='beyazit')
+        self.assertEqual(c.bakiye, Decimal('300'))
+        self.assertEqual(cs.sahsi_kasa_borcu(c.id), Decimal('0.00'))
+        self.tutarli()
+
+    def test_geri_alirken_borc_alma_once_kasanin_borcundan_duser(self):
+        c = self.sahsi()
+        cs.tahsilat_al(c.id, Decimal('1000'), T, '', 1, tur='borc_verme', hesap_kodu='elde')
+        cs.odeme_yap(c.id, 'elde', Decimal('1500'), T, '', 1, tur='borc_alma')
+        self.assertEqual(c.bakiye, Decimal('-500'))            # aşan kısım kasaya borcumuz
+        self.assertEqual(cs.sahsi_kasa_borcu(c.id), Decimal('500.00'))
+        self.assertEqual(fs.hesap_getir('elde').bakiye, Decimal('9500'))
+        self.tutarli()
+
+    def test_borc_verme_iptali_iki_tarafi_geri_alir(self):
+        c = self.sahsi()
+        h = cs.tahsilat_al(c.id, Decimal('1000'), T, '', 1, tur='borc_verme', hesap_kodu='beyazit')
+        cs.hareket_iptal(h.id, 1)
+        self.assertEqual(c.bakiye, Decimal('0'))
+        self.assertEqual(fs.hesap_getir('beyazit').bakiye, Decimal('0'))
+        self.tutarli()
+
+    def test_borc_verme_hesap_secimi_zorunlu_ve_yalniz_sahside(self):
+        c = self.sahsi()
+        for kod in ('', 'kredi_karti', 'yok'):
+            with self.assertRaises(FinansHata):
+                cs.tahsilat_al(c.id, Decimal('100'), T, '', 1, tur='borc_verme', hesap_kodu=kod)
+        t = cs.cari_ekle('Taban Ltd', 'tedarikci', '', '', 1)
+        with self.assertRaises(FinansHata):
+            cs.tahsilat_al(t.id, Decimal('100'), T, '', 1, tur='borc_verme', hesap_kodu='elde')
+        self.assertEqual(c.bakiye, Decimal('0'))
+        self.assertEqual(t.bakiye, Decimal('0'))
+        self.tutarli()
+
     def test_bakiyeli_sahsi_hesap_kapatilamaz(self):
         c = self.sahsi()
         cs.odeme_yap(c.id, 'elde', Decimal('500'), T, '', 1, tur='borc_alma')

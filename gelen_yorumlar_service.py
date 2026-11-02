@@ -9,6 +9,7 @@
 # Flask/DB bağımlılığı yok → saf testlenebilir (tests/test_gelen_yorumlar.py).
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
 from dataclasses import dataclass
@@ -72,10 +73,12 @@ ORDER BY r.sent_at DESC
 
 
 # Brif §4 (27 Ekim 15:20 eki): yorumun kendisi reviews_cache'te (Shopify'ın yerel kopyası; compile ile tazelenir)
+# {foto}: Güllü Yorum 1.3.0+ `c.photo_urls` (JSON liste) yazar; eski sürümde sütun yok → "''"
 YORUMLAR_SQL = """
 SELECT
   c.review_id, c.order_id, c.order_name, c.product_title, c.variant_title, c.display_name,
   c.rating, c.title, c.body, c.status, c.reply, c.photo_count, c.submitted_at,
+  {foto} AS photo_urls,
   r.incentive_amount, r.refunded_at
 FROM reviews_cache c
 LEFT JOIN requests r ON r.order_id = c.order_id
@@ -153,6 +156,7 @@ class Yorum:
     submitted_at: datetime | None
     incentive_amount: int
     refunded_at: datetime | None
+    foto_adresleri: tuple[str, ...] = ()   # Shopify CDN; yalnız https
 
     @property
     def durum_etiketi(self) -> str:
@@ -247,6 +251,20 @@ def _satir_yap(row) -> Satir:
     )
 
 
+def foto_adresleri(deger) -> tuple[str, ...]:
+    """reviews_cache.photo_urls JSON listesi → https adresleri. Boş/bozuk/https olmayan → atlanır
+    (müşteri içeriği; şablonda src/href olarak basılır, javascript: vb. şemalar asla geçmez)."""
+    if not deger or not isinstance(deger, str):
+        return ()
+    try:
+        liste = json.loads(deger)
+    except ValueError:
+        return ()
+    if not isinstance(liste, list):
+        return ()
+    return tuple(u for u in liste if isinstance(u, str) and u.startswith("https://"))
+
+
 def _yorum_yap(row) -> Yorum:
     return Yorum(
         review_id=str(row["review_id"] or ""),
@@ -263,6 +281,7 @@ def _yorum_yap(row) -> Yorum:
         submitted_at=utc_parse(row["submitted_at"]),
         incentive_amount=int(row["incentive_amount"] or 0),
         refunded_at=utc_parse(row["refunded_at"]),
+        foto_adresleri=foto_adresleri(row["photo_urls"]),
     )
 
 
@@ -339,7 +358,9 @@ def oku_yorumlar(db_yolu: str | None = None) -> tuple[list[Yorum], YildizDagilim
             var = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='reviews_cache'").fetchone()
             if not var:
                 return [], YildizDagilimi({})
-            rows = conn.execute(YORUMLAR_SQL).fetchall()
+            sutunlar = {c["name"] for c in conn.execute("PRAGMA table_info(reviews_cache)")}
+            foto = "c.photo_urls" if "photo_urls" in sutunlar else "''"
+            rows = conn.execute(YORUMLAR_SQL.format(foto=foto)).fetchall()
             yildiz_rows = conn.execute(YILDIZ_SQL).fetchall()
         except sqlite3.Error as e:
             raise GelenYorumHata(f"Güllü Yorum yorum sorgusu başarısız: {e}") from e

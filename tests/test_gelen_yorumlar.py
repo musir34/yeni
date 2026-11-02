@@ -20,6 +20,7 @@ from gelen_yorumlar_service import (  # noqa: E402
     DURUM_YORUM,
     GelenYorumHata,
     email_maskele,
+    foto_adresleri,
     iade_isaretle,
     oku,
     oku_yorumlar,
@@ -150,6 +151,30 @@ def test_yorumlar_ve_yildiz_dagilimi(db_yorumlu):
     assert not y903.iade_bekliyor and y903.durum_renk == "warning"          # #1375 iadesi yapılmış, pending
     assert yildiz.adetler == {5: 1, 4: 1, 3: 0, 2: 0, 1: 0}                 # pending sayılmaz
     assert yildiz.toplam == 2 and yildiz.ortalama == 4.5 and yildiz.yuzde(5) == 50
+
+
+def test_eski_semada_foto_adresi_yok_sayfa_calisir(db_yorumlu):
+    yorumlar, _ = oku_yorumlar(db_yorumlu)                                  # photo_urls sütunu yok (Güllü Yorum < 1.3.0)
+    assert all(y.foto_adresleri == () for y in yorumlar)
+    assert next(y for y in yorumlar if y.review_id == "901").photo_count == 2
+
+
+def test_foto_adresleri_okunur_yalniz_https(db_yorumlu):
+    conn = sqlite3.connect(db_yorumlu)
+    conn.execute("ALTER TABLE reviews_cache ADD COLUMN photo_urls TEXT NOT NULL DEFAULT ''")
+    conn.execute("UPDATE reviews_cache SET photo_urls = ? WHERE review_id = '901'",
+                 ('["https://cdn.shopify.com/a.jpg", "javascript:alert(1)", "http://x/b.jpg", 5, "https://cdn.shopify.com/c.jpg?v=1"]',))
+    conn.commit()
+    conn.close()
+    yorumlar, _ = oku_yorumlar(db_yorumlu)
+    y901 = next(y for y in yorumlar if y.review_id == "901")
+    assert y901.foto_adresleri == ("https://cdn.shopify.com/a.jpg", "https://cdn.shopify.com/c.jpg?v=1")
+    assert next(y for y in yorumlar if y.review_id == "902").foto_adresleri == ()
+
+
+def test_foto_adresleri_bozuk_deger():
+    assert foto_adresleri("") == () and foto_adresleri(None) == ()
+    assert foto_adresleri("{bozuk") == () and foto_adresleri('{"a": 1}') == ()
 
 
 def test_reviews_cache_tablosu_yoksa_bos_doner(db):

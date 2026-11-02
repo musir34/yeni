@@ -237,6 +237,30 @@ def cari_borc_odeme(cari_id):
     return _geri(url_for('finans.cari_detay', cari_id=cari_id))
 
 
+@finans_bp.route('/cari/<int:cari_id>/borc-verme', methods=['POST'])
+@login_required
+@roles_required('admin')
+def cari_borc_verme(cari_id):
+    """Şahsi hesap: cebimizden kasaya koyduğumuz para (seçilen hesaba giriş + kasanın bize borcu ↑)."""
+    try:
+        tutar = fs.parse_tutar(request.form.get('tutar'))
+        h = cs.tahsilat_al(cari_id, tutar, fs.parse_tarih(request.form.get('tarih')),
+                           request.form.get('aciklama', ''), _uid(), tur='borc_verme',
+                           hesap_kodu=request.form.get('hesap', ''))
+        _log("CREATE", f"Finans cari kasaya borç verme — {h.cari.ad}: {tutar}₺ ({h.islem.hesap.ad})",
+             tutar=str(tutar))
+        if h.yeni_bakiye > 0:
+            durum = f'Kasanın size borcu {h.yeni_bakiye:.2f} ₺.'
+        elif h.yeni_bakiye < 0:
+            durum = f'Kalan borcunuz {(-h.yeni_bakiye):.2f} ₺.'
+        else:
+            durum = 'Hesap sıfırlandı.'
+        flash(f'✅ Kasaya borç verildi: {tutar:.2f} ₺ {h.islem.hesap.ad} hesabına girdi. {durum}', 'success')
+    except FinansHata as e:
+        _hata_flash(e)
+    return _geri(url_for('finans.cari_detay', cari_id=cari_id))
+
+
 @finans_bp.route('/cari/<int:cari_id>/calisan-borc', methods=['POST'])
 @login_required
 @roles_required('admin')

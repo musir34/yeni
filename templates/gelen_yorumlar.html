@@ -19,6 +19,10 @@
   .gy-dagilim td { font-size: .85rem; padding: .2rem .4rem; border: 0; vertical-align: middle; }
   .gy-sekme .nav-link { font-weight: 600; }
   .gy-table td form { vertical-align: middle; }
+  .gy-fotolar { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .6rem; }
+  .gy-fotolar a { display: block; width: 96px; height: 96px; border-radius: 10px; overflow: hidden; border: 1px solid #e9ecef; background: #f8f9fa; }
+  .gy-fotolar img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .15s; }
+  .gy-fotolar a:hover img { transform: scale(1.05); }
   .gy-mobil-bilgi { font-size: .75rem; color: #6c757d; font-weight: 400; line-height: 1.4; margin-top: .15rem; }
   /* Telefon: tablo satır kırsın (mobile.css + yukarıdaki nowrap sayfayı taşırıyordu); ikincil sütunlar sipariş altına iner */
   @media (max-width: 767.98px) {
@@ -213,7 +217,7 @@
             <span class="gy-yildiz" title="{{ y.rating }} / 5">{{ y.yildiz_metni }}</span>
             <span class="fw-bold">{{ y.rating }}/5</span>
             <span class="badge bg-{{ y.durum_renk }}">{{ y.durum_etiketi }}</span>
-            {% if y.photo_count %}<span class="badge bg-light text-dark" title="Fotoğraflar Shopify'da"><i class="fas fa-camera me-1"></i>{{ y.photo_count }}</span>{% endif %}
+            {% if y.photo_count %}<span class="badge bg-light text-dark" title="{{ 'Fotoğraflı yorum' if y.foto_adresleri else 'Fotoğraflar Shopify’da (henüz panele gelmedi)' }}"><i class="fas fa-camera me-1"></i>{{ y.photo_count }}</span>{% endif %}
             {% if y.iade_bekliyor %}<span class="badge bg-primary">{{ y.incentive_amount }} TL iade bekliyor</span>
               <form method="post" action="{{ url_for('gelen_yorumlar_bp.iade_edildi') }}" class="d-inline" onsubmit="return confirm('{{ y.order_name }} için {{ y.incentive_amount }} TL teşvik iadesi yapıldı olarak işaretlensin mi?');"><input type="hidden" name="order_name" value="{{ y.order_name }}"><input type="hidden" name="sekme" value="yorumlar">{{ iade_sayfa_alanlari }}<button type="submit" class="btn btn-sm btn-outline-success py-0 ms-1" title="İade yapıldı olarak işaretle"><i class="fas fa-check me-1"></i>İade Edildi</button></form>{% endif %}
             {% if y.refunded_at %}<span class="badge bg-info text-dark" title="{{ y.refunded_at | ist }}">İade yapıldı</span>{% endif %}
@@ -225,6 +229,12 @@
           {% if y.title %}<div class="fw-bold mt-2">{{ y.title }}</div>{% endif %}
           {# müşteri metni: otomatik kaçırma açık, |safe YOK #}
           <p class="gy-yorum-metin">{{ y.body }}</p>
+          {% if y.foto_adresleri %}
+          {# Shopify CDN adresleri; servis yalnız https:// geçirir. Dokununca tam boy yeni sekmede. #}
+          <div class="gy-fotolar">
+            {% for u in y.foto_adresleri %}<a href="{{ u }}" target="_blank" rel="noopener noreferrer" title="Fotoğrafı büyüt"><img src="{{ u }}{{ '&' if '?' in u else '?' }}width=240" alt="{{ y.display_name }} — müşteri fotoğrafı {{ loop.index }}" loading="lazy"></a>{% endfor %}
+          </div>
+          {% endif %}
           {% if y.reply %}<div class="gy-yanit"><i class="fas fa-reply me-1"></i><strong>Mağaza yanıtı:</strong> {{ y.reply }}</div>{% endif %}
         </div>
         {% else %}

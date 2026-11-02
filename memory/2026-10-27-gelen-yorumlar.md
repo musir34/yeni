@@ -50,3 +50,11 @@ yorum e-postası gitti, kaçı bağlantıyı açtı (sipariş numarasıyla), ka�
   gönderim tablosunda hem yorum kartında, yalnız "iade bekliyor" rozeti olan satırda; işaretlenince
   "İade yapıldı" rozetine döner. Zaten işaretli/teşviksiz → uyarı, değişiklik yok.
 - Güllü Yorum'un `refund-list` / `mark-refunded` komutları aynı alanı okuduğundan iki taraf tutarlı kalır.
+
+## 2026-11-02 — Yorum fotoğrafları
+- Komutan: görselli yorumların fotoğrafları da görünsün. Adresler Shopify'da; reviews_cache yalnız photo_count tutuyordu.
+- Karar (Komutan): Güllü Yorum yazsın. Güllü Yorum 1.3.0: `reviews_cache.photo_urls` (JSON, READY CDN adresleri; `_migrate`
+  ile eklemeli sütun; boş web satırı eski adresi ezmez, foto 0 → temizlenir). Ayrıntı: Gullu-Yorum/DEGISIKLIK-GUNLUGU.md.
+- Panel: `oku_yorumlar` PRAGMA ile sütun varsa okur (yoksa '' → eski davranış), `foto_adresleri()` yalnız https geçirir,
+  `Yorum.foto_adresleri`; şablonda 96px küçük resim şeridi (yeni sekmede tam boy, `?width=240` Shopify CDN küçültmesi).
+- Testler: tests/test_gelen_yorumlar.py +3 (12/12). Deploy sırası serbest: panel önce giderse fotoğraf yerine 📷 rozeti kalır.

@@ -69,7 +69,7 @@
                 {% if g.alacak_usd %}<span class="fn-pos"> +{{ g.alacak_usd | tl_format }} $</span>{% endif %}
               </th>
               <th class="d-md-none"></th>
-              <th colspan="2" class="fn-mini fw-normal d-none d-md-table-cell">{% if g.kod == 'sahsi' %}kasaya borcum{% elif g.borc or g.borc_usd %}borcumuz{% elif g.alacak or g.alacak_usd %}alacağımız{% else %}sıfır{% endif %}</th>
+              <th colspan="2" class="fn-mini fw-normal d-none d-md-table-cell">{% if g.kod == 'sahsi' and g.alacak and not g.borc %}kasaya borcum{% elif g.borc or g.borc_usd %}borcumuz{% elif g.alacak or g.alacak_usd %}alacağımız{% else %}sıfır{% endif %}</th>
             </tr>
           {% for c in g.cariler %}
             <tr class="collapse show fn-cg-{{ g.kod }} {{ 'text-muted' if not c.aktif }}">

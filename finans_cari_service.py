@@ -11,6 +11,9 @@ Hareketler (yon: +1 borcumuz artar, -1 azalır):
 - tahsilat (+1) o bize ödedi → Beyazıt'a `cari_tahsilat` gelir kaydı
 - borc_alma  (-1) yalnız şahsi hesapta: kasadan kendimize aldığımız borç; kasa tarafı ödeme gibi
 - borc_odeme (+1) yalnız şahsi hesapta: bu borcun kasaya geri ödenmesi; kasa tarafı tahsilat gibi
+- borc_verme (+1) yalnız şahsi hesapta: cebimizden kasaya koyduğumuz para (kasa bize borçlanır);
+                  seçilen Beyazıt/Elde/Banka hesabına `cari_tahsilat` girişi. Geri alınırken
+                  borc_alma kullanılır, önce kasanın bu borcundan düşer (komutan kararı 2026-11-02)
 - calisan_borc       (+1) yalnız çalışan hesabında: çalışanın cebinden verdiği para; seçilen
                           Elde/Banka hesabına `cari_tahsilat` girişi, çalışana borcumuz ↑
 - calisan_borc_odeme (-1) yalnız çalışan hesabında: bu paranın geri ödenmesi; Elde/Banka'dan
@@ -39,12 +42,13 @@ CARI_TURLERI = ('tedarikci', 'musteri', 'diger', 'calisan', 'sahsi')
 CARI_TUR_ETIKET = {'tedarikci': 'Tedarikçi', 'musteri': 'Müşteri', 'diger': 'Diğer', 'calisan': 'Çalışan',
                   'sahsi': 'Şahsi (kasadan borç)'}
 HAREKET_TURLERI = {'alim': +1, 'odeme': -1, 'satis': -1, 'tahsilat': +1,
-                  'hakedis': +1, 'hakedis_azaltma': -1, 'borc_alma': -1, 'borc_odeme': +1,
+                  'hakedis': +1, 'hakedis_azaltma': -1, 'borc_alma': -1, 'borc_odeme': +1, 'borc_verme': +1,
                   'calisan_borc': +1, 'calisan_borc_odeme': -1, 'mahsup': +1, 'mesai': +1,
                   'alissa_hakedis': +1, 'alissa_duzeltme': -1, 'yuvarlama': +1}
 HAREKET_ETIKET = {'alim': 'Mal Girişi', 'odeme': 'Ödeme', 'satis': 'Satış', 'tahsilat': 'Tahsilat',
                  'hakedis': 'Hak ediş', 'hakedis_azaltma': 'Hak ediş düzeltmesi',
                  'borc_alma': 'Kasadan borç aldım', 'borc_odeme': 'Borç geri ödemesi',
+                 'borc_verme': 'Kasaya borç verdim',
                  'calisan_borc': 'Cebinden verdi', 'calisan_borc_odeme': 'Geri ödeme',
                  'mahsup': 'Maaş hesaba yazıldı', 'mesai': 'Mesai',
                  'alissa_hakedis': 'Alissa hak edişi', 'alissa_duzeltme': 'Alissa hak ediş düzeltmesi',
@@ -55,7 +59,8 @@ HAREKET_ETIKET = {'alim': 'Mal Girişi', 'odeme': 'Ödeme', 'satis': 'Satış', 
 YUVARLAMA_SINIRI = Decimal('10.00')
 # Alissa haftalık hak edişi alissa/cari.py tarafından defterden hesaplanıp yazılır; elle iptal edilmez.
 ALISSA_TURLERI = ('alissa_hakedis', 'alissa_duzeltme')
-SAHSI_BORC_TURLERI = ('borc_alma', 'borc_odeme', 'mahsup')
+SAHSI_BORC_TURLERI = ('borc_alma', 'borc_odeme', 'borc_verme', 'mahsup')
+SAHSI_GIRIS_HESAPLARI = ('beyazit', 'elde', 'banka')   # Kasaya borç verdim: paranın girdiği hesap
 CALISAN_BORC_TURLERI = ('calisan_borc', 'calisan_borc_odeme')
 PARA_BIRIMLERI = ('TRY', 'USD')
 PARA_SEMBOL = {'TRY': '₺', 'USD': '$'}
@@ -89,8 +94,8 @@ def parse_kur(raw) -> Decimal:
 
 
 def _sahsi_kontrol(cari: FinansCari, tur: str) -> None:
-    """Şahsi hesapta yalnız borç alma/geri ödeme; diğer hesaplarda bu ikisi kullanılamaz."""
-    sahsi_hareket = tur in ('borc_alma', 'borc_odeme')
+    """Şahsi hesapta yalnız borç alma/geri ödeme/kasaya borç verme; diğer hesaplarda bunlar kullanılamaz."""
+    sahsi_hareket = tur in ('borc_alma', 'borc_odeme', 'borc_verme')
     if cari.tur == 'sahsi' and not sahsi_hareket:
         raise FinansHata('Şahsi hesapta yalnız kasadan borç alma ve geri ödeme kaydedilir.')
     if cari.tur != 'sahsi' and sahsi_hareket:
@@ -426,11 +431,16 @@ def tahsilat_al(cari_id, tutar: Decimal, tarih: datetime, aciklama: str,
     USD caride tutar dolardır; Beyazıt'a tutar×kur TL girer.
     tur='borc_odeme': şahsi hesapta kasadan alınan borcun geri ödenmesi (kasa tarafı aynı).
     tur='calisan_borc': çalışanın cebinden verdiği para; Beyazıt yerine hesap_kodu (Elde/Banka)
-    hesabına girer."""
+    hesabına girer.
+    tur='borc_verme': şahsi hesapta cebimizden kasaya koyduğumuz para; hesap_kodu (Beyazıt/Elde/Banka)
+    hesabına girer, kasa bize borçlanır."""
     try:
         if tur == 'calisan_borc':
             if hesap_kodu not in fs.GIDER_HESAPLARI:
                 raise FinansHata('Paranın girdiği hesabı seçin (Elde veya Banka).')
+        elif tur == 'borc_verme':
+            if hesap_kodu not in SAHSI_GIRIS_HESAPLARI:
+                raise FinansHata('Paranın girdiği hesabı seçin (Beyazıt, Elde veya Banka).')
         else:
             hesap_kodu = fs.GELIR_HESABI
         # Kilit sırası hesap → cari (islem_iptal ile aynı) — deadlock önleme
@@ -442,6 +452,7 @@ def tahsilat_al(cari_id, tutar: Decimal, tarih: datetime, aciklama: str,
             raise FinansHata('Kapalı cari hesaba hareket girilemez.')
         aciklama = (aciklama or '').strip() or {
             'borc_odeme': f'{cari.ad} — borç geri ödemesi',
+            'borc_verme': f'{cari.ad} — kasaya borç verdi',
             'calisan_borc': f'{cari.ad} — cebinden verdi',
         }.get(tur, f'{cari.ad} — tahsilat')
         kasa_tutar, kur = _kasa_tutari(cari, tutar, kur)
