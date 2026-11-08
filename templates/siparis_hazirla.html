@@ -620,6 +620,13 @@
     <button type="button" class="btn btn-info text-white" id="bugunHazirlananBtn" title="Bugün bu ekrandan hazırlanan siparişler (her gün 00:00'da sıfırlanır)">
       <i class="fas fa-clipboard-list me-1"></i>Bugün Hazırlananlar <span class="badge bg-light text-dark" id="bugunHazirlananSayi" hidden></span>
     </button>
+    <div class="dropdown">
+      <button class="btn btn-info text-white dropdown-toggle" type="button" id="topluHazirlaMenu" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fas fa-boxes me-1"></i>Toplu Hazırla</button>
+      <div class="dropdown-menu" aria-labelledby="topluHazirlaMenu">
+        <a class="dropdown-item" href="{{ url_for('new_orders_service.prepare_new_orders') }}" title="Yeni siparişleri toplu hazırla"><i class="fas fa-boxes me-2"></i>Toplu Ürün Hazırla</a>
+        <a class="dropdown-item" href="{{ url_for('new_orders_service.acil_siparisler') }}" title="Kargo süresi en az kalan 100 sipariş"><i class="fas fa-stopwatch me-2 text-danger"></i>Acil 100 Sipariş</a>
+      </div>
+    </div>
 
 
 

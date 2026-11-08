@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Acil {{ limit }} Sipariş - Güllü Ayakkabı{% endblock %}
+{% block extra_css %}
+<style>
+    /* :root / * / body ortak stilleri gullu-common.css'ten gelir; burada yalnızca sayfaya özgü kurallar tutulur. */
+        .container { max-width: 960px; padding: 1.5rem; }
+
+        .page-header { background: var(--color-white); padding: 1rem 1.5rem; border-radius: var(--border-radius); box-shadow: var(--shadow-sm); margin-bottom: 1.5rem; }
+        .btn { border-radius: var(--border-radius); font-weight: 600; transition: var(--transition); border: none; padding: 0.55rem 1.1rem; }
+        .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+        .btn-primary   { background: var(--color-primary); color: #fff; }
+        .btn-primary:hover { background: var(--color-primary-dark); color: #fff; }
+
+        .acil-block { background: var(--color-white); border-radius: var(--border-radius); box-shadow: var(--shadow-sm); overflow: hidden; }
+
+        .acil-row { display: flex; align-items: center; padding: .65rem 1.2rem; border-bottom: 1px solid var(--color-border); gap: .8rem; color: inherit; text-decoration: none; border-left: 5px solid transparent; }
+        .acil-row:last-child { border-bottom: none; }
+        .acil-row:hover { background: #fdf5f6; color: inherit; }
+        .acil-row.d-gecikmis { border-left-color: #dc3545; background: #fff3f3; }
+        .acil-row.d-acil     { border-left-color: #fd7e14; }
+        .acil-row.d-normal   { border-left-color: #28a745; }
+        .acil-row.d-yok      { border-left-color: #adb5bd; }
+
+        .sira { font-size: 1.15rem; font-weight: 800; color: var(--color-primary); min-width: 2.4rem; text-align: center; }
+        .order-no { font-size: .8rem; color: #888; min-width: 125px; white-space: nowrap; }
+        .order-no .musteri { display: block; font-size: .72rem; color: #aaa; white-space: normal; }
+        .product-info { font-weight: 700; font-size: .98rem; color: var(--color-secondary); flex: 1; }
+        .product-info .cs { font-weight: 400; font-size: .86rem; color: #666; }
+        .product-info .adet { font-weight: 700; color: #dc3545; }
+        .kalan { text-align: right; min-width: 150px; }
+        .kalan-badge { display: inline-block; font-size: .82rem; font-weight: 700; border-radius: 6px; padding: .2rem .55rem; white-space: nowrap; }
+        .d-gecikmis .kalan-badge { background: #dc3545; color: #fff; }
+        .d-acil .kalan-badge     { background: #fd7e14; color: #fff; }
+        .d-normal .kalan-badge   { background: #e8f6ec; color: #1e7e34; }
+        .d-yok .kalan-badge      { background: #eee; color: #777; }
+        .kalan small { display: block; font-size: .72rem; color: #999; margin-top: 2px; }
+        .toplandi-badge { font-size: .72rem; font-weight: 600; color: #1e7e34; background: #eafaf0; border: 1px solid #b7e4c7; border-radius: 4px; padding: .1rem .45rem; }
+
+        .empty-state { text-align: center; padding: 4rem 2rem; color: #aaa; }
+        .empty-state i { font-size: 3rem; margin-bottom: 1rem; }
+
+        /* ── MOBİL / EL TERMİNALİ (Zebra TC21 ~5") ── */
+        @media (max-width: 640px) {
+            .container { padding: .75rem; }
+            .page-header { padding: .75rem 1rem; }
+            .acil-row { flex-wrap: wrap; gap: .4rem; padding: .7rem .9rem; }
+            .order-no { min-width: 0; flex: 1; }
+            .product-info { flex: 1 1 100%; font-size: 1.02rem; }
+            .kalan { flex: 1 1 100%; text-align: left; min-width: 0; }
+            .page-header .btn { padding: .5rem .75rem; font-size: .9rem; }
+        }
+</style>
+{% endblock %}
+
+{% block content %}
+
+    <!-- ── Başlık ── -->
+    <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3">
+            <img src="/static/logo/gullu.png" alt="Güllü Logo" style="height:40px;">
+            <div>
+                <h4 class="mb-0">Acil {{ limit }} Sipariş</h4>
+                <small class="text-muted">Hazırlanıyor — kargo süresine kalan vakte göre (raf sırası yok)</small>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('siparis_hazirla.index') }}" class="btn btn-primary">
+                <i class="fas fa-arrow-left"></i> Sipariş Hazırla
+            </a>
+        </div>
+    </div>
+
+    {% if rows %}
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <span class="text-muted">En acil <strong>{{ rows | length }}</strong> sipariş — hazırlamak için satıra dokunun</span>
+        <span class="small text-muted">
+            <span class="kalan-badge" style="background:#dc3545;color:#fff;">Süre geçti</span>
+            <span class="kalan-badge" style="background:#fd7e14;color:#fff;">&lt; {{ esik_saat }} saat</span>
+        </span>
+    </div>
+
+    <div class="acil-block">
+        {% for r in rows %}
+        <a class="acil-row d-{{ r.durum }}" href="{{ url_for('siparis_hazirla.index', order_number=r.order_number) }}">
+            <div class="sira">{{ r.sira }}</div>
+            <div class="order-no">
+                {{ r.order_number }}
+                {% if r.toplandi %}<span class="toplandi-badge">Toplandı</span>{% endif %}
+                <span class="musteri">{{ r.customer_name }}{% if r.cargo %} · {{ r.cargo }}{% endif %}</span>
+            </div>
+            <div class="product-info">
+                {% for it in r.items %}
+                <div>
+                    {{ it.get('sku') or it.get('product_name') or '-' }}
+                    <span class="cs">{{ it.get('color') or '' }}{% if it.get('size') %} / {{ it.get('size') }}{% endif %}</span>
+                    {% if (it.get('quantity') or 1)|int > 1 %}<span class="adet">×{{ it.get('quantity') }}</span>{% endif %}
+                </div>
+                {% else %}
+                <div class="cs">Ürün bilgisi yok</div>
+                {% endfor %}
+            </div>
+            <div class="kalan">
+                <span class="kalan-badge">{{ r.remaining_text }}</span>
+                {% if r.teslim %}<small>{{ r.teslim.strftime('%d.%m.%Y %H:%M') }}</small>{% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-check-circle"></i>
+        <p>Hazırlanacak sipariş yok.</p>
+    </div>
+    {% endif %}
+
+{% endblock %}

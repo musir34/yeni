@@ -261,6 +261,62 @@ def prepare_new_orders_excel():
 
 
 # ─────────────────────────────────────────────────────────────
+#  ACİL 100 SİPARİŞ — kargo cut-off'una kalan süreye göre (raf sırası yok)
+# ─────────────────────────────────────────────────────────────
+
+ACIL_LISTE_LIMIT = 100
+
+
+@new_orders_service_bp.route('/prepare-new-orders/acil', methods=['GET'])
+def acil_siparisler():
+    """Hazırlanıyor kuyruğundaki en acil ACIL_LISTE_LIMIT siparişi kargo süresine göre dizer.
+
+    Sıralama sipariş hazırla ekranının sıralı moduyla aynı: agreed_delivery_date asc
+    (tarihi olmayan en sona), eşitlikte en eski sipariş. Arşivdekiler elenir.
+    """
+    try:
+        PrepModel = _prep_model()
+        archived_numbers = {r[0] for r in db.session.query(Archive.order_number).all()}
+        q = PrepModel.query
+        if archived_numbers:
+            q = q.filter(~PrepModel.order_number.in_(archived_numbers))
+        orders = (q.order_by(PrepModel.agreed_delivery_date.asc().nullslast(),
+                             PrepModel.order_date.asc())
+                  .limit(ACIL_LISTE_LIMIT)
+                  .all())
+
+        threshold_seconds = KARGO_ACIL_ESIK_SAAT * 3600
+        rows = []
+        for sira, order in enumerate(orders, start=1):
+            rs = _remaining_seconds(order.agreed_delivery_date)
+            if rs is None:
+                durum = 'yok'
+            elif rs <= 0:
+                durum = 'gecikmis'
+            elif rs < threshold_seconds:
+                durum = 'acil'
+            else:
+                durum = 'normal'
+            rows.append({
+                'sira': sira,
+                'order_number': order.order_number,
+                'items': _parse_details(order),
+                'customer_name': ' '.join(filter(None, [order.customer_name, order.customer_surname])),
+                'cargo': order.cargo_provider_name or '',
+                'teslim': _to_ist(order.agreed_delivery_date),
+                'remaining_text': 'Süre geçti' if durum == 'gecikmis' else _format_remaining(rs),
+                'durum': durum,
+                'toplandi': order.toplandi_at is not None,
+            })
+
+        return render_template('acil_siparisler.html', rows=rows,
+                               limit=ACIL_LISTE_LIMIT, esik_saat=KARGO_ACIL_ESIK_SAAT)
+    except Exception as e:
+        traceback.print_exc()
+        return f"Bir hata oluştu: {e}", 500
+
+
+# ─────────────────────────────────────────────────────────────
 #  A4 ETİKET YAZDIR
 # ─────────────────────────────────────────────────────────────
 
