@@ -201,7 +201,7 @@ def prepare_new_orders_excel():
         import openpyxl
         from openpyxl.styles import Font, PatternFill, Alignment
 
-        sorted_shelves = _build_shelf_groups()
+        sorted_shelves = _acil_as_shelf_groups() if request.args.get('acil') == '1' else _build_shelf_groups()
 
         wb = openpyxl.Workbook()
         ws = wb.active
@@ -267,48 +267,60 @@ def prepare_new_orders_excel():
 ACIL_LISTE_LIMIT = 100
 
 
+def _build_acil_items(limit: int = ACIL_LISTE_LIMIT) -> list[dict]:
+    """Toplu Ürün Hazırla ile AYNI sipariş kümesi (tek ürünlü, toplanmamış, aynı stok/raf
+    bilgisi) — tek fark sıralama: kargo cut-off'una (agreed_delivery_date) kalan süre.
+    Gecikmiş en başta, tarihi olmayan en sona, eşitlikte en eski sipariş. İlk `limit` kayıt.
+    """
+    items = [it for _, grp in _build_shelf_groups() for it in grp]
+    if not items:
+        return []
+
+    PrepModel = _prep_model()
+    numbers = [it['order_number'] for it in items]
+    tarihler = {num: (add, od) for num, add, od in
+                db.session.query(PrepModel.order_number,
+                                 PrepModel.agreed_delivery_date,
+                                 PrepModel.order_date)
+                .filter(PrepModel.order_number.in_(numbers)).all()}
+
+    threshold_seconds = KARGO_ACIL_ESIK_SAAT * 3600
+    zenginlestirilmis = []
+    for it in items:
+        add, od = tarihler.get(it['order_number'], (None, None))
+        rs = _remaining_seconds(add)
+        if rs is None:
+            durum = 'yok'
+        elif rs <= 0:
+            durum = 'gecikmis'
+        elif rs < threshold_seconds:
+            durum = 'acil'
+        else:
+            durum = 'normal'
+        zenginlestirilmis.append(({
+            **it,
+            'teslim': _to_ist(add),
+            'remaining_text': 'Süre geçti' if durum == 'gecikmis' else _format_remaining(rs),
+            'durum': durum,
+        }, rs, od or datetime.min))
+
+    zenginlestirilmis.sort(key=lambda x: (x[1] is None, x[1] or 0, x[2]))
+    return [{**it, 'sira': i} for i, (it, _rs, _od) in
+            enumerate(zenginlestirilmis[:limit], start=1)]
+
+
+def _acil_as_shelf_groups() -> list[tuple[str, list[dict]]]:
+    """Excel/etiket rotaları (raf_kodu, [item]) biçimi beklediği için acil sırayı
+    bozmadan her siparişi kendi rafıyla tek elemanlı grup yapar."""
+    return [((it['raf_secenekleri'][0] if it['raf_secenekleri'] else 'RAF YOK'), [it])
+            for it in _build_acil_items()]
+
+
 @new_orders_service_bp.route('/prepare-new-orders/acil', methods=['GET'])
 def acil_siparisler():
-    """Hazırlanıyor kuyruğundaki en acil ACIL_LISTE_LIMIT siparişi kargo süresine göre dizer.
-
-    Sıralama sipariş hazırla ekranının sıralı moduyla aynı: agreed_delivery_date asc
-    (tarihi olmayan en sona), eşitlikte en eski sipariş. Arşivdekiler elenir.
-    """
+    """Toplu Ürün Hazırla'nın aynısı; sıralama kargoya kalan süre, en fazla ACIL_LISTE_LIMIT."""
     try:
-        PrepModel = _prep_model()
-        archived_numbers = {r[0] for r in db.session.query(Archive.order_number).all()}
-        q = PrepModel.query
-        if archived_numbers:
-            q = q.filter(~PrepModel.order_number.in_(archived_numbers))
-        orders = (q.order_by(PrepModel.agreed_delivery_date.asc().nullslast(),
-                             PrepModel.order_date.asc())
-                  .limit(ACIL_LISTE_LIMIT)
-                  .all())
-
-        threshold_seconds = KARGO_ACIL_ESIK_SAAT * 3600
-        rows = []
-        for sira, order in enumerate(orders, start=1):
-            rs = _remaining_seconds(order.agreed_delivery_date)
-            if rs is None:
-                durum = 'yok'
-            elif rs <= 0:
-                durum = 'gecikmis'
-            elif rs < threshold_seconds:
-                durum = 'acil'
-            else:
-                durum = 'normal'
-            rows.append({
-                'sira': sira,
-                'order_number': order.order_number,
-                'items': _parse_details(order),
-                'customer_name': ' '.join(filter(None, [order.customer_name, order.customer_surname])),
-                'cargo': order.cargo_provider_name or '',
-                'teslim': _to_ist(order.agreed_delivery_date),
-                'remaining_text': 'Süre geçti' if durum == 'gecikmis' else _format_remaining(rs),
-                'durum': durum,
-                'toplandi': order.toplandi_at is not None,
-            })
-
+        rows = _build_acil_items()
         return render_template('acil_siparisler.html', rows=rows,
                                limit=ACIL_LISTE_LIMIT, esik_saat=KARGO_ACIL_ESIK_SAAT)
     except Exception as e:
@@ -328,7 +340,7 @@ def prepare_new_orders_labels_print():
     """
     try:
         from barcode_utils import generate_barcode_data_uri
-        sorted_shelves = _build_shelf_groups()
+        sorted_shelves = _acil_as_shelf_groups() if request.args.get('acil') == '1' else _build_shelf_groups()
 
         labels = []
         for raf_kodu, items in sorted_shelves:
