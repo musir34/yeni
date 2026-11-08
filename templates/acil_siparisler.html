@@ -89,7 +89,7 @@
                 <span class="musteri">{{ r.customer_name }}{% if r.cargo %} · {{ r.cargo }}{% endif %}</span>
             </div>
             <div class="product-info">
-                {% for it in r.items %}
+                {% for it in r['items'] %}
                 <div>
                     {{ it.get('sku') or it.get('product_name') or '-' }}
                     <span class="cs">{{ it.get('color') or '' }}{% if it.get('size') %} / {{ it.get('size') }}{% endif %}</span>
