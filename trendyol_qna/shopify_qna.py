@@ -275,7 +275,8 @@ def answer_shopify_question(question_id: int, text: str, username: str | None = 
 def new_count() -> int:
     """Cevap bekleyen Shopify sorusu sayısı (rozet için)."""
     try:
-        return db.session.query(ShopifyQuestion).filter_by(status="new").count()
+        return (db.session.query(ShopifyQuestion).filter_by(status="new")
+                .filter(ShopifyQuestion.archived_at.is_(None)).count())
     except Exception:
         db.session.rollback()
         logger.exception("[SHOPIFY-QNA] bekleyen sayısı okunamadı")

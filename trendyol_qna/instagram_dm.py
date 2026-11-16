@@ -292,6 +292,9 @@ def kaydet_mesaj(igsid: str, mid: str, direction: str, text: str, created_at: da
             conv.last_customer_at = created_at
         if en_yeni:
             conv.status = "new"
+            # Arşivdeki konuşmaya müşteri YENİ mesaj yazdı: yeni soru, arşivden çıkar
+            # (aynı mesajın tekrar gelişi yukarıda mid ile elendiği için senkron çıkarmaz)
+            conv.archived_at, conv.archived_by = None, None
             if conv.ai_draft_status != "pending":
                 # Eski taslak yeni mesajı görmedi; yenisi üretilecek
                 conv.ai_draft, conv.ai_draft_status = None, "none"
@@ -738,7 +741,8 @@ def answer_conversation(conv_id: int, text: str, username: str | None = None,
 def new_count() -> int:
     """Cevap bekleyen Instagram konuşması sayısı (rozet için)."""
     try:
-        return db.session.query(InstagramConversation).filter_by(status="new").count()
+        return (db.session.query(InstagramConversation).filter_by(status="new")
+                .filter(InstagramConversation.archived_at.is_(None)).count())
     except Exception:
         db.session.rollback()
         logger.exception("[INSTAGRAM] bekleyen sayısı okunamadı")
@@ -1040,7 +1044,8 @@ def ignore_comment(yorum_id: int, username: str | None = None) -> dict:
 def new_comment_count() -> int:
     """Cevap bekleyen Instagram yorumu sayısı (rozet için)."""
     try:
-        return db.session.query(InstagramComment).filter_by(status="new").count()
+        return (db.session.query(InstagramComment).filter_by(status="new")
+                .filter(InstagramComment.archived_at.is_(None)).count())
     except Exception:
         db.session.rollback()
         logger.exception("[INSTAGRAM] bekleyen yorum sayısı okunamadı")

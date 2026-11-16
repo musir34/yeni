@@ -60,6 +60,7 @@
           <button class="qna-tab" data-status="ANSWERED" role="tab" aria-selected="false">Cevaplanan</button>
           <button class="qna-tab" data-status="DIGER" role="tab" aria-selected="false">Diğer</button>
           <button class="qna-tab" data-status="ALL" role="tab" aria-selected="false">Tümü</button>
+          <button class="qna-tab" data-status="ARSIV" role="tab" aria-selected="false"><i class="bi bi-archive"></i> Arşiv</button>
         </div>
       </div>
 
@@ -347,6 +348,8 @@
   .qna-meta { color:var(--qna-muted); font-size:.74rem; }
   .qna-secondary-btn { min-height:40px; padding:0 13px; border:1px solid #d7d8df; border-radius:10px; background:#fff; color:var(--qna-ink); font-size:.78rem; font-weight:680; }
   .qna-secondary-btn--filled { border-color:var(--qna-blue); background:var(--qna-blue); color:#fff; }
+  .qna-arsiv-btn { flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 10px; font-size:.7rem; white-space:nowrap; }
+  .qna-arsiv-btn:disabled { opacity:.6; }
   .qna-pagination-wrap { display:flex; justify-content:center; margin-top:24px; }
   .qna-pagination-wrap .pagination { gap:5px; margin:0; }
   .qna-pagination-wrap .page-link { min-width:40px; min-height:40px; display:grid; place-items:center; border:1px solid var(--qna-line); border-radius:10px !important; color:var(--qna-ink); background:#fff; font-size:.78rem; box-shadow:none; }
@@ -401,6 +404,8 @@
     .qna-product-info strong { font-size:.79rem; }
     .qna-status { align-self:flex-start; padding:5px 7px; }
     .qna-status span { display:none; }
+    .qna-arsiv-btn { align-self:flex-start; min-height:28px; padding:0 8px; }
+    .qna-arsiv-btn span { display:none; }
     .qna-question-pane,.qna-answer-pane { padding:16px 14px; }
     .qna-customer-meta { margin-bottom:12px; }
     .qna-question { font-size:.98rem; line-height:1.55; }
@@ -538,6 +543,35 @@
       : '';
   }
 
+  // Panel içi arşiv: cevaplanmamış kart arşivlenir, Arşiv sekmesinden geri alınır (dışarı bir şey gitmez)
+  function arsivDugmesi(s, kaynak) {
+    if (s.arsivli) {
+      const kim = `Arşivlendi${s.arsiv_tarih ? ': ' + s.arsiv_tarih : ''}${s.arsivleyen ? ' · ' + s.arsivleyen : ''}`;
+      return `<button type="button" class="qna-secondary-btn qna-arsiv-btn" data-src="${kaynak}" data-qid="${s.id}" data-geri="1"
+          title="${esc(kim)} — tıklayınca listeye geri döner" aria-label="Arşivden çıkar"><i class="bi bi-box-arrow-up"></i><span>Arşivden çıkar</span></button>`;
+    }
+    if (s.status === 'ANSWERED') return '';
+    return `<button type="button" class="qna-secondary-btn qna-arsiv-btn" data-src="${kaynak}" data-qid="${s.id}"
+        title="Listeden kaldır, Arşiv sekmesinde sakla (müşteriye bir şey gönderilmez)" aria-label="Arşivle"><i class="bi bi-archive"></i><span>Arşivle</span></button>`;
+  }
+
+  async function arsivle(btn) {
+    const geri = btn.dataset.geri === '1';
+    btn.disabled = true;
+    try {
+      const r = await fetch('/soru-cevap/api/arsiv', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-Requested-With': 'fetch'},
+        body: JSON.stringify({source: btn.dataset.src, id: +btn.dataset.qid, geri})
+      });
+      const d = await r.json();
+      if (!d.ok) { alert(d.hata || 'Arşiv işlemi yapılamadı.'); btn.disabled = false; return; }
+      const card = btn.closest('.qna-card');
+      if (card) card.style.opacity = '.4';
+      setTimeout(load, 700);
+    } catch (e) { alert('Sunucuya ulaşılamadı.'); btn.disabled = false; }
+  }
+
   // Soruyu soranın Trendyol siparişleri (kart düğmesi → ayrıntı penceresi)
   const SIPARISLER = {};
   function siparisSeridi(s) {
@@ -668,6 +702,7 @@
           <span class="qna-status qna-status--${st[1]}" title="${esc(st[0])}">
             <i class="bi ${st[2]}"></i><span>${esc(st[0])}</span>
           </span>
+          ${arsivDugmesi(s, 'trendyol')}
         </header>
         <div class="qna-card-grid">
           <section class="qna-question-pane">
@@ -789,6 +824,7 @@
           <span class="qna-status qna-status--${st[1]}" title="${esc(st[0])}">
             <i class="bi ${st[2]}"></i><span>${esc(st[0])}</span>
           </span>
+          ${arsivDugmesi(s, 'shopify')}
         </header>
         <div class="qna-card-grid">
           <section class="qna-question-pane">
@@ -939,6 +975,7 @@
           <span class="qna-status qna-status--${st[1]}" title="${esc(st[0])}">
             <i class="bi ${st[2]}"></i><span>${esc(st[0])}</span>
           </span>
+          ${arsivDugmesi(s, 'instagram')}
         </header>
         <div class="qna-card-grid">
           <section class="qna-question-pane">
@@ -1110,6 +1147,7 @@
           <span class="qna-status qna-status--${st[1]}" title="${esc(st[0])}">
             <i class="bi ${st[2]}"></i><span>${esc(st[0])}</span>
           </span>
+          ${arsivDugmesi(s, 'instagram_yorum')}
         </header>
         <div class="qna-card-grid">
           <section class="qna-question-pane">
@@ -1284,6 +1322,7 @@
     list.querySelectorAll('.qna-urun-ara').forEach(i => i.addEventListener('input', () => urunAra(i)));
     list.querySelectorAll('.qna-instagram-send').forEach(b => b.addEventListener('click', () => sendInstagram(b)));
     list.querySelectorAll('.qna-siparis-btn').forEach(b => b.addEventListener('click', () => siparisGoster(b)));
+    list.querySelectorAll('.qna-arsiv-btn').forEach(b => b.addEventListener('click', () => arsivle(b)));
     list.querySelectorAll('.qna-thread').forEach(t => { t.scrollTop = t.scrollHeight; });
     list.querySelectorAll('.qna-shopify-send').forEach(b => b.addEventListener('click', () => sendShopify(b, false)));
     list.querySelectorAll('.qna-shopify-done').forEach(b => b.addEventListener('click', () => sendShopify(b, true)));

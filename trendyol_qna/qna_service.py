@@ -424,7 +424,8 @@ def waiting_count() -> int:
     """Cevap bekleyen soru sayısı (anasayfa rozeti) — Trendyol + Shopify + Instagram toplamı."""
     toplam = 0
     try:
-        toplam += db.session.query(TrendyolQuestion).filter_by(status=ANSWERABLE_STATUS).count()
+        toplam += (db.session.query(TrendyolQuestion).filter_by(status=ANSWERABLE_STATUS)
+                   .filter(TrendyolQuestion.archived_at.is_(None)).count())
     except Exception:
         db.session.rollback()
         logger.exception("[QNA] bekleyen sayısı okunamadı")

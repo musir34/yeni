@@ -1634,6 +1634,10 @@ class TrendyolQuestion(db.Model):
     raw_json = db.Column(db.Text)
     first_seen_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
     last_synced_at = db.Column(db.DateTime(timezone=True))
+    # Panel içi arşiv (pazaryerine/müşteriye bir şey gitmez; senkron dokunmaz).
+    # Kolonlar additive: scripts/add_soru_arsiv.py
+    archived_at = db.Column(db.DateTime(timezone=True))
+    archived_by = db.Column(db.String(120))
 
 
 class ShopifyQuestion(db.Model):
@@ -1663,6 +1667,10 @@ class ShopifyQuestion(db.Model):
     ai_draft_at = db.Column(db.DateTime(timezone=True))
     created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), index=True)
     answered_at = db.Column(db.DateTime(timezone=True))
+    # Panel içi arşiv (pazaryerine/müşteriye bir şey gitmez; senkron dokunmaz).
+    # Kolonlar additive: scripts/add_soru_arsiv.py
+    archived_at = db.Column(db.DateTime(timezone=True))
+    archived_by = db.Column(db.String(120))
 
 
 class InstagramConversation(db.Model):
@@ -1690,6 +1698,10 @@ class InstagramConversation(db.Model):
     ai_draft_status = db.Column(db.String(20), default='none')  # none|pending|ready|failed
     ai_draft_at = db.Column(db.DateTime(timezone=True))
     created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
+    # Panel içi arşiv (pazaryerine/müşteriye bir şey gitmez; senkron dokunmaz).
+    # Kolonlar additive: scripts/add_soru_arsiv.py
+    archived_at = db.Column(db.DateTime(timezone=True))
+    archived_by = db.Column(db.String(120))
 
 
 class InstagramMessage(db.Model):
@@ -1764,6 +1776,10 @@ class InstagramComment(db.Model):
     ai_draft_status = db.Column(db.String(20), default='none')    # none|pending|ready|failed
     ai_draft_at = db.Column(db.DateTime(timezone=True))
     created_at = db.Column(db.DateTime(timezone=True), index=True)  # yorumun yazıldığı an
+    # Panel içi arşiv (pazaryerine/müşteriye bir şey gitmez; senkron dokunmaz).
+    # Kolonlar additive: scripts/add_soru_arsiv.py
+    archived_at = db.Column(db.DateTime(timezone=True))
+    archived_by = db.Column(db.String(120))
 
 
 class InstagramMediaProduct(db.Model):

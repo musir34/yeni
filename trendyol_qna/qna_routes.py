@@ -123,6 +123,16 @@ def _to_dict(r: TrendyolQuestion, gecmis: list[TrendyolQuestion] | None = None,
         "answered_by": r.answered_by,
         "ai_draft": r.ai_draft,
         "ai_draft_status": r.ai_draft_status or "none",
+        **_arsiv_alanlari(r),
+    }
+
+
+def _arsiv_alanlari(r) -> dict:
+    """Kartın arşiv bilgisi (dört kaynakta aynı alanlar)."""
+    return {
+        "arsivli": r.archived_at is not None,
+        "arsiv_tarih": _tr(r.archived_at),
+        "arsivleyen": r.archived_by,
     }
 
 
@@ -154,6 +164,7 @@ def _shopify_to_dict(r: ShopifyQuestion, uretim: set[str] | None = None) -> dict
         "answered_by": r.answered_by,
         "ai_draft": r.ai_draft,
         "ai_draft_status": r.ai_draft_status or "none",
+        **_arsiv_alanlari(r),
     }
 
 
@@ -230,6 +241,7 @@ def _instagram_to_dict(c: InstagramConversation, mesajlar: list[InstagramMessage
         "pencere_bitis": bitis.isoformat() if bitis else None,
         "metin_azami": TEXT_MAX,
         "urun": _urun_sozlugu(bag),
+        **_arsiv_alanlari(c),
         # cevapla birlikte gidecek ekler (panelden yüklendi, henüz gönderilmedi)
         "ekler": [ek_sozluk(e) for e in bekleyen_ekler(c.id)] if c.status == "new" else [],
         "mesajlar": [
@@ -275,6 +287,7 @@ def _instagram_yorum_to_dict(y: InstagramComment, bag=None) -> dict:
         "not_azami": YORUM_NOTU_MAX,
         "not_varsayilan": YORUM_NOTU_VARSAYILAN,
         "urun": _urun_sozlugu(bag),
+        **_arsiv_alanlari(y),
     }
 
 
@@ -312,9 +325,13 @@ def sorular():
         page = 1
 
     query = db.session.query(TrendyolQuestion)
+    # Arşivlenenler yalnız "Arşiv" sekmesinde görünür (orada statüden bağımsız hepsi)
+    arsiv_mi = status == "ARSIV"
+    query = query.filter(TrendyolQuestion.archived_at.isnot(None) if arsiv_mi
+                         else TrendyolQuestion.archived_at.is_(None))
     if status == "DIGER":
         query = query.filter(TrendyolQuestion.status.in_(("REJECTED", "REPORTED", "UNANSWERED")))
-    elif status != "ALL":
+    elif status not in ("ALL", "ARSIV"):
         query = query.filter(TrendyolQuestion.status == status)
     if q:
         like = f"%{q}%"
@@ -325,13 +342,14 @@ def sorular():
         )
 
     # Shopify soruları aynı listeye tarihe göre karışır (DIGER sekmesi Shopify'da yok)
-    sh_status = {"WAITING_FOR_ANSWER": "new", "ANSWERED": "answered", "ALL": None}
+    sh_status = {"WAITING_FOR_ANSWER": "new", "ANSWERED": "answered", "ALL": None, "ARSIV": None}
     sh_rows: list[ShopifyQuestion] = []
     sh_total = 0
     fetch_limit = page * PAGE_SIZE
     if status in sh_status:
         try:
-            sh_query = db.session.query(ShopifyQuestion)
+            sh_query = db.session.query(ShopifyQuestion).filter(
+                ShopifyQuestion.archived_at.isnot(None) if arsiv_mi else ShopifyQuestion.archived_at.is_(None))
             if sh_status[status]:
                 sh_query = sh_query.filter(ShopifyQuestion.status == sh_status[status])
             if q:
@@ -358,7 +376,9 @@ def sorular():
     ig_bag: dict = {}
     if status in sh_status:
         try:
-            ig_query = db.session.query(InstagramConversation)
+            ig_query = db.session.query(InstagramConversation).filter(
+                InstagramConversation.archived_at.isnot(None) if arsiv_mi
+                else InstagramConversation.archived_at.is_(None))
             if sh_status[status]:
                 ig_query = ig_query.filter(InstagramConversation.status == sh_status[status])
             if q:
@@ -394,7 +414,8 @@ def sorular():
     yr_bag: dict = {}
     if status in sh_status:
         try:
-            yr_query = db.session.query(InstagramComment)
+            yr_query = db.session.query(InstagramComment).filter(
+                InstagramComment.archived_at.isnot(None) if arsiv_mi else InstagramComment.archived_at.is_(None))
             if sh_status[status]:
                 yr_query = yr_query.filter(InstagramComment.status == sh_status[status])
             if q:
@@ -483,6 +504,47 @@ def cevapla():
     from trendyol_qna.qna_service import answer_question
     sonuc = answer_question(qid, text, username=session.get("username"))
     return jsonify(sonuc), (200 if sonuc["ok"] else 422)
+
+
+ARSIV_MODELLERI = {
+    "trendyol": TrendyolQuestion,
+    "shopify": ShopifyQuestion,
+    "instagram": InstagramConversation,
+    "instagram_yorum": InstagramComment,
+}
+
+
+@qna_bp.route("/api/arsiv", methods=["POST"])
+def arsiv():
+    """Soruyu panel içinde arşivler / arşivden çıkarır (geri=true).
+
+    Pazaryerine, siteye ya da müşteriye HİÇBİR şey gönderilmez; yalnız
+    archived_at/archived_by damgası. Senkron bu kolonlara dokunmaz.
+    """
+    payload = request.get_json(silent=True) or {}
+    model = ARSIV_MODELLERI.get(str(payload.get("source") or ""))
+    if model is None:
+        return jsonify({"ok": False, "hata": "Geçersiz kaynak."}), 400
+    try:
+        qid = int(payload.get("id"))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "hata": "Geçersiz soru ID."}), 400
+    row = db.session.get(model, qid)
+    if not row:
+        return jsonify({"ok": False, "hata": "Soru bulunamadı."}), 404
+    if payload.get("geri"):
+        row.archived_at, row.archived_by = None, None
+    else:
+        row.archived_at, row.archived_by = datetime.now(timezone.utc), session.get("username")
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("[QNA] arşiv işlemi kaydedilemedi (%s %s)", payload.get("source"), qid)
+        return jsonify({"ok": False, "hata": "Arşiv işlemi kaydedilemedi."}), 500
+    logger.info("[QNA] %s %s %s (%s)", payload.get("source"), qid,
+                "arşivden çıkarıldı" if payload.get("geri") else "arşivlendi", session.get("username"))
+    return jsonify({"ok": True, "hata": None})
 
 
 @qna_bp.route("/api/shopify/cevapla", methods=["POST"])
