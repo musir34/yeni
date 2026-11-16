@@ -101,18 +101,29 @@ def _adres(order: dict) -> str:
     ).strip()
 
 
+def _guncel_adet(li: dict) -> int:
+    """Kalemin güncel adedi: order-edit / kısmi iade sonrası kalan (currentQuantity), yoksa quantity."""
+    current = li.get("currentQuantity")
+    return int(current if current is not None else li.get("quantity", 1) or 0)
+
+
+def _guncel_kalemler(order: dict) -> list:
+    """Güncel adedi 0 olan (kaldırılmış / tamamen iade edilmiş) kalemler hariç."""
+    return [li for li in order.get("line_items") or [] if _guncel_adet(li) > 0]
+
+
 def _detaylar(order: dict) -> str:
     """Kalemleri order_list process_order_details'in okuduğu details JSON biçimine çevir.
     Barkod: get_orders'ın eklediği resolved_barcode (panel barkodu) → varyant barkodu → sku."""
     kalemler = []
-    for li in order.get("line_items") or []:
+    for li in _guncel_kalemler(order):
         variant = li.get("variant") or {}
         sku = li.get("sku") or ""
         kalemler.append({
             "barcode": li.get("resolved_barcode") or variant.get("barcode") or sku,
             "sku": sku,
             "product_name": li.get("title") or "Shopify Ürün",
-            "quantity": li.get("quantity", 1),
+            "quantity": _guncel_adet(li),
         })
     return json.dumps(kalemler)
 
@@ -129,7 +140,7 @@ def karta_cevir(order: dict) -> SimpleNamespace:
         status=durum_kodu(order),
         order_date=_naive_utc(order.get("createdAt")),
         details=_detaylar(order),
-        merchant_sku=", ".join(li.get("sku") or "" for li in order.get("line_items") or []),
+        merchant_sku=", ".join(li.get("sku") or "" for li in _guncel_kalemler(order)),
         product_barcode="",
         cargo_provider_name=kargo_firma,
         cargo_tracking_number=takip_no,

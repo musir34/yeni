@@ -194,6 +194,10 @@ def _fetch_shopify_order_info(order_number: str) -> dict | None:
             line_items = [e.get("node", {}) for e in (order.get("lineItems") or {}).get("edges", [])]
         details_list = []
         for li in line_items:
+            # Kaldırılmış / tamamen iade edilmiş kalem (güncel adet 0) değişim formuna gelmez
+            guncel_adet = li.get("currentQuantity") if li.get("currentQuantity") is not None else li.get("quantity")
+            if (guncel_adet or 0) <= 0:
+                continue
             variant = li.get("variant") or {}
             remote_img = (variant.get("image") or {}).get("url", "") or ""
             # Panel barkodu (eşleme tablosundan) öncelikli: öneriler ve stok ona bakar

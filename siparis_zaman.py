@@ -564,7 +564,7 @@ query($id: ID!) { order(id: $id) {
   customer { firstName lastName phone }
   shippingAddress { name address1 address2 city province phone }
   fulfillments { createdAt status trackingInfo { company number } }
-  lineItems(first: 50) { edges { node { title sku quantity image { url }
+  lineItems(first: 50) { edges { node { title sku quantity currentQuantity image { url }
     variant { barcode selectedOptions { name value } } } } }
 } }"""
 
@@ -588,7 +588,8 @@ def shopify_kalemi(node: dict) -> dict:
         "renk": renk,
         "beden": beden,
         "barkod": varyant.get("barcode") or node.get("sku") or "",
-        "adet": node.get("quantity"),
+        # Güncel adet: order-edit / kısmi iade sonrası kalan (currentQuantity), yoksa quantity
+        "adet": node.get("currentQuantity") if node.get("currentQuantity") is not None else node.get("quantity"),
         "gorsel": ((node.get("image") or {}).get("url")) or "",
         "tablo": "Site",
     }
@@ -611,7 +612,8 @@ def _shopify_ozeti(order: dict, shopify_id: str) -> dict:
     adres = order.get("shippingAddress") or {}
     ad = f"{musteri.get('firstName') or ''} {musteri.get('lastName') or ''}".strip() or (adres.get("name") or "")
     kalemler = _kalemleri_zenginlestir([
-        shopify_kalemi(e.get("node") or {}) for e in ((order.get("lineItems") or {}).get("edges") or [])
+        k for k in (shopify_kalemi(e.get("node") or {}) for e in ((order.get("lineItems") or {}).get("edges") or []))
+        if (k["adet"] or 0) > 0  # kaldırılmış / tamamen iade edilmiş kalem gösterilmez
     ])
     takip = next((t for f in (order.get("fulfillments") or []) for t in (f.get("trackingInfo") or []) if t), {})
     kargo = takip.get("company") or ""

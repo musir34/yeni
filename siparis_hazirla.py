@@ -186,6 +186,12 @@ def _fetch_shopify_beklemede_orders(limit=20):
         return []
 
 
+def _shopify_guncel_adet(li):
+    """Kalemin güncel adedi: order-edit / kısmi iade sonrası kalan (currentQuantity), yoksa quantity."""
+    current = li.get("currentQuantity")
+    return int(current if current is not None else li.get("quantity", 1) or 0)
+
+
 def _shopify_order_to_hazirla_format(shopify_order):
     """Shopify sipariş verisini siparis_hazirla ekranının beklediği formata dönüştürür.
     Sahte bir OrderCreated benzeri obje döner."""
@@ -193,7 +199,8 @@ def _shopify_order_to_hazirla_format(shopify_order):
     order_id = shopify_order.get("legacyResourceId") or shopify_order.get("id", "").split("/")[-1]
     customer = shopify_order.get("customer") or {}
     shipping = shopify_order.get("shippingAddress") or {}
-    line_items = shopify_order.get("line_items") or []
+    # Kaldırılmış / tamamen iade edilmiş kalemler (güncel adet 0) atlanır
+    line_items = [li for li in (shopify_order.get("line_items") or []) if _shopify_guncel_adet(li) > 0]
     price_set = shopify_order.get("currentTotalPriceSet", {}).get("shopMoney", {})
 
     # Kapıda ödeme tespiti
@@ -220,7 +227,7 @@ def _shopify_order_to_hazirla_format(shopify_order):
             "barcode": real_barcode,
             "sku": sku,
             "product_name": li.get("title") or "Shopify Ürün",
-            "quantity": li.get("quantity", 1),
+            "quantity": _shopify_guncel_adet(li),
             "image_url": variant_image,
         })
 
@@ -681,7 +688,7 @@ def get_queue_orders():
 
             customer = s_order.get("customer") or {}
             shipping = s_order.get("shippingAddress") or {}
-            line_items = s_order.get("line_items") or []
+            line_items = [li for li in (s_order.get("line_items") or []) if _shopify_guncel_adet(li) > 0]
             price_set = s_order.get("currentTotalPriceSet", {}).get("shopMoney", {})
 
             cust_name = ((customer.get("firstName") or "") + " " + (customer.get("lastName") or "")).strip()

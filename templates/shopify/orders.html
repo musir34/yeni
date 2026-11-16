@@ -1153,7 +1153,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const orderId = extractId(order.id);
             const customer = getCustomerName(order.customer, order.shippingAddress);
             const city = order.shippingAddress ? order.shippingAddress.city || '' : '';
-            const itemCount = (order.line_items || []).reduce((sum, li) => sum + (li.quantity || 0), 0);
+            const itemCount = (order.line_items || []).reduce((sum, li) => sum + ((li.currentQuantity ?? li.quantity) || 0), 0);
             const total = formatMoney(order.currentTotalPriceSet);
             const isCancelled = !!order.cancelledAt;
             const codFlag = isCOD(order);
@@ -1994,7 +1994,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const customer = getCustomerName(o.customer, o.shippingAddress);
             const email = o.customer?.email || '';
             const city = o.shippingAddress?.city || '';
-            const itemCount = (o.line_items || []).reduce((sum, li) => sum + (li.quantity || 0), 0);
+            const itemCount = (o.line_items || []).reduce((sum, li) => sum + ((li.currentQuantity ?? li.quantity) || 0), 0);
             const amount = o.currentTotalPriceSet?.shopMoney?.amount || '0';
             const currency = o.currentTotalPriceSet?.shopMoney?.currencyCode || 'TRY';
             const status = getOrderStatus(o.tags, !!o.cancelledAt, o.displayFinancialStatus);
