@@ -1,0 +1,33 @@
+{
+  "name": "Güllü Kargo Asist",
+  "description": "Güllü panelinden alınan sipariş kodunu DHL paneline otomatik gönderir, basılan etiketleri günlük PDF'e kaydeder",
+  "version": "2.5",
+  "manifest_version": 3,
+  "permissions": ["storage", "scripting", "tabs", "alarms", "downloads", "unlimitedStorage"],
+  "host_permissions": [
+    "https://gullupanel.com/*",
+    "https://onlinesube.dhlecommerce.com.tr/*",
+    "https://api.labelary.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://gullupanel.com/*",
+        "https://onlinesube.dhlecommerce.com.tr/*"
+      ],
+      "js": ["content-script.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://onlinesube.dhlecommerce.com.tr/*"
+      ],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ]
+}
