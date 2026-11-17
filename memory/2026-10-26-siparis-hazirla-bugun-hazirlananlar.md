@@ -22,3 +22,10 @@ yenilenen bir şey olsun, sırayla hazırlanan siparişler çıksın."
 
 ## Deploy
 Şema yok. `git pull && systemctl restart gullupanel.service`.
+
+## 2026-11-17 — Geçmiş gün arşivi
+Komutan: "istediğimde günlüklere ordan bakayım, liste liste." Modal başlığına gün seçici
+(◀ tarih ▶ + Bugün). `/api/bugun-hazirlananlar?gun=YYYY-MM-DD` → o İstanbul günü
+[00:00, ertesi 00:00) penceresi (`_gun_penceresi_utc`, eski `_bugun_baslangici_utc` yerine);
+gelecek/geçersiz gün 400. Yanıta `gun_iso`, `bugun_mu` eklendi; düğmedeki sayı rozeti yalnız
+bugünü gösterir. Ayrı tablo yok — veri user_logs'ta durdukça geçmiş görülür. +2 test (5/5).

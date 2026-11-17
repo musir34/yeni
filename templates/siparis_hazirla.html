@@ -1068,14 +1068,21 @@
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="bugunModalLabel"><i class="fas fa-clipboard-list me-2"></i>Bugün Hazırlananlar <small class="text-muted" id="bugunModalGun"></small></h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+          <h5 class="modal-title" id="bugunModalLabel"><i class="fas fa-clipboard-list me-2"></i><span id="bugunModalBaslik">Bugün Hazırlananlar</span> <small class="text-muted" id="bugunModalGun"></small></h5>
+          <!-- Geçmiş günler: gün seç → o günün listesi -->
+          <div class="d-flex align-items-center gap-1 ms-auto me-2 flex-wrap">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="bugunGunOnceki" title="Önceki gün"><i class="fas fa-chevron-left"></i></button>
+            <input type="date" class="form-control form-control-sm" id="bugunGunSec" style="width:auto">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="bugunGunSonraki" title="Sonraki gün"><i class="fas fa-chevron-right"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="bugunGunBugun">Bugün</button>
+          </div>
+          <button type="button" class="btn-close ms-0" data-bs-dismiss="modal" aria-label="Kapat"></button>
         </div>
         <div class="modal-body p-0">
           <div id="bugunListe" class="table-responsive"><div class="text-center text-muted py-4">Yükleniyor…</div></div>
         </div>
         <div class="modal-footer">
-          <span class="me-auto text-muted small">Liste her gün 00:00'da sıfırlanır. <span class="badge bg-danger">Etiket yok</span> = bu sipariş için ne yazdırma ne otomatik gönderim izi var.</span>
+          <span class="me-auto text-muted small">Liste her gün 00:00'da sıfırlanır; geçmiş günler üstteki gün seçiciden açılır. <span class="badge bg-danger">Etiket yok</span> = bu sipariş için ne yazdırma ne otomatik gönderim izi var.</span>
           <button type="button" class="btn btn-outline-secondary" id="bugunYenile"><i class="fas fa-sync-alt me-1"></i>Yenile</button>
         </div>
       </div>
@@ -1929,9 +1936,21 @@
         if (r.etiket === 'oto') return '<span class="badge bg-primary">Oto. gönderim ' + esc(r.etiket_saat) + '</span>';
         return '<span class="badge bg-danger">Etiket yok</span>';
       }
+      var gunSec = document.getElementById('bugunGunSec');
+      var seciliGun = '';   // '' = bugün; 'YYYY-MM-DD' = geçmiş gün
+      var bugunMu = true;
+      function gunKaydir(n) {
+        var t = new Date((gunSec.value || gunSec.max) + 'T12:00:00');
+        t.setDate(t.getDate() + n);
+        var iso = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+        if (gunSec.max && iso > gunSec.max) return;
+        seciliGun = (iso === gunSec.max) ? '' : iso;
+        yukle();
+      }
       function ciz() {
         if (!veri.length) {
-          liste.innerHTML = '<div class="text-center text-muted py-4">Bugün bu ekrandan henüz sipariş hazırlanmadı.</div>';
+          liste.innerHTML = '<div class="text-center text-muted py-4">'
+            + (bugunMu ? 'Bugün bu ekrandan henüz sipariş hazırlanmadı.' : 'Bu gün bu ekrandan sipariş hazırlanmamış.') + '</div>';
           return;
         }
         var h = '<table class="table table-sm table-hover mb-0 align-middle"><thead><tr>'
@@ -1953,14 +1972,21 @@
       }
       function yukle() {
         liste.innerHTML = '<div class="text-center text-muted py-4">Yükleniyor…</div>';
-        fetch("{{ url_for('siparis_hazirla.bugun_hazirlananlar') }}")
+        fetch("{{ url_for('siparis_hazirla.bugun_hazirlananlar') }}" + (seciliGun ? '?gun=' + encodeURIComponent(seciliGun) : ''))
           .then(function (r) { return r.json(); })
           .then(function (d) {
             if (!d.success) throw new Error(d.message || 'Hata');
             veri = d.siparisler || [];
-            document.getElementById('bugunModalGun').textContent = d.gun || '';
-            sayi.textContent = veri.length;
-            sayi.hidden = false;
+            bugunMu = !!d.bugun_mu;
+            document.getElementById('bugunModalGun').textContent = (d.gun || '') + ' · ' + veri.length + ' sipariş';
+            document.getElementById('bugunModalBaslik').textContent = bugunMu ? 'Bugün Hazırlananlar' : 'Hazırlananlar';
+            if (bugunMu) {
+              gunSec.max = d.gun_iso;          // ileri gün seçilemesin
+              sayi.textContent = veri.length;   // rozet yalnız bugünü gösterir
+              sayi.hidden = false;
+            }
+            gunSec.value = d.gun_iso || '';
+            document.getElementById('bugunGunSonraki').disabled = bugunMu;
             ciz();
           })
           .catch(function (e) {
@@ -1968,8 +1994,16 @@
           });
       }
       btn.addEventListener('click', function () { bootstrap.Modal.getOrCreateInstance(modalEl).show(); });
-      modalEl.addEventListener('show.bs.modal', yukle);
+      modalEl.addEventListener('show.bs.modal', function () { seciliGun = ''; yukle(); });
       document.getElementById('bugunYenile').addEventListener('click', yukle);
+      document.getElementById('bugunGunOnceki').addEventListener('click', function () { gunKaydir(-1); });
+      document.getElementById('bugunGunSonraki').addEventListener('click', function () { gunKaydir(1); });
+      document.getElementById('bugunGunBugun').addEventListener('click', function () { seciliGun = ''; yukle(); });
+      gunSec.addEventListener('change', function () {
+        if (!gunSec.value) return;
+        seciliGun = (gunSec.max && gunSec.value >= gunSec.max) ? '' : gunSec.value;
+        yukle();
+      });
       liste.addEventListener('click', function (e) {
         var b = e.target.closest('[data-bugun-yazdir]');
         if (!b) return;

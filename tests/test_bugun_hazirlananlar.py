@@ -59,3 +59,19 @@ def test_siparis_no_alani_yoksa_aciklamadan_cikarilir():
     rows = [_satir(T0, **{"İşlem Açıklaması": "Sipariş hazırlandı — 555 (Created → Picking)"})]
     siparisler, _ = bugun_hazirlananlari_derle(rows)
     assert siparisler[0]["order_number"] == "555" and siparisler[0]["kaynak"] == "TRENDYOL"
+
+
+def test_gun_penceresi_istanbul_gunu_utc_olarak():
+    from siparis_hazirla import _gun_penceresi_utc
+    bas, bit, gun = _gun_penceresi_utc("2026-11-10")
+    assert gun.isoformat() == "2026-11-10"
+    assert bas == datetime(2026, 11, 9, 21, 0) and bit == datetime(2026, 11, 10, 21, 0)
+
+
+def test_gun_penceresi_gecersiz_ve_gelecek_reddedilir():
+    import pytest
+    from siparis_hazirla import _gun_penceresi_utc
+    with pytest.raises(ValueError):
+        _gun_penceresi_utc("10.11.2026")
+    with pytest.raises(ValueError):
+        _gun_penceresi_utc((datetime.now() + timedelta(days=3)).strftime("%Y-%m-%d"))

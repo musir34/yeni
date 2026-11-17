@@ -849,12 +849,19 @@ _ETIKET_YAZDIRILDI_EK = "Kargo etiketi yazdırıldı — "
 _OTO_GONDERIM_EK = "Otomatik gönderim — kargo kodu verildi — "
 
 
-def _bugun_baslangici_utc() -> datetime:
-    """İstanbul gününün 00:00'ı, naive UTC (user_logs.timestamp konvansiyonu)."""
-    from datetime import timezone
+def _gun_penceresi_utc(gun_str: str | None) -> tuple[datetime, datetime, "date"]:
+    """İstanbul günü [00:00, ertesi 00:00) → naive UTC (user_logs.timestamp konvansiyonu).
+    gun_str 'YYYY-MM-DD' (geçmiş gün arşivi); boşsa bugün. Geçersiz/gelecek → ValueError."""
+    from datetime import timezone, timedelta
     from time_utils import IST
-    gun_basi = datetime.now(IST).replace(hour=0, minute=0, second=0, microsecond=0)
-    return gun_basi.astimezone(timezone.utc).replace(tzinfo=None)
+    bugun = datetime.now(IST).date()
+    gun = datetime.strptime(gun_str, "%Y-%m-%d").date() if gun_str else bugun
+    if gun > bugun:
+        raise ValueError("gelecek gün")
+    gun_basi = datetime(gun.year, gun.month, gun.day, tzinfo=IST)
+    bas = gun_basi.astimezone(timezone.utc).replace(tzinfo=None)
+    bit = (gun_basi + timedelta(days=1)).astimezone(timezone.utc).replace(tzinfo=None)
+    return bas, bit, gun
 
 
 def bugun_hazirlananlari_derle(rows) -> tuple[list[dict], dict[str, dict]]:
@@ -943,11 +950,16 @@ def bugun_hazirlananlar():
     from flask import jsonify
     from sqlalchemy import or_
     from models import UserLog
-    from time_utils import fmt_ist
+    from time_utils import IST
+
+    try:
+        bas, bit, gun = _gun_penceresi_utc((request.args.get("gun") or "").strip() or None)
+    except ValueError:
+        return jsonify({"success": False, "message": "Geçersiz gün"}), 400
 
     try:
         rows = (db.session.query(UserLog)
-                .filter(UserLog.timestamp >= _bugun_baslangici_utc())
+                .filter(UserLog.timestamp >= bas, UserLog.timestamp < bit)
                 .filter(~UserLog.action.like("PAGE_VIEW%"))
                 .filter(or_(UserLog.details.like(f"%{_HAZIRLANDI_EK}%"),
                             UserLog.details.like(f"%{_ETIKET_YAZDIRILDI_EK}%"),
@@ -973,5 +985,5 @@ def bugun_hazirlananlar():
             "etiket_saat": iz["saat"] if iz else "",
             "yazdir": yazdir,
         })
-    return jsonify({"success": True, "gun": fmt_ist(datetime.utcnow(), "%d.%m.%Y"),
-                    "siparisler": sonuc})
+    return jsonify({"success": True, "gun": gun.strftime("%d.%m.%Y"), "gun_iso": gun.isoformat(),
+                    "bugun_mu": gun == datetime.now(IST).date(), "siparisler": sonuc})
