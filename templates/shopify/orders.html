@@ -607,6 +607,7 @@
     .shopify-orders .status-teslim-edildi { --so-st: var(--so-teslim); }
     .shopify-orders .status-iade { --so-st: var(--so-iade); }
     .shopify-orders .status-iptal { --so-st: var(--so-iptal); }
+    .shopify-orders .status-arsivde { --so-st: #6b7280; }
     .shopify-orders [class*="status-"]:not(.status-tab),
     .shopify-orders .btn[class*="status-"]:hover,
     .shopify-orders .btn[class*="status-"]:focus,
@@ -944,6 +945,7 @@ document.addEventListener('DOMContentLoaded', function() {
         'Teslim Edildi': { cls: 'status-teslim-edildi', icon: 'check-circle',    color: '#10b981' },
         'Iade':          { cls: 'status-iade',          icon: 'arrow-return-left', color: '#f97316' },
         'Iptal':         { cls: 'status-iptal',         icon: 'x-circle',        color: '#ef4444' },
+        'Arsivde':       { cls: 'status-arsivde',       icon: 'archive',         color: '#6b7280' },
     };
 
     function getOrderStatus(tags, cancelled, financialStatus) {
@@ -954,6 +956,8 @@ document.addEventListener('DOMContentLoaded', function() {
         for (const s of ORDER_STATUSES) {
             if (tags.includes(s)) return s;
         }
+        // Statü etiketi yok ama panelde arşivde → beklemede değil
+        if (tags.includes('Arsivlendi')) return 'Arsivde';
         return 'Beklemede';
     }
 
@@ -1063,6 +1067,8 @@ document.addEventListener('DOMContentLoaded', function() {
             parts.push('-tag:Hazirlaniyor');
             parts.push('-tag:Kargoda');
             parts.push('-tag:"Teslim Edildi"');
+            // Panelde arşivlenen sipariş sipariş hazırlaya düşmez; burada da beklemede sayılmaz
+            parts.push('-tag:Arsivlendi');
             parts.push('-status:cancelled');
             parts.push('-financial_status:refunded');
             parts.push('-financial_status:partially_refunded');
@@ -1240,7 +1246,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Tum siparis sayilarini API'den cek (her tab icin ayri count)
     function loadGlobalStats() {
         const queries = {
-            beklemede: '-tag:Hazirlaniyor -tag:Kargoda -tag:"Teslim Edildi" -status:cancelled financial_status:paid -financial_status:refunded -financial_status:partially_refunded',
+            beklemede: '-tag:Hazirlaniyor -tag:Kargoda -tag:"Teslim Edildi" -tag:Arsivlendi -status:cancelled financial_status:paid -financial_status:refunded -financial_status:partially_refunded',
             hazirlaniyor: 'tag:Hazirlaniyor -status:cancelled -financial_status:refunded -financial_status:partially_refunded',
             kargoda: 'tag:Kargoda -status:cancelled -financial_status:refunded -financial_status:partially_refunded',
             teslim: 'tag:"Teslim Edildi" -status:cancelled -financial_status:refunded -financial_status:partially_refunded',
