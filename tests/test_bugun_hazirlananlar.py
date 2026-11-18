@@ -75,3 +75,14 @@ def test_gun_penceresi_gecersiz_ve_gelecek_reddedilir():
         _gun_penceresi_utc("10.11.2026")
     with pytest.raises(ValueError):
         _gun_penceresi_utc((datetime.now() + timedelta(days=3)).strftime("%Y-%m-%d"))
+
+
+def test_toplam_adet_okunur_yoksa_none():
+    rows = [
+        _satir(T0, **{"Işlem Açıklaması": "Sipariş hazırlandı — 111 (Created → Picking)",
+                      "Sipariş No": "111", "Toplam Adet": 4}),
+        _satir(T0, **{"Işlem Açıklaması": "Sipariş hazırlandı — 222 (Created → Picking)",
+                      "Sipariş No": "222"}),
+    ]
+    siparisler, _ = bugun_hazirlananlari_derle(rows)
+    assert [s["adet"] for s in siparisler] == [4, None]

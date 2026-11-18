@@ -44,14 +44,16 @@
       return { kod: m ? m[1].trim() : (s.textContent || '').trim(), adet: m ? +m[2] : 0,
                onerilen: (s.getAttribute('style') || '').indexOf('#e8f5e9') >= 0 };
     });
-    var rafIn = kart.querySelector('.raf-kodu-input');
-    var raf = null;
-    if (rafIn) {
+    // Her kutunun kendi raf alanı var (data-quantity-index = kutu sırası)
+    var rafKutular = Array.prototype.map.call(kart.querySelectorAll('.raf-kodu-input'), function (rafIn) {
       var v = rafIn.value.trim(), gecerli = (rafIn.dataset.raflar || '').split(',').map(normRaf).filter(Boolean);
-      raf = { deger: v, ok: !!v && (!gecerli.length || gecerli.indexOf(normRaf(v)) !== -1),
-              yanlis: !!v && gecerli.length > 0 && gecerli.indexOf(normRaf(v)) === -1,
-              kaynak: rafIn.classList.contains('tel-okutma') ? 'telefon' : 'pc' };
-    }
+      return { q: +(rafIn.dataset.quantityIndex || 0), deger: v,
+               ok: !!v && (!gecerli.length || gecerli.indexOf(normRaf(v)) !== -1),
+               yanlis: !!v && gecerli.length > 0 && gecerli.indexOf(normRaf(v)) === -1,
+               kaynak: rafIn.classList.contains('tel-okutma') ? 'telefon' : 'pc' };
+    });
+    var rafIn = rafKutular.length ? true : null;
+    var raf = rafKutular.length ? rafKutular[0] : null;
     var kutular = Array.prototype.map.call(kart.querySelectorAll('.barkod-input'), function (inp) {
       var val = inp.value.trim();
       return { q: +inp.dataset.quantityIndex, deger: val, ok: inp.dataset.confirmed === 'true',
@@ -68,6 +70,7 @@
       raflar: raflar,
       raf_gerekli: !!rafIn,
       raf: raf,
+      raf_kutular: rafKutular,
       kutular: kutular,
       onerilen_bosaldi: !!(uyari && uyari.textContent.indexOf('boşalmış') >= 0),
       stok_yok: !!(stokYok && stokYok.textContent.indexOf('Stokta yok') >= 0)
@@ -109,7 +112,8 @@
     var kart = document.querySelectorAll('#packingForm .product-card')[o.kalem];
     if (!kart) return;
     var hedef = null;
-    if (o.tip === 'raf') hedef = kart.querySelector('.raf-kodu-input');
+    if (o.tip === 'raf') hedef = kart.querySelector('.raf-kodu-input[data-quantity-index="' + (o.adet || 0) + '"]')
+                              || kart.querySelector('.raf-kodu-input');
     else hedef = kart.querySelector('#barkodInput-right-' + o.kalem + '-' + o.adet);
     if (!hedef) return;
     if (hedef.readOnly || hedef.dataset.confirmed === 'true') return;   // zaten doğrulanmış: üstüne yazma

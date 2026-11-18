@@ -901,17 +901,6 @@
                         </span>
                       {% endfor %}
                     </div>
-                    {% if not manuel_mod %}
-                      {# Sıralı mod AÇIK: çalışan aldığı rafın barkodunu okutur (ürün barkodunun üstünde). #}
-                      <div class="form-group">
-                        <div class="alert raf-mesaj" style="display:none;"></div>
-                        <input type="text" class="form-control raf-kodu-input"
-                               name="raf_{{ product['barcode'] }}"
-                               data-raflar="{{ aktif_raflar | map(attribute='kod') | join(',') }}"
-                               placeholder="📍 RAF BARKODU OKUT"
-                               autocomplete="off" style="border:2px solid var(--color-primary);"/>
-                      </div>
-                    {% endif %}
                   {% elif not product.get('onerilen_bosaldi') %}
                     <div class="alert alert-danger" style="padding:6px 10px; margin-bottom:0; font-size:0.9em;">
                       ❌ <strong>Stokta yok</strong> — bu ürün hiçbir rafta bulunmuyor.
@@ -921,6 +910,19 @@
 
                 {# 🔥 Tek okutma: kutu barkodu. (Eskiden sağ/sol çift okutma vardı.) #}
                 {% for q in range(product['quantity']|int) %}
+                  {% if aktif_raflar and not manuel_mod %}
+                    {# Sıralı mod AÇIK: her kutu için o kutunun alındığı rafın barkodu okutulur
+                       (kutu barkodunun üstünde) — adetler farklı raflardan alınabilir. #}
+                    <div class="form-group">
+                      <div class="alert raf-mesaj" style="display:none;"></div>
+                      <input type="text" class="form-control raf-kodu-input"
+                             name="raf_{{ product['barcode'] }}_{{ q }}"
+                             data-quantity-index="{{ q }}"
+                             data-raflar="{{ aktif_raflar | map(attribute='kod') | join(',') }}"
+                             placeholder="📍 RAF BARKODU OKUT{% if product['quantity']|int > 1 %} ({{ q+1 }}){% endif %}"
+                             autocomplete="off" style="border:2px solid var(--color-primary);"/>
+                    </div>
+                  {% endif %}
                   <div class="form-group">
                     <div id="barkodMatchMessage-right-{{ loop.index0 }}-{{ q }}" class="alert"></div>
                     <input type="text"
@@ -1454,10 +1456,9 @@
           input.style.backgroundColor = '#e9ffe9'; input.dataset.confirmed = 'true'; input.readOnly = true;
           var next = barkodInputs[idx + 1];
           if (next) {
-            // Çok-ürünlü: sonraki barkod farklı karttaysa o kartın boş raf alanına geç.
-            var curCard = input.closest('.card-body');
+            // Her kutunun kendi raf alanı var: sonraki kutunun rafı boşsa önce ona geç.
             var nextCard = next.closest('.card-body');
-            var nextRaf = (nextCard && nextCard !== curCard) ? nextCard.querySelector('.raf-kodu-input') : null;
+            var nextRaf = nextCard ? nextCard.querySelector('.raf-kodu-input[data-quantity-index="' + next.dataset.quantityIndex + '"]') : null;
             if (nextRaf && !nextRaf.value.trim()) setTimeout(function(){ nextRaf.focus(); }, 150);
             else setTimeout(function(){ next.focus(); }, 150);
           }
@@ -1552,9 +1553,10 @@
           if (mesaj) { mesaj.textContent = '✓ Raf doğru'; mesaj.className = 'alert alert-success raf-mesaj alert-show'; mesaj.style.display = 'block'; }
           rafIn.style.borderColor = '#28a745';
           updateButtons();
+          // Bu rafın altındaki (aynı sıradaki) kutu barkoduna geç
           var card = rafIn.closest('.card-body');
-          var firstBc = card ? card.querySelector('.barkod-input') : null;
-          if (firstBc) setTimeout(function(){ firstBc.focus(); }, 50);
+          var kutuBc = card ? card.querySelector('.barkod-input[data-quantity-index="' + rafIn.dataset.quantityIndex + '"]') : null;
+          if (kutuBc) setTimeout(function(){ kutuBc.focus(); }, 50);
         });
       });
 
@@ -1963,31 +1965,57 @@
             + (r.gorunen_no !== r.order_number ? '<br><small class="text-muted">' + esc(r.order_number) + '</small>' : '') + '</td>'
             + '<td>' + esc(r.musteri) + '</td><td>' + esc(r.kaynak) + '</td><td>' + esc(r.hazirlayan) + '</td>'
             + '<td>' + etiketRozet(r) + '</td>'
-            + '<td class="text-end">' + (r.yazdir
+            + '<td class="text-end">' + (r.yazdir === undefined
+                ? '<button type="button" class="btn btn-sm btn-warning" disabled title="Yazdırma bilgisi yükleniyor"><i class="fas fa-spinner fa-spin me-1"></i>Yazdır</button>'
+                : r.yazdir
                 ? '<button type="button" class="btn btn-sm btn-warning" data-bugun-yazdir="' + i + '"><i class="fas fa-print me-1"></i>Yazdır</button>'
                 : '<small class="text-muted">sipariş bulunamadı</small>') + '</td>'
             + '</tr>';
         });
         liste.innerHTML = h + '</tbody></table>';
       }
+      var yukSayac = 0;   // gün değişince eski yazdır cevabı yeni listeye yazılmasın
+      function yazdirBilgisiYukle(no) {
+        fetch("{{ url_for('siparis_hazirla.bugun_hazirlananlar_yazdir') }}", {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ siparisler: veri.map(function (r) { return { order_number: r.order_number, kaynak: r.kaynak }; }) })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (no !== yukSayac) return;
+            var y = (d && d.success && d.yazdir) || {};
+            veri.forEach(function (r) { r.yazdir = y[r.order_number] || null; });
+            ciz();
+          })
+          .catch(function () {
+            if (no !== yukSayac) return;
+            veri.forEach(function (r) { r.yazdir = null; });
+            ciz();
+          });
+      }
       function yukle() {
+        var no = ++yukSayac;
         liste.innerHTML = '<div class="text-center text-muted py-4">Yükleniyor…</div>';
         fetch("{{ url_for('siparis_hazirla.bugun_hazirlananlar') }}" + (seciliGun ? '?gun=' + encodeURIComponent(seciliGun) : ''))
           .then(function (r) { return r.json(); })
           .then(function (d) {
+            if (no !== yukSayac) return;
             if (!d.success) throw new Error(d.message || 'Hata');
             veri = d.siparisler || [];
             bugunMu = !!d.bugun_mu;
-            document.getElementById('bugunModalGun').textContent = (d.gun || '') + ' · ' + veri.length + ' sipariş';
+            // Ürün adedi: eski paketleme kayıtlarında adet yoksa "+" ile belirtilir
+            var urunMetni = (d.toplam_urun || 0) + (d.adetsiz_siparis ? '+' : '') + ' ürün';
+            document.getElementById('bugunModalGun').textContent = (d.gun || '') + ' · ' + veri.length + ' sipariş · ' + urunMetni;
             document.getElementById('bugunModalBaslik').textContent = bugunMu ? 'Bugün Hazırlananlar' : 'Hazırlananlar';
             if (bugunMu) {
               gunSec.max = d.gun_iso;          // ileri gün seçilemesin
-              sayi.textContent = veri.length;   // rozet yalnız bugünü gösterir
+              sayi.textContent = veri.length + ' (' + urunMetni + ')';   // rozet yalnız bugünü gösterir
               sayi.hidden = false;
             }
             gunSec.value = d.gun_iso || '';
             document.getElementById('bugunGunSonraki').disabled = bugunMu;
             ciz();
+            if (veri.length) yazdirBilgisiYukle(no);
           })
           .catch(function (e) {
             liste.innerHTML = '<div class="text-center text-danger py-4">Liste alınamadı: ' + esc(e.message) + '</div>';
@@ -2017,5 +2045,5 @@
       });
     })();
   </script>
-  <script src="{{ url_for('static', filename='js/hazirla-telefon-pc.js') }}?v=3"></script>
+  <script src="{{ url_for('static', filename='js/hazirla-telefon-pc.js') }}?v=4"></script>
 {% endblock %}

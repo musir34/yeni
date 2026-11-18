@@ -171,12 +171,13 @@
       }
       if (k.onerilen_bosaldi) html += '<div class="tel-uyari sari">⚠️ Atanan raf boşalmış, alternatif raftan al.</div>';
       if (k.stok_yok) html += '<div class="tel-uyari kirmizi">❌ Stokta yok — hiçbir rafta bulunmuyor.</div>';
-      if (k.raf_gerekli) {
-        html += '<div class="tel-alan raf" data-tip="raf" data-kalem="' + k.idx + '" data-adet="0"><label>📍 RAF BARKODU</label>' +
-          '<div class="tel-giris"><input type="text" inputmode="text" autocomplete="off" autocapitalize="characters" enterkeyhint="send" placeholder="Rafı okut ya da yaz">' +
-          '<button type="button" class="tel-gonder" title="Gönder">➤</button></div><div class="durum"></div></div>';
-      }
       for (var q = 0; q < (k.adet || 1); q++) {
+        // Her kutunun kendi raf alanı (kutu barkodunun üstünde)
+        if (k.raf_gerekli) {
+          html += '<div class="tel-alan raf" data-tip="raf" data-kalem="' + k.idx + '" data-adet="' + q + '"><label>📍 RAF BARKODU' + ((k.adet || 1) > 1 ? ' (' + (q + 1) + ')' : '') + '</label>' +
+            '<div class="tel-giris"><input type="text" inputmode="text" autocomplete="off" autocapitalize="characters" enterkeyhint="send" placeholder="Rafı okut ya da yaz">' +
+            '<button type="button" class="tel-gonder" title="Gönder">➤</button></div><div class="durum"></div></div>';
+        }
         html += '<div class="tel-alan urun" data-tip="urun" data-kalem="' + k.idx + '" data-adet="' + q + '"><label>📦 KUTU BARKODU (' + (q + 1) + ')</label>' +
           '<div class="tel-giris"><input type="text" inputmode="numeric" autocomplete="off" enterkeyhint="send" placeholder="Ürünü okut ya da yaz">' +
           '<button type="button" class="tel-gonder" title="Gönder">➤</button></div><div class="durum"></div></div>';
@@ -196,7 +197,10 @@
     if (!p || !p.order_number) return;
     var harita = {};
     (p.kalemler || []).forEach(function (k) {
-      if (k.raf_gerekli) harita['raf:' + k.idx + ':0'] = k.raf || {};
+      if (k.raf_gerekli) {
+        harita['raf:' + k.idx + ':0'] = k.raf || {};
+        (k.raf_kutular || []).forEach(function (r) { harita['raf:' + k.idx + ':' + r.q] = r; });
+      }
       (k.kutular || []).forEach(function (ku) { harita['urun:' + k.idx + ':' + ku.q] = ku; });
     });
     alanlariGetir().forEach(function (a) {

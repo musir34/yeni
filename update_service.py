@@ -257,19 +257,25 @@ async def confirm_packing():
                         continue
 
                 toplam_beklenen += adet
-                # Sıralı-AÇIK: okutulan raf kodu (raf_{barcode}); eski radio (pick_) fallback.
-                chosen_raf = (request.form.get(f"raf_{d.get('barcode')}")
-                              or request.form.get(f"pick_{d.get('barcode')}")
-                              or request.form.get('raf_kodu'))
+                # Sıralı-AÇIK: her kutu için okutulan raf (raf_{barcode}_{q}) → aynı raftan
+                # gelen adetler gruplanır. Eski tek alan (raf_{barcode}) / radio (pick_) fallback.
+                birim_raflar = [request.form.get(f"raf_{d.get('barcode')}_{q}") for q in range(adet)]
+                if any(birim_raflar):
+                    raf_gruplari = (Counter(_norm_raf(r) for r in birim_raflar)
+                                    if all(birim_raflar) else {})
+                else:
+                    chosen_raf = (request.form.get(f"raf_{d.get('barcode')}")
+                                  or request.form.get(f"pick_{d.get('barcode')}")
+                                  or request.form.get('raf_kodu'))
+                    raf_gruplari = {_norm_raf(chosen_raf): adet} if chosen_raf else {}
                 kalan = adet
-                logger.info(f"[STOCK] basla bc={bc} adet={adet} chosen_raf={chosen_raf}")
+                logger.info(f"[STOCK] basla bc={bc} adet={adet} raf_gruplari={dict(raf_gruplari)}")
 
-                # 6a) Seçilen raftan düş (başka raftan otomatik tamamlama YAPILMAZ).
-                # chosen_raf normalize edilir (Zebra =/* → -, upper) ve depodaki
+                # 6a) Okutulan raf(lar)dan düş (başka raftan otomatik tamamlama YAPILMAZ).
+                # Raf kodu normalize edilir (Zebra =/* → -, upper) ve depodaki
                 # raf_kodu de normalize edilerek eşleştirilir → frontend doğrulamasıyla
                 # birebir tutarlı. Aksi halde "A=1" gibi ham kod RafUrun'da bulunamaz.
-                if chosen_raf:
-                    hedef = _norm_raf(chosen_raf)
+                for grup_sira, (hedef, grup_adet) in enumerate(raf_gruplari.items()):
                     rec = next(
                         (r for r in (RafUrun.query
                                      .filter(RafUrun.urun_barkodu == bc, RafUrun.adet > 0)
@@ -278,27 +284,31 @@ async def confirm_packing():
                          if _norm_raf(r.raf_kodu) == hedef),
                         None,
                     )
-                    if rec and (rec.adet or 0) >= kalan:
+                    if rec and (rec.adet or 0) >= grup_adet:
                         gercek_raf = rec.raf_kodu
                         eski = rec.adet or 0
-                        rec.adet = eski - kalan
-                        toplam_dusen += kalan
+                        rec.adet = eski - grup_adet
+                        toplam_dusen += grup_adet
                         stok_hareketleri.append({
                             "barkod": bc,
                             "raf": gercek_raf,
                             "onceki": eski,
                             "sonraki": rec.adet,
-                            "dusen": kalan,
+                            "dusen": grup_adet,
                         })
                         # STOK DEFTERİ: paketleme düşümünü kaydet. RafUrun düşümü
-                        # yukarıda seçili raftan yapıldı (kullanıcı seçimi), o yüzden
+                        # yukarıda okutulan raftan yapıldı (kullanıcı seçimi), o yüzden
                         # mutate_shelf=False — defter yalnızca hareketi loglar.
+                        # İlk raf grubu klasik anahtarı kullanır (üretim ekranı / kargo
+                        # has_movement kontrolleri buna bakar); ek raflar raf kodlu anahtar alır.
+                        idem = (f"{order_number}:pick:{bc}" if grup_sira == 0
+                                else f"{order_number}:pick:{bc}:{gercek_raf}")
                         try:
                             from stock_ledger import record_movement, REASON_PACK_OUT
                             record_movement(
-                                barcode=bc, delta=-kalan, reason=REASON_PACK_OUT,
+                                barcode=bc, delta=-grup_adet, reason=REASON_PACK_OUT,
                                 shelf_code=gercek_raf, order_number=order_number,
-                                idempotency_key=f"{order_number}:pick:{bc}",
+                                idempotency_key=idem,
                                 source="USER", mutate_shelf=False, commit=False,
                             )
                         except Exception:
@@ -307,13 +317,13 @@ async def confirm_packing():
                             # Bu yüzden yutma — dış except'e taşı, tüm düşüm geri alınsın.
                             logger.exception("[LEDGER] pack_out kaydı hatası — stok düşümü geri alınacak")
                             raise
-                        logger.debug(f"[STOCK][RAF] {gercek_raf}/{bc} {eski}->{rec.adet} (use={kalan})")
-                        kalan = 0
+                        logger.debug(f"[STOCK][RAF] {gercek_raf}/{bc} {eski}->{rec.adet} (use={grup_adet})")
+                        kalan -= grup_adet
                     else:
                         mevcut = (rec.adet or 0) if rec else 0
-                        logger.warning(f"[STOCK][YETERSIZ] {chosen_raf}/{bc} mevcut={mevcut} istenen={kalan}")
-                        uyarilar.append(f"{bc}: {chosen_raf} rafında {mevcut} adet var, {kalan} adet gerekli — başka raf seçin")
-                else:
+                        logger.warning(f"[STOCK][YETERSIZ] {hedef}/{bc} mevcut={mevcut} istenen={grup_adet}")
+                        uyarilar.append(f"{bc}: {hedef} rafında {mevcut} adet var, {grup_adet} adet gerekli — başka raf seçin")
+                if not raf_gruplari:
                     logger.warning(f"[STOCK][NO-RAF] {bc} için raf seçilmedi")
                     uyarilar.append(f"{bc}: Raf seçilmedi")
 

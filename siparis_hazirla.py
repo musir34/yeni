@@ -864,6 +864,13 @@ def _gun_penceresi_utc(gun_str: str | None) -> tuple[datetime, datetime, "date"]
     return bas, bit, gun
 
 
+def _int_or_none(v):
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
+
+
 def bugun_hazirlananlari_derle(rows) -> tuple[list[dict], dict[str, dict]]:
     """user_logs satırlarından (kronolojik) → (hazırlanan siparişler sırayla, etiket izleri).
     Saf mantık: DB yok. Aynı sipariş iki kez paketlendiyse ilk kayıt kalır; başarısız
@@ -895,6 +902,8 @@ def bugun_hazirlananlari_derle(rows) -> tuple[list[dict], dict[str, dict]]:
                 "musteri": d.get("Müşteri") or "",
                 "kaynak": d.get("Kaynak") or ("SHOPIFY" if no.startswith("SH-") else "TRENDYOL"),
                 "hazirlayan": d.get("Kullanıcı") or "",
+                # Paketleme kaydındaki toplam ürün adedi (toplam_adet → "Toplam Adet")
+                "adet": _int_or_none(d.get("Toplam Adet")),
             }
         elif aciklama.startswith(_ETIKET_YAZDIRILDI_EK) or aciklama.startswith(_OTO_GONDERIM_EK):
             tur = "yazdirildi" if aciklama.startswith(_ETIKET_YAZDIRILDI_EK) else "oto"
@@ -972,10 +981,14 @@ def bugun_hazirlananlar():
         return jsonify({"success": False, "message": "Kayıtlar okunamadı"}), 500
 
     siparisler, etiketler = bugun_hazirlananlari_derle(rows)
+    # Hız: sipariş başına Shopify API / tablo taraması YAPILMAZ. Görünen no (#1428) tek
+    # toplu Shopify sorgusuyla; yeniden yazdır bilgisi ayrı uçtan (/yazdir) arka planda gelir.
+    shopify_adlari = _shopify_siparis_adlari(
+        [s["order_number"] for s in siparisler
+         if s["kaynak"] == "SHOPIFY" or s["order_number"].startswith("SH-")])
     sonuc = []
     for sira, satir in enumerate(siparisler, start=1):
-        yazdir = _hazirlanan_yazdir_bilgisi(satir["order_number"], satir["kaynak"])
-        gorunen = (yazdir or {}).get("gorunen_no") or satir["order_number"]
+        gorunen = shopify_adlari.get(satir["order_number"]) or satir["order_number"]
         iz = etiketler.get(satir["order_number"]) or etiketler.get(gorunen)
         sonuc.append({
             **satir,
@@ -983,7 +996,66 @@ def bugun_hazirlananlar():
             "gorunen_no": gorunen,
             "etiket": iz["tur"] if iz else "yok",
             "etiket_saat": iz["saat"] if iz else "",
-            "yazdir": yazdir,
         })
+    toplam_urun = sum(s["adet"] or 0 for s in siparisler)
+    adetsiz = sum(1 for s in siparisler if s["adet"] is None)
     return jsonify({"success": True, "gun": gun.strftime("%d.%m.%Y"), "gun_iso": gun.isoformat(),
-                    "bugun_mu": gun == datetime.now(IST).date(), "siparisler": sonuc})
+                    "bugun_mu": gun == datetime.now(IST).date(), "siparisler": sonuc,
+                    "toplam_urun": toplam_urun, "adetsiz_siparis": adetsiz})
+
+
+def _shopify_siparis_adlari(order_numbers: list[str]) -> dict[str, str]:
+    """SH-<id> → mağaza sipariş adı (#1428), TEK toplu GraphQL (nodes) sorgusuyla.
+    Hata → boş sözlük (liste SH- numarasıyla yine açılır)."""
+    if not order_numbers:
+        return {}
+    try:
+        from shopify_site.shopify_service import shopify_service
+        sonuc: dict[str, str] = {}
+        for i in range(0, len(order_numbers), 100):
+            parca = order_numbers[i:i + 100]
+            ids = [f"gid://shopify/Order/{no.replace('SH-', '', 1)}" for no in parca]
+            r = shopify_service.run_graphql(
+                "query($ids: [ID!]!) { nodes(ids: $ids) { ... on Order { legacyResourceId name } } }",
+                {"ids": ids})
+            if not r.get("success"):
+                logging.warning("[BUGUN] Shopify adları alınamadı: %s", r.get("error"))
+                continue
+            for n in (r.get("data") or {}).get("nodes") or []:
+                if n and n.get("legacyResourceId") and n.get("name"):
+                    sonuc[f"SH-{n['legacyResourceId']}"] = n["name"]
+        return sonuc
+    except Exception:
+        logging.warning("[BUGUN] Shopify adları okunamadı", exc_info=True)
+        return {}
+
+
+@siparis_hazirla_bp.route("/api/bugun-hazirlananlar/yazdir", methods=["POST"])
+def bugun_hazirlananlar_yazdir():
+    """Listedeki siparişlerin yeniden yazdır form alanları (liste açıldıktan sonra arka
+    planda istenir). Gövde: {"siparisler": [{"order_number", "kaynak"}, ...]}"""
+    from flask import jsonify
+    from concurrent.futures import ThreadPoolExecutor
+    from flask import current_app
+
+    istek = (request.get_json(silent=True) or {}).get("siparisler") or []
+    istek = [(str(s.get("order_number") or "").strip(), str(s.get("kaynak") or ""))
+             for s in istek[:500] if isinstance(s, dict)]
+    istek = [s for s in istek if s[0]]
+    app = current_app._get_current_object()
+
+    def _shopify_bilgi(no_kaynak):
+        with app.app_context():
+            try:
+                return no_kaynak[0], _hazirlanan_yazdir_bilgisi(*no_kaynak)
+            finally:
+                db.session.remove()
+
+    shopify = [s for s in istek if s[1] == "SHOPIFY" or s[0].startswith("SH-")]
+    diger = [s for s in istek if s not in shopify]
+    sonuc = {no: _hazirlanan_yazdir_bilgisi(no, kaynak) for no, kaynak in diger}
+    # Shopify: her sipariş ayrı API çağrısı → paralel (sırayla 50 çağrı ~10+ sn sürüyordu)
+    if shopify:
+        with ThreadPoolExecutor(max_workers=6) as havuz:
+            sonuc.update(dict(havuz.map(_shopify_bilgi, shopify)))
+    return jsonify({"success": True, "yazdir": sonuc})
