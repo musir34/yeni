@@ -719,6 +719,20 @@ def kargo_kodu_verildi():
     return jsonify({"success": True})
 
 
+@siparis_zaman_bp.route("/siparis-zaman/son-hareket", endpoint="son_hareket")
+def son_hareket():
+    """Sipariş listesi kartı için Sipariş Takip zaman çizgisinin en son olayı (kart görününce tembel çağrılır)."""
+    q = (request.args.get("q") or "").strip().lstrip("#")
+    if not q:
+        return jsonify({"success": False, "message": "q gerekli"}), 400
+    try:
+        olaylar = zaman_cizgisi(q)["olaylar"]
+    except Exception:
+        logger.warning("son_hareket: %s okunamadı", q, exc_info=True)
+        return jsonify({"success": False}), 500
+    return jsonify({"success": True, "hareket": olaylar[-1] if olaylar else None})
+
+
 @siparis_zaman_bp.route("/siparis-zaman", endpoint="page")
 def page():
     q = (request.args.get("q") or "").strip().lstrip("#")

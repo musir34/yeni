@@ -286,6 +286,17 @@
         .archive-reason-btn .ar-lbl{font-size:.95rem;line-height:1.2;}
         .archive-reason-btn .ar-lbl small{opacity:.8;font-size:.78rem;}
         .archive-reason-other{grid-column:1 / -1;}
+        /* Kartta son hareket: tek satır, taşarsa kırpılır; tam metin title'da */
+        .son-hareket small{display:flex;align-items:center;gap:.35rem;min-width:0;}
+        .son-hareket .sh-nokta{flex:0 0 auto;width:.5rem;height:.5rem;border-radius:50%;background:#6c757d;}
+        .son-hareket .sh-baslik{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+        .son-hareket .sh-zaman{flex:0 0 auto;color:#6c757d;font-variant-numeric:tabular-nums;}
+        .son-hareket .sh-nokta.primary{background:#0d6efd;} .son-hareket .sh-nokta.info{background:#0dcaf0;}
+        .son-hareket .sh-nokta.success{background:#198754;} .son-hareket .sh-nokta.warning{background:#ffc107;}
+        .son-hareket .sh-nokta.danger{background:#dc3545;} .son-hareket .sh-nokta.purple{background:#6f42c1;}
+        .son-hareket .sh-nokta.dark{background:#212529;}
+        html.gs-dark .son-hareket .sh-zaman{color:#999;}
+        html.gs-dark .son-hareket .sh-nokta.dark{background:#adb5bd;}
     </style>
 {% endblock %}
 
@@ -465,6 +476,8 @@
                     <p class="arsiv-nedeni mb-2"><strong>Arşiv nedeni:</strong> {{ order.archive_reason or 'Belirtilmemiş' }}</p>
                     {% endif %}
                     <p class="mb-1"><small><strong>Kargo:</strong> <span class="kargo-rozet-yeri">{{ kargo_rozet(order.cargo_tracking_number, order.cargo_provider_name) }}</span><span class="cargo-provider {% if order.cargo_provider_name and 'MNG Kargo' in order.cargo_provider_name %}orange{% endif %}">{{ order.cargo_provider_name or '-' }}</span></small></p>
+                    {# Sipariş Takip'in son olayı — kart ekrana girince /siparis-zaman/son-hareket'ten dolar #}
+                    <p class="mb-1 son-hareket d-none" data-order-number="{{ order.order_number }}"><small></small></p>
                     {% if translated_status in ['Yeni','Hazırlanıyor','İşleme Alındı'] and (order.agreed_delivery_date or order.estimated_delivery_end) %}
                         <p class="mb-3"><strong>Kalan Süre:</strong> <span class="remaining-time red" data-end-time="{{ order.agreed_delivery_date or order.estimated_delivery_end }}">{{ order.remaining_time }}</span></p>
                     {% endif %}
@@ -756,6 +769,7 @@
 
                     window.applyOrderListCompact?.(localStorage.getItem('orderListCompact') === '1');
                     updateRemainingTime();
+                    window.sonHareketBagla?.();
                     results.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 } catch (error) {
                     if (error.name !== 'AbortError') {
@@ -1225,5 +1239,64 @@
                     window.GS ? GS.showToast(errMsg, 'danger') : alert(errMsg);
                 });
         });
+
+        // ─── Kartta son hareket (Sipariş Takip'in son olayı) ──────────────────────
+        // Kart ekrana girince çekilir; aynı anda en çok 3 istek, sonuç sipariş no başına önbellekte.
+        (function(){
+            var onbellek = {}, kuyruk = [], aktif = 0, ESZAMANLI = 3, gozcu = null;
+
+            function yaz(el, h) {
+                if (!h) return;
+                var kucuk = el.querySelector('small');
+                var nokta = document.createElement('span');
+                nokta.className = 'sh-nokta ' + (h.renk || '');
+                var baslik = document.createElement('span');
+                baslik.className = 'sh-baslik';
+                baslik.textContent = h.baslik;
+                var zaman = document.createElement('span');
+                zaman.className = 'sh-zaman';
+                zaman.textContent = (h.tarih || '').slice(0, 5) + ' ' + (h.saat || '').slice(0, 5);
+                kucuk.replaceChildren(nokta, baslik, zaman);
+                el.title = [h.baslik, h.detay, h.kim, h.tarih + ' ' + h.saat].filter(Boolean).join(' · ');
+                el.classList.remove('d-none');
+            }
+
+            function sirada() {
+                while (aktif < ESZAMANLI && kuyruk.length) {
+                    var el = kuyruk.shift(), no = el.dataset.orderNumber;
+                    if (no in onbellek) { yaz(el, onbellek[no]); continue; }
+                    aktif++;
+                    fetch('/siparis-zaman/son-hareket?q=' + encodeURIComponent(no), { headers: { 'X-Requested-With': 'fetch' } })
+                        .then(function(r){ return r.ok ? r.json() : null; })
+                        .then(function(j){
+                            if (!j || !j.success) return;
+                            onbellek[this.no] = j.hareket;
+                            document.querySelectorAll('.son-hareket').forEach(function(x){
+                                if (x.dataset.orderNumber === this.no) yaz(x, j.hareket);
+                            }, this);
+                        }.bind({ no: no }))
+                        .catch(function(){})
+                        .finally(function(){ aktif--; sirada(); });
+                }
+            }
+
+            function bagla() {
+                if (gozcu) gozcu.disconnect();
+                kuyruk = [];
+                var hedefler = document.querySelectorAll('.son-hareket[data-order-number]');
+                if (!('IntersectionObserver' in window)) { hedefler.forEach(function(el){ kuyruk.push(el); }); sirada(); return; }
+                gozcu = new IntersectionObserver(function(girdiler){
+                    girdiler.forEach(function(g){
+                        if (!g.isIntersecting) return;
+                        gozcu.unobserve(g.target);
+                        kuyruk.push(g.target.querySelector('.son-hareket'));  // gizli satır kesişmez → kartı izle
+                    });
+                    sirada();
+                }, { rootMargin: '200px' });
+                hedefler.forEach(function(el){ gozcu.observe(el.closest('.card') || el); });
+            }
+            window.sonHareketBagla = bagla;
+            bagla();
+        })();
     </script>
 {% endblock %}

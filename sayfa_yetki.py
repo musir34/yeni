@@ -82,6 +82,10 @@ SAYFALAR: tuple[Sayfa, ...] = (
     Sayfa("siparis_takip_oto_gonderim", "Sipariş Takip — Otomatik Gönderim İzi", "Siparişler", roller=YONETIM,
           endpoints=("siparis_zaman.kargo_kodu_verildi",),
           ebeveynler=("siparis_hazirla", "uretim"), menude=False),
+    # Sipariş listesi kartındaki "son hareket" satırı Sipariş Takip'in son olayını okur.
+    Sayfa("siparis_takip_son_hareket", "Sipariş Takip — Kartta Son Hareket", "Siparişler", roller=YONETIM,
+          endpoints=("siparis_zaman.son_hareket",),
+          ebeveynler=("siparis_listesi",), menude=False),
     Sayfa("siparis_iz", "Sipariş İz Sürme", "Siparişler", blueprints=("order_audit",), roller=YONETIM),
     # ── Ürünler & Stok ──
     Sayfa("urun_yukleme", "Ürün Yükleme (AI)", "Ürünler & Stok", blueprints=("urun_yukleme",), roller=SADECE_ADMIN),
