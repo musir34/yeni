@@ -730,7 +730,9 @@ def son_hareket():
     except Exception:
         logger.warning("son_hareket: %s okunamadı", q, exc_info=True)
         return jsonify({"success": False}), 500
-    return jsonify({"success": True, "hareket": olaylar[-1] if olaylar else None})
+    # Raftan düşüldü / raf atandı ayrıntı satırlarıdır (gri); kartta asıl adımın yerini almasın
+    anlamli = [o for o in olaylar if o["adim"] not in ("stok", "raf")]
+    return jsonify({"success": True, "hareket": anlamli[-1] if anlamli else None})
 
 
 @siparis_zaman_bp.route("/siparis-zaman", endpoint="page")
