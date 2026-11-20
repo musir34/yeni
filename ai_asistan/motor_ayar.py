@@ -24,7 +24,10 @@ GECERLI_MOTORLAR = ("claude", "codex")
 # Motor seçimi olan alanlar: panel sohbeti, Trendyol Q&A taslakları ve ürün yükleme metinleri.
 GECERLI_ALANLAR = ("asistan", "qna", "urun")
 # UI'da hazır sunulan Codex modelleri; serbest girişle başka model de yazılabilir.
-CODEX_HAZIR_MODELLER = ("gpt-5.2", "gpt-5.1-codex-max", "gpt-5.1-codex-mini")
+CODEX_HAZIR_MODELLER = (
+    "gpt-6.1-terra", "gpt-6.1-sol", "gpt-6-astra", "gpt-6-sol", "gpt-6-luna",
+    "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna",
+)
 # Model adı doğrulaması: alt sürece argüman gidiyor, keyfi metin kabul edilmez.
 _MODEL_DESENI = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 

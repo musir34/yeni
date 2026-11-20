@@ -18,7 +18,6 @@ from ai_asistan.blueprint import (
     _claude_bin,
     _codex_calistir,
     BASE_DIR as AI_ASISTAN_DIR,
-    CLAUDE_MODEL,
 )
 
 logger = logging.getLogger(__name__)
@@ -27,6 +26,9 @@ BASE_DIR = Path(__file__).resolve().parent
 KURALLAR_MD = BASE_DIR / "CEVAP_KURALLARI.md"
 ALLOWED_TOOLS = "mcp__gulludb__query"  # salt-okunur DB (opsiyonel; stok zaten prompta gömülü)
 DRAFT_TIMEOUT_SN = 120
+# Q&A taslakları çok sayıda otomatik çağrı üretir → abonelik limitini korumak için
+# asistandan (opus) ayrı, daha hafif model. Asistan ai_asistan.blueprint.CLAUDE_MODEL'de kalır.
+QNA_CLAUDE_MODEL = "sonnet"
 FALLBACK_PROMPT = "Sen Güllü Shoes'un Trendyol müşteri sorularına kısa, kibar Türkçe cevap taslağı yazan asistanısın. Sadece cevap metnini yaz."
 
 
@@ -208,7 +210,7 @@ def _run_claude(prompt: str, ek_yollari: list[str] | None = None) -> str | None:
     cmd = [
         claude_bin,
         "-p", prompt,
-        "--model", CLAUDE_MODEL,
+        "--model", QNA_CLAUDE_MODEL,
         "--append-system-prompt", _kurallar(),
         "--allowedTools", ALLOWED_TOOLS + (",Read" if ek_yollari else ""),
         "--output-format", "json",
