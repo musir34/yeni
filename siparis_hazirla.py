@@ -983,51 +983,98 @@ def bugun_hazirlananlar():
     siparisler, etiketler = bugun_hazirlananlari_derle(rows)
     # Hız: sipariş başına Shopify API / tablo taraması YAPILMAZ. Görünen no (#1428) tek
     # toplu Shopify sorgusuyla; yeniden yazdır bilgisi ayrı uçtan (/yazdir) arka planda gelir.
-    shopify_adlari = _shopify_siparis_adlari(
-        [s["order_number"] for s in siparisler
-         if s["kaynak"] == "SHOPIFY" or s["order_number"].startswith("SH-")])
+    shopify_nolar = [s["order_number"] for s in siparisler
+                     if s["kaynak"] == "SHOPIFY" or s["order_number"].startswith("SH-")]
+    shopify_adlari, shopify_adetleri = _shopify_siparis_adlari(shopify_nolar)
+    # Ürün adedi siparişin kendi kalemlerinden: paketleme logundaki "Toplam Adet" toplu
+    # ekranda toplanan siparişte 0 yazılıyor (stok orada düştüğü için details boşaltılır).
+    adetler = {**_trendyol_siparis_adetleri(
+        [s["order_number"] for s in siparisler if s["order_number"] not in shopify_nolar]),
+        **shopify_adetleri}
     sonuc = []
     for sira, satir in enumerate(siparisler, start=1):
         gorunen = shopify_adlari.get(satir["order_number"]) or satir["order_number"]
         iz = etiketler.get(satir["order_number"]) or etiketler.get(gorunen)
+        adet = adetler.get(satir["order_number"])
+        if adet is None:
+            adet = satir["adet"] or None   # sipariş bulunamadı → log değeri (0 ise bilinmiyor)
         sonuc.append({
             **satir,
+            "adet": adet,
             "sira": sira,
             "gorunen_no": gorunen,
             "etiket": iz["tur"] if iz else "yok",
             "etiket_saat": iz["saat"] if iz else "",
         })
-    toplam_urun = sum(s["adet"] or 0 for s in siparisler)
-    adetsiz = sum(1 for s in siparisler if s["adet"] is None)
+    toplam_urun = sum(s["adet"] or 0 for s in sonuc)
+    adetsiz = sum(1 for s in sonuc if s["adet"] is None)
     return jsonify({"success": True, "gun": gun.strftime("%d.%m.%Y"), "gun_iso": gun.isoformat(),
                     "bugun_mu": gun == datetime.now(IST).date(), "siparisler": sonuc,
                     "toplam_urun": toplam_urun, "adetsiz_siparis": adetsiz})
 
 
-def _shopify_siparis_adlari(order_numbers: list[str]) -> dict[str, str]:
-    """SH-<id> → mağaza sipariş adı (#1428), TEK toplu GraphQL (nodes) sorgusuyla.
-    Hata → boş sözlük (liste SH- numarasıyla yine açılır)."""
+def _shopify_siparis_adlari(order_numbers: list[str]) -> tuple[dict[str, str], dict[str, int]]:
+    """SH-<id> → (mağaza sipariş adı #1428, güncel ürün adedi), TEK toplu GraphQL (nodes)
+    sorgusuyla. Hata → boş sözlükler (liste SH- numarasıyla yine açılır)."""
+    adlar: dict[str, str] = {}
+    adetler: dict[str, int] = {}
     if not order_numbers:
-        return {}
+        return adlar, adetler
     try:
         from shopify_site.shopify_service import shopify_service
-        sonuc: dict[str, str] = {}
         for i in range(0, len(order_numbers), 100):
             parca = order_numbers[i:i + 100]
             ids = [f"gid://shopify/Order/{no.replace('SH-', '', 1)}" for no in parca]
             r = shopify_service.run_graphql(
-                "query($ids: [ID!]!) { nodes(ids: $ids) { ... on Order { legacyResourceId name } } }",
+                "query($ids: [ID!]!) { nodes(ids: $ids) { ... on Order { legacyResourceId name"
+                " lineItems(first: 50) { nodes { currentQuantity } } } } }",
                 {"ids": ids})
             if not r.get("success"):
                 logging.warning("[BUGUN] Shopify adları alınamadı: %s", r.get("error"))
                 continue
             for n in (r.get("data") or {}).get("nodes") or []:
-                if n and n.get("legacyResourceId") and n.get("name"):
-                    sonuc[f"SH-{n['legacyResourceId']}"] = n["name"]
-        return sonuc
+                if not (n and n.get("legacyResourceId")):
+                    continue
+                no = f"SH-{n['legacyResourceId']}"
+                if n.get("name"):
+                    adlar[no] = n["name"]
+                kalemler = ((n.get("lineItems") or {}).get("nodes")) or []
+                adetler[no] = sum(int(k.get("currentQuantity") or 0) for k in kalemler)
+        return adlar, adetler
     except Exception:
         logging.warning("[BUGUN] Shopify adları okunamadı", exc_info=True)
-        return {}
+        return adlar, adetler
+
+
+def _trendyol_siparis_adetleri(order_numbers: list[str]) -> dict[str, int]:
+    """Sipariş no → kalem adetleri toplamı (details JSON), statü tablosu başına TEK IN
+    sorgusuyla (find_order_across_tables sırası; ilk bulunan tablo geçerli).
+    Hata → o ana kadar bulunanlar."""
+    from models import (OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped,
+                        OrderDelivered, OrderCancelled)
+    kalan = set(order_numbers)
+    adetler: dict[str, int] = {}
+    try:
+        for cls in (OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped,
+                    OrderDelivered, OrderCancelled):
+            if not kalan:
+                break
+            satirlar = (db.session.query(cls.order_number, cls.details)
+                        .filter(cls.order_number.in_(list(kalan))).all())
+            for no, details in satirlar:
+                if no not in kalan:
+                    continue   # aynı tabloda çift satır: ilki kalır
+                try:
+                    kalemler = json.loads(details or "[]")
+                    adetler[no] = sum(int(k.get("quantity") or 0) for k in kalemler
+                                      if isinstance(k, dict))
+                except (ValueError, TypeError):
+                    continue
+                kalan.discard(no)
+    except Exception:
+        db.session.rollback()
+        logging.warning("[BUGUN] sipariş adetleri okunamadı", exc_info=True)
+    return adetler
 
 
 @siparis_hazirla_bp.route("/api/bugun-hazirlananlar/yazdir", methods=["POST"])

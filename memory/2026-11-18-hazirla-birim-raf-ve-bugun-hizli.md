@@ -9,6 +9,12 @@
   yazdır alanları yeni `POST /api/bugun-hazirlananlar/yazdir` ile arka planda (Shopify 6 paralel thread,
   app_context içinde). Yazdır düğmesi yüklenene kadar spinner; bulunamazsa "sipariş bulunamadı".
 
+- **2026-11-19 düzeltme:** "71 sipariş · 17 ürün" çıkıyordu. Sebep: toplu ekranda toplanan
+  (toplandi_at dolu) siparişte confirm_packing `details=[]` yapar (update_service.py ~200) →
+  logdaki `Toplam Adet` 0. Adet artık siparişin kendi kalemlerinden: Trendyol tablo başına tek IN
+  sorgusu (`_trendyol_siparis_adetleri`), Shopify aynı `nodes` sorgusunda `lineItems.currentQuantity`.
+  Log değeri yalnız sipariş bulunamazsa yedek.
+
 ## 2) Kutu başına raf okutma (sıralı mod)
 - Şablon: raf alanı kartta tek değil, her kutu barkodunun ÜSTÜNDE: `raf_{barcode}_{q}`,
   `data-quantity-index=q`. Raf Enter → aynı q'nun kutu barkodu; kutu onayı → sonraki kutunun boş rafı.
