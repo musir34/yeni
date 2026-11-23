@@ -215,6 +215,11 @@
         /* Sayfaya git — gece modu */
         html.gs-dark .sayfa-git{color:#ccc}
         html.gs-dark .sayfa-git input{background:#2a2a2a;color:#ddd;border-color:#444}
+        /* Stok kataloğu penceresi */
+        .katalog-form label{display:block;font-weight:600;font-size:.85rem;margin:0 0 .3rem}
+        .katalog-form select,.katalog-form input{width:100%;padding:.55rem .7rem;border:1px solid var(--color-border);border-radius:var(--border-radius);font-size:.9rem;margin-bottom:1rem}
+        html.gs-dark .katalog-form select,
+        html.gs-dark .katalog-form input{background:#2a2a2a;color:#ddd;border-color:#444}
         @media (max-width:991px){
             .container{padding:10px;max-width:none}
             .model-grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}
@@ -272,6 +277,7 @@
                     <button type="submit"><i class="fas fa-cubes"></i> Ürünleri Güncelle</button>
                 </form>
                 <a href="{{ url_for('get_products.stok_excel', marketplace=marketplace_filter or none, tedarikci=tf or none) }}"><i class="fas fa-file-excel"></i> Stok Excel'i İndir</a>
+                <a href="#" onclick="document.getElementById('katalogModal').classList.add('is-visible');return false;"><i class="fas fa-file-pdf"></i> Stok Kataloğu (PDF)</a>
                 <a href="/product_label"><i class="fas fa-barcode"></i> Basit Barkod</a>
                 <a href="/image_manager"><i class="fas fa-images"></i> Görsel Yöneticisi</a>
                 <a href="{{ url_for('siparis_fisi_bp.tedarikci_sayfasi') }}"><i class="fas fa-truck"></i> Tedarikçi Yönetimi</a>
@@ -548,6 +554,25 @@
             <button class="btn btn-primary" id="modalSaveBtn">Kaydet</button>
         </div>
     </div>
+</div>
+
+<div class="action-modal-overlay" id="katalogModal" onclick="if(event.target===this||event.target.classList.contains('close-btn'))this.classList.remove('is-visible');">
+    <form class="action-modal-content katalog-form" method="get" action="{{ url_for('get_products.stok_katalog') }}" style="max-width:420px">
+        <div class="action-modal-header"><h4><i class="fas fa-file-pdf"></i> Stok Kataloğu (PDF)</h4><button type="button" class="close-btn">&times;</button></div>
+        <div class="action-modal-body">
+            <label for="katalogGrup">Grup</label>
+            <select id="katalogGrup" name="grup">
+                <option value="agir_giden" selected>Ağır Giden Modeller</option>
+                <option value="cok_satan">Çok Satan Modeller</option>
+            </select>
+            <label for="katalogAltSinir">En az stok (bu ve altı girmez)</label>
+            <input type="number" id="katalogAltSinir" name="alt_sinir" value="5" min="0" max="1000" required>
+        </div>
+        <div class="action-modal-footer">
+            <button type="button" class="btn close-btn" style="background:#212529;color:#fff;">İptal</button>
+            <button type="submit" class="btn btn-primary" onclick="setTimeout(function(){document.getElementById('katalogModal').classList.remove('is-visible');},300);"><i class="fas fa-file-pdf"></i> Oluştur</button>
+        </div>
+    </form>
 </div>
 
 <div id="imageModal" class="image-modal-overlay">

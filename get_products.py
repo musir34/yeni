@@ -1023,6 +1023,50 @@ def stok_excel():
         return redirect(url_for('get_products.product_list'))
 
 
+@get_products_bp.route('/product_list/stok_katalog')
+def stok_katalog():
+    """Eritme grubundaki modellerin stok kataloğu PDF'i (stok_katalog.py).
+
+    ?grup=agir_giden|cok_satan (geçersizse agir_giden), ?alt_sinir= model toplamı
+    bu ve altında olan model girmez (varsayılan 5, 0–1000)."""
+    try:
+        from stok_katalog import GRUPLAR, katalog_verisi, katalog_pdf
+
+        grup = request.args.get('grup', 'agir_giden')
+        if grup not in GRUPLAR:
+            grup = 'agir_giden'
+        alt_sinir = min(max(request.args.get('alt_sinir', 5, type=int) or 0, 0), 1000)
+        grup_adi, modeller = GRUPLAR[grup]
+
+        veri = katalog_verisi(modeller, alt_sinir)
+        if not veri:
+            flash("Seçilen kriterde stoklu model yok.", "warning")
+            return redirect(url_for('get_products.product_list'))
+        output = katalog_pdf(veri, grup_adi)
+
+        try:
+            from user_logs import log_user_action
+            log_user_action("EXPORT", {
+                'sayfa': 'Ürün Listesi',
+                'işlem_açıklaması': f'Stok kataloğu PDF indirildi ({grup_adi}, {len(veri)} model)',
+                'grup': grup,
+                'alt_sınır': alt_sinir,
+            })
+        except Exception:
+            pass
+
+        return send_file(
+            output,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f"Stok_Katalog_{grup}_{datetime.now().strftime('%Y-%m-%d')}.pdf"
+        )
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Stok kataloğu oluşturulamadı: {e}", exc_info=True)
+        flash("Stok kataloğu oluşturulurken bir hata oluştu.", "danger")
+        return redirect(url_for('get_products.product_list'))
+
+
 
 @get_products_bp.route('/api/get_product_variants', methods=['GET'])
 def get_product_variants():

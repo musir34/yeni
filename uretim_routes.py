@@ -129,6 +129,7 @@ def liste():
         q = q.filter(UretimSiparis.paketlendi.is_(durum == "paketlenen"))
     # Sıralama sipariş tarihine göre: aktif kuyruklarda en eski üstte (FIFO),
     # kargolanmış/teslim edilmişlerde en yeni üstte. order_date boşsa sona düşer.
+    # (Aktif kuyruklar aşağıda kargoya kalan süreye göre yeniden sıralanır.)
     if durum in ("kargoda", "teslim", "tamamlanan"):
         siralama = UretimSiparis.order_date.desc().nullslast()
     else:
@@ -205,6 +206,7 @@ def liste():
     from barcode_alias_helper import normalize_barcode
     kargo_map = {}
     detay_map = {}  # order_number → siparişin tam kalem listesi (ham details)
+    kargo_son_map = {}  # order_number → agreed_delivery_date (kargo cut-off'u)
     if rows:
         try:
             from models import (OrderCreated, OrderHazirlaniyor, OrderPicking,
@@ -219,9 +221,11 @@ def liste():
                             .with_entities(M.order_number, M.cargo_tracking_number,
                                            M.cargo_provider_name, M.customer_name,
                                            M.customer_surname, M.customer_address,
-                                           M.details)
+                                           M.details, M.agreed_delivery_date)
                             .all())
                 for o in satirlar:
+                    if o.agreed_delivery_date is not None:
+                        kargo_son_map.setdefault(o.order_number, o.agreed_delivery_date)
                     kargo_map.setdefault(o.order_number, {
                         "shipping_barcode": o.cargo_tracking_number or "",
                         "cargo_provider": o.cargo_provider_name or "",
@@ -239,6 +243,12 @@ def liste():
         except Exception:
             db.session.rollback()
             logger.warning("[URETIM] kargo/sipariş içeriği okunamadı", exc_info=True)
+    # Aktif kuyruklarda sıra: kargoya kalan süresi EN AZ olan üstte (sipariş hazırla
+    # ile aynı ölçüt, agreed_delivery_date). Cut-off'u olmayanlar (site/değişim)
+    # sona düşer, kendi aralarında sipariş tarihine göre (FIFO) kalır.
+    if durum not in ("kargoda", "teslim", "tamamlanan"):
+        rows = sorted(rows, key=lambda r: (r.order_number not in kargo_son_map,
+                                           kargo_son_map.get(r.order_number) or datetime.max))
     # 🛍️ Site siparişleri panel tablolarına inmez — tam içerik + etiket bilgisi
     # Shopify'dan (önbellekli). Site etiketi adres etiketidir, kargo kodu taşımaz.
     # Kargolanmış sekmelerde gerekmez.
