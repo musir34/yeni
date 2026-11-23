@@ -271,6 +271,7 @@
                 <form action="{{ url_for('get_products.update_products_route') }}" method="post" style="margin:0;">
                     <button type="submit"><i class="fas fa-cubes"></i> Ürünleri Güncelle</button>
                 </form>
+                <a href="{{ url_for('get_products.stok_excel', marketplace=marketplace_filter or none, tedarikci=tf or none) }}"><i class="fas fa-file-excel"></i> Stok Excel'i İndir</a>
                 <a href="/product_label"><i class="fas fa-barcode"></i> Basit Barkod</a>
                 <a href="/image_manager"><i class="fas fa-images"></i> Görsel Yöneticisi</a>
                 <a href="{{ url_for('siparis_fisi_bp.tedarikci_sayfasi') }}"><i class="fas fa-truck"></i> Tedarikçi Yönetimi</a>

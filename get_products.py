@@ -953,6 +953,76 @@ def product_list():
                                tedarikci_filter='', tedarikciler=[])
 
 
+@get_products_bp.route('/product_list/stok_excel')
+def stok_excel():
+    """Ürün listesindeki barkodların fiziksel stok Excel'i.
+
+    Stok = CentralStock.qty (raf toplamı). Üretim modunun sabit adedi yalnız
+    pazaryerine gönderimde uygulandığı için burada fiziksel stok görünür.
+    Ürün listesinin pazaryeri/tedarikçi filtrelerine uyar."""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill
+
+        marketplace_filter = _get_marketplace_filter()
+        tedarikci_filter = _get_tedarikci_filter()
+        query = Product.query.filter(
+            Product.product_main_id.isnot(None),
+            Product.product_main_id != ''
+        )
+        query = _apply_marketplace_filter(query, marketplace_filter)
+        query = _apply_tedarikci_filter(query, tedarikci_filter)
+        rows = (
+            query
+            .outerjoin(CentralStock, CentralStock.barcode == Product.barcode)
+            .with_entities(Product.product_main_id, Product.color, Product.size,
+                           Product.barcode, CentralStock.qty)
+            .order_by(Product.product_main_id, Product.color, Product.size)
+            .all()
+        )
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = 'Stok'
+        ws.append(['Model Kodu', 'Renk', 'Beden', 'Barkod', 'Stok'])
+        for cell in ws[1]:
+            cell.font = Font(bold=True, color='FFFFFF')
+            cell.fill = PatternFill('solid', fgColor='8B1E3F')
+        for model, color, size, barcode, qty in rows:
+            ws.append([model, color or '', size or '', barcode, int(qty or 0)])
+            ws.cell(row=ws.max_row, column=4).number_format = '@'
+        for col, width in zip('ABCDE', (16, 18, 8, 18, 8)):
+            ws.column_dimensions[col].width = width
+        ws.freeze_panes = 'A2'
+        ws.auto_filter.ref = ws.dimensions
+
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        try:
+            from user_logs import log_user_action
+            log_user_action("EXPORT", {
+                'sayfa': 'Ürün Listesi',
+                'işlem_açıklaması': f'Stok Excel indirildi ({len(rows)} barkod)',
+                'pazaryeri': marketplace_filter or 'tümü',
+                'tedarikçi': tedarikci_filter or 'tümü',
+            })
+        except Exception:
+            pass
+
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f"urun_stoklari_{datetime.now().strftime('%Y-%m-%d_%H%M')}.xlsx"
+        )
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Stok Excel oluşturulamadı: {e}", exc_info=True)
+        flash("Stok Excel'i oluşturulurken bir hata oluştu.", "danger")
+        return redirect(url_for('get_products.product_list'))
+
+
 
 @get_products_bp.route('/api/get_product_variants', methods=['GET'])
 def get_product_variants():
