@@ -349,6 +349,13 @@ class ShopifyStockService:
         if safety_buffer:
             logger.info("[SHOPIFY] Güvenlik stoğu tamponu aktif: -%s adet/ürün", safety_buffer)
 
+        # İptal-eğilimli ürünler için barkod bazlı EKSTRA listeleme tamponu
+        # (Trendyol ile aynı kural). Tablo yoksa boş harita → eski davranış.
+        from stock_sync.listing_policy import get_extra_buffer_map
+        extra_buffer_map = get_extra_buffer_map()
+        if extra_buffer_map:
+            logger.info("[SHOPIFY] %d ürüne ekstra listeleme tamponu uygulanıyor", len(extra_buffer_map))
+
         # 🏭 Üretim Modu: seçili modellerin barkodları Shopify'a da daima sabit
         # adet gider (Trendyol ile aynı kural; hata → boş set, gönderim durmaz).
         try:
@@ -378,7 +385,7 @@ class ShopifyStockService:
         for mapping in mappings:
             raw_qty = stocks.get(mapping.barcode, 0)
             reserved = reserved_map.get(mapping.barcode, 0)
-            qty = max(0, raw_qty - reserved - safety_buffer)
+            qty = max(0, raw_qty - reserved - safety_buffer - extra_buffer_map.get(mapping.barcode, 0))
             if mapping.barcode in uretim_barcodes:
                 qty = URETIM_SABIT_ADET
             batch.append({

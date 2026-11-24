@@ -154,6 +154,7 @@ class StockSyncService:
         stok raftan/ CentralStock'tan ZATEN düşülür. O yüzden toplanmış siparişler
         rezervden ÇIKARILIR — yoksa hem CentralStock düşer hem rezerv sayar = ÇİFT
         düşüm = available olduğundan az = satış kaybı.
+        Rezerv artık Shopify'ın açık (karşılanmamış, arşivlenmemiş) siparişlerini de içerir.
         """
         import json
 
@@ -190,6 +191,14 @@ class StockSyncService:
 
         if parse_errors > 0:
             logger.warning(f"[REZERV] Toplam {parse_errors} sipariş detayı parse edilemedi")
+
+        # Shopify (site) açık siparişleri — DB'de tutulmadıkları için API'den; hata → eklenmez
+        try:
+            from stock_sync.shopify_rezerv import get_shopify_reserved
+            for barcode, qty in get_shopify_reserved().items():
+                reserved_map[barcode] = reserved_map.get(barcode, 0) + qty
+        except Exception:
+            logger.exception("[REZERV] Shopify rezervi eklenemedi (yutuldu)")
 
         return reserved_map
     
