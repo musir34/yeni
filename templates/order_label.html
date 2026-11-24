@@ -92,7 +92,10 @@
 <body>
   <div class="label">
     <!-- ÜST: Barkod (sol) + QR (sağ) — sadece barkod veya QR varsa göster -->
-    {% if barcode_data_uri or qr_code_path %}
+    {# Trendyol Express etiketinde QR yok (barkod tüm genişliği alır); diğer kargolarda QR kalır.
+       Tanıma kuralı aşağıdaki siyah bantla (cargo-tyex) aynı. #}
+    {% set _tyex = cargo_provider_name and ('trendyol' in cargo_provider_name|lower or 'tyex' in cargo_provider_name|lower) %}
+    {% if barcode_data_uri or (qr_code_path and not _tyex) %}
     <div class="top-row">
       <div class="barcode-wrap">
         {% if barcode_data_uri %}
@@ -103,6 +106,7 @@
         {% endif %}
       </div>
 
+      {% if not _tyex %}
       <div class="qr-wrap">
         {% if qr_code_path %}
           <img src="{{ url_for('static', filename=qr_code_path) }}" alt="QR Kod">
@@ -110,6 +114,7 @@
           <div style="font-size:9pt;text-align:center;">QR Yok</div>
         {% endif %}
       </div>
+      {% endif %}
     </div>
     {% endif %}
 
