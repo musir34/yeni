@@ -156,7 +156,7 @@ def karta_cevir(order: dict) -> SimpleNamespace:
 
 
 def aramaya_uyar(kart, aranan: str | None) -> bool:
-    """Sipariş listesi aramasıyla aynı kapsam: sipariş no (1428 / #1428 / SH-… / iç kimlik) + müşteri adı."""
+    """Sipariş listesi aramasıyla aynı kapsam: sipariş no (1428 / #1428 / SH-… / iç kimlik) + müşteri adı + kargo barkodu."""
     if not aranan:
         return True
     a = aranan.strip().lstrip("#").casefold()
@@ -165,6 +165,7 @@ def aramaya_uyar(kart, aranan: str | None) -> bool:
     adaylar = (
         kart.display_number, kart.order_number, kart.order_number.replace("SH-", "", 1),
         kart.customer_name, kart.customer_surname, f"{kart.customer_name} {kart.customer_surname}",
+        getattr(kart, "cargo_tracking_number", ""),
     )
     return any(a in str(x or "").casefold() for x in adaylar)
 

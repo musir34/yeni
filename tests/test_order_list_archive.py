@@ -180,6 +180,24 @@ class OrderListArchiveTests(unittest.TestCase):
                 result = self.listing(query)
                 self.assertEqual([o.order_number for o in result['orders']], ['ARCH-7'])
 
+    def test_search_finds_cargo_barcode_in_live_status_and_archive(self):
+        self.add('OrderShipped', 'LIVE-1', cargo_tracking_number='7330001112223')
+        self.add('Archive', 'ARCH-1', shipping_barcode='7330009998887', status='Picking')
+        self.add('OrderShipped', 'OTHER-1', cargo_tracking_number='1234567890')
+        cases = (
+            (dict(query='search=7330001112223'), ['LIVE-1']),
+            (dict(query='search=7330009998887'), ['ARCH-1']),
+            (dict(query='search=7330001112223', status='Kargoda'), ['LIVE-1']),
+            (dict(query='search=7330009998887', status='Kargoda'), ['ARCH-1']),
+        )
+        for kwargs, expected in cases:
+            with self.subTest(**kwargs):
+                result = self.listing(**kwargs)
+                self.assertEqual([o.order_number for o in result['orders']], expected)
+        with self.app.test_request_context('/order-list/archived?search=7330009998887'):
+            archived = self.ns['get_archived_order_list']()
+        self.assertEqual([o.order_number for o in archived['orders']], ['ARCH-1'])
+
     def test_status_search_shows_archive_without_changing_normal_status_tab(self):
         self.add('OrderCreated', 'LIVE-1', customer_name='Ortak')
         self.add('OrderShipped', 'LIVE-2', customer_name='Ortak')

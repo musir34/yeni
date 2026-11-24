@@ -373,7 +373,7 @@
                     {% if kaynak_param %}<input type="hidden" name="kaynak" value="{{ kaynak_param }}">{% endif %}
                     {% if show_overdue %}<input type="hidden" name="show_overdue" value="1">{% endif %}
                     <div class="input-group order-search-group">
-                        <input type="text" class="form-control" name="search" placeholder="Sipariş No veya Müşteri Adı" value="{{ request.args.get('search', '') }}">
+                        <input type="text" class="form-control" name="search" placeholder="Sipariş No, Müşteri Adı veya Kargo Barkodu" value="{{ request.args.get('search', '') }}">
                         <button class="btn btn-secondary order-search-submit" type="submit" title="Sipariş ara" aria-label="Sipariş ara"><i class="fas fa-search"></i></button>
                     </div>
                 </form>

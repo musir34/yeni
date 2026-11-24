@@ -404,7 +404,8 @@ def get_order_list():
                     AllOrders.c.order_number.ilike(f"%{search_query}%"),
                     AllOrders.c.customer_name.ilike(f"%{search_query}%"),
                     AllOrders.c.customer_surname.ilike(f"%{search_query}%"),
-                    (AllOrders.c.customer_name + ' ' + AllOrders.c.customer_surname).ilike(f"%{search_query}%")
+                    (AllOrders.c.customer_name + ' ' + AllOrders.c.customer_surname).ilike(f"%{search_query}%"),
+                    AllOrders.c.cargo_tracking_number.ilike(f"%{search_query}%")
                 )
             )
             logger.debug(f"Arama sorgusuna göre filtre: {search_query}")
@@ -582,7 +583,8 @@ def get_filtered_orders(status):
                     order_columns.order_number.ilike(f"%{sq}%"),
                     order_columns.customer_name.ilike(f"%{sq}%"),
                     order_columns.customer_surname.ilike(f"%{sq}%"),
-                    (order_columns.customer_name + ' ' + order_columns.customer_surname).ilike(f"%{sq}%")
+                    (order_columns.customer_name + ' ' + order_columns.customer_surname).ilike(f"%{sq}%"),
+                    order_columns.cargo_tracking_number.ilike(f"%{sq}%")
                 )
             )
 
@@ -666,7 +668,8 @@ def get_archived_order_list():
                     AllOrders.c.order_number.ilike(f"%{search_query}%"),
                     AllOrders.c.customer_name.ilike(f"%{search_query}%"),
                     AllOrders.c.customer_surname.ilike(f"%{search_query}%"),
-                    (AllOrders.c.customer_name + ' ' + AllOrders.c.customer_surname).ilike(f"%{search_query}%")
+                    (AllOrders.c.customer_name + ' ' + AllOrders.c.customer_surname).ilike(f"%{search_query}%"),
+                    AllOrders.c.cargo_tracking_number.ilike(f"%{search_query}%")
                 )
             )
 

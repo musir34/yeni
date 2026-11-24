@@ -82,6 +82,8 @@ def test_arama_numara_bicimlerini_ve_musteriyi_bulur():
     for aranan in ("1428", "#1428", "SH-6543210987654", "6543210987654", "ayşe", "Ayşe Yılmaz", "yıl"):
         assert aramaya_uyar(kart, aranan), aranan
     assert not aramaya_uyar(kart, "1429")
+    kart.cargo_tracking_number = "MNG123456789"
+    assert aramaya_uyar(kart, "MNG123456789") and aramaya_uyar(kart, "123456789")
     assert aramaya_uyar(kart, None) and aramaya_uyar(kart, "   ")
 
 
