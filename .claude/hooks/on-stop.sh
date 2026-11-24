@@ -6,8 +6,10 @@
 # sohbet/boş turlarda ve değişiklik yoksa sessiz kalır.
 set -uo pipefail
 
-PROJ="/Users/abdurrahmankuli/Documents/Webs/yeni"
-STATE="$HOME/.claude/projects/-Users-abdurrahmankuli-Documents-Webs-yeni/.last-stop-hash"
+# Mac + Windows uyumlu: yol $CLAUDE_PROJECT_DIR'dan türetilir.
+PROJ="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && (pwd -W 2>/dev/null || pwd))}"
+SLUG="$(printf '%s' "$PROJ" | sed 's/[^A-Za-z0-9]/-/g')"
+STATE="$HOME/.claude/projects/$SLUG/.last-stop-hash"
 
 INPUT="$(cat)"
 

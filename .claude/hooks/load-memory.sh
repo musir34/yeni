@@ -1,24 +1,21 @@
 #!/usr/bin/env bash
-# SessionStart hook: proje hafızasını (memory/*.md) oturum başında context'e yükler.
+# SessionStart hook: oturum başında proje hafızasının (memory/) yerini hatırlatır.
 # "Her işe başladığında Obsidian/memory'yi kontrol et" protokolünün garantili (harness tarafından çalıştırılan) hali.
+# Notlar tam metin YÜKLENMEZ (120+ not ≈ 100k token); MEMORY.md indeksi harness tarafından zaten yükleniyor,
+# ilgili not konuya göre açılır. Mac + Windows uyumlu: yol $CLAUDE_PROJECT_DIR'dan türetilir.
 set -euo pipefail
 
-MEM_DIR="$HOME/.claude/projects/-Users-abdurrahmankuli-Documents-Webs-yeni/memory"
+PROJ="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && (pwd -W 2>/dev/null || pwd))}"
+SLUG="$(printf '%s' "$PROJ" | sed 's/[^A-Za-z0-9]/-/g')"
+MEM_DIR="$HOME/.claude/projects/$SLUG/memory"
 
 [ -d "$MEM_DIR" ] || exit 0
 
-echo "## 📌 Proje Hafızası (memory/) — oturum başında otomatik yüklendi"
-echo "Aşağıdaki kalıcı notlar bu projeye özeldir. İşe başlamadan önce dikkate al."
-echo
-
 shopt -s nullglob
-for f in "$MEM_DIR"/*.md; do
-  base="$(basename "$f")"
-  # MEMORY.md indeksi harness tarafından zaten yükleniyor; tam dosyaları ekle.
-  [ "$base" = "MEMORY.md" ] && continue
-  echo "### ${base}"
-  cat "$f"
-  echo
-done
+NOTES=("$MEM_DIR"/*.md)
+
+echo "## 📌 Proje Hafızası (memory/)"
+echo "Klasör: $MEM_DIR (${#NOTES[@]} dosya)."
+echo "İşe başlamadan önce MEMORY.md indeksine bak; konuyla ilgili notları tam metin aç ve dikkate al."
 
 exit 0
