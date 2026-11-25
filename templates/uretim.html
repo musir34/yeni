@@ -86,6 +86,13 @@
     </section>
 
     <section class="ur-controls">
+      <!-- Sekmeden bağımsız arama: tüm üretim kayıtlarında (kargolanan/arşiv/iptal dahil) -->
+      <form class="ur-ara" id="urAraForm" role="search" autocomplete="off">
+        <input type="text" class="form-control" id="urAraInput" placeholder="Sipariş No, Müşteri Adı veya Kargo Barkodu" aria-label="Üretim siparişi ara">
+        <button type="submit" class="ur-primary-btn" title="Sipariş ara" aria-label="Sipariş ara"><i class="bi bi-search"></i></button>
+        <button type="button" class="ur-ara-temizle" id="urAraTemizle" hidden title="Aramayı temizle" aria-label="Aramayı temizle"><i class="bi bi-x-lg"></i></button>
+      </form>
+      <div class="ur-ara-sonuc" id="urAraSonuc" hidden aria-live="polite"></div>
       <div class="ur-tabs" role="tablist" aria-label="Üretim durumları">
         <button class="ur-tab active" data-durum="bekleyen" role="tab" aria-selected="true">
           Bekleyen <span id="urTabSay-bekleyen">0</span>
@@ -526,6 +533,25 @@
   html.gs-dark .ur-card--iptal { background:#252022; }
   html.gs-dark .ur-empty { background:#1e1f24; border-color:#2c2e34; }
   html.gs-dark .ur-skeleton span { background:linear-gradient(100deg,#26272d 40%,#2d2e35 50%,#26272d 60%); background-size:200% 100%; }
+
+  /* Üretim siparişi araması */
+  .ur-ara { display:flex; gap:8px; padding:14px 18px 6px; }
+  .ur-ara input { flex:1 1 auto; min-width:0; border-radius:12px; }
+  .ur-ara .ur-primary-btn { flex:0 0 auto; }
+  .ur-ara-temizle { flex:0 0 auto; border:1px solid var(--ur-line); border-radius:12px; background:transparent; color:var(--ur-muted); padding:0 12px; }
+  .ur-ara-sonuc { padding:6px 18px 12px; }
+  .ur-ara-baslik { font-size:.74rem; font-weight:700; color:var(--ur-muted); margin-bottom:6px; }
+  .ur-ara-satir { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; padding:9px 0; border-top:1px solid var(--ur-line); font-size:.84rem; }
+  .ur-ara-satir strong { color:var(--ur-ink); }
+  .ur-ara-meta { color:var(--ur-muted); font-size:.76rem; }
+  .ur-ara-rozet { padding:3px 9px; border-radius:999px; font-size:.7rem; font-weight:700; background:var(--ur-rose-soft); color:var(--ur-rose-dark); }
+  .ur-ara-rozet--yok { background:var(--ur-red-soft); color:var(--ur-red); }
+  .ur-ara-pazar { padding:3px 9px; border-radius:999px; font-size:.7rem; font-weight:650; border:1px solid var(--ur-line); color:var(--ur-ink); }
+  .ur-ara-git { margin-left:auto; border:0; background:transparent; color:var(--ur-rose-dark); font-size:.78rem; font-weight:650; padding:0; }
+  html.gs-dark .ur-ara-rozet { background:#3a2a2d; }
+  html.gs-dark .ur-ara-rozet--yok { background:#3a2321; color:#e07b6f; }
+  html.gs-dark .ur-ara-pazar, html.gs-dark .ur-ara-satir, html.gs-dark .ur-ara-temizle { border-color:#33353c; color:#e6e7ea; }
+  @media (max-width:576px) { .ur-ara { padding:12px 12px 6px; } .ur-ara-sonuc { padding:6px 12px 12px; } }
 </style>
 {% endblock %}
 
@@ -889,6 +915,56 @@
             seciliIdler.clear();
             listeYukle(aktifDurum, true);
         });
+    });
+
+    // 🔎 Sekmeden bağımsız arama — sonuç her siparişin sekmesini + pazaryeri statüsünü gösterir;
+    // "Sekmeye git" mevcut sekme tıklamasını tetikler (liste davranışı değişmez).
+    const araSonuc = document.getElementById('urAraSonuc');
+    const araTemizle = document.getElementById('urAraTemizle');
+    document.getElementById('urAraForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const q = document.getElementById('urAraInput').value.trim();
+        if (q.length < 2) { toast('En az 2 karakter girin.', 'warning'); return; }
+        araSonuc.hidden = false;
+        araTemizle.hidden = false;
+        araSonuc.innerHTML = '<div class="ur-ara-baslik">Aranıyor…</div>';
+        let data;
+        try {
+            const res = await fetch(`/uretim/api/ara?q=${encodeURIComponent(q)}`);
+            data = await res.json();
+        } catch (err) {
+            data = { success: false, message: 'Arama yapılamadı.' };
+        }
+        if (!data.success) {
+            araSonuc.innerHTML = `<div class="ur-ara-baslik">${esc(data.message || 'Arama yapılamadı.')}</div>`;
+            return;
+        }
+        if (!data.rows.length) {
+            araSonuc.innerHTML = `<div class="ur-ara-baslik">“${esc(q)}” için üretim siparişi bulunamadı.</div>`;
+            return;
+        }
+        araSonuc.innerHTML = `<div class="ur-ara-baslik">${data.rows.length} sonuç${data.rows.length >= 50 ? ' (ilk 50)' : ''}</div>` +
+            data.rows.map(r => `
+              <div class="ur-ara-satir">
+                <strong>${esc(r.order_number)}</strong>
+                <span>${esc(r.customer_name)}</span>
+                <span class="ur-ara-meta">${esc(r.order_date)}${r.product_main_id ? ' · ' + esc(r.product_main_id) : ''}</span>
+                <span class="ur-ara-rozet${r.sekme ? '' : ' ur-ara-rozet--yok'}" title="Üretim aşaması">${esc(r.sekme_adi)}</span>
+                <span class="ur-ara-pazar" title="Pazaryeri statüsü">${esc(r.pazaryeri_statu)}</span>
+                ${r.aciklama ? `<span class="ur-ara-meta">${esc(r.aciklama)}</span>` : ''}
+                ${r.sekme ? `<button type="button" class="ur-ara-git" data-ara-sekme="${esc(r.sekme)}">Sekmeye git <i class="bi bi-arrow-right"></i></button>` : ''}
+              </div>`).join('');
+    });
+    araSonuc.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-ara-sekme]');
+        if (!btn) return;
+        document.querySelector(`.ur-tab[data-durum="${btn.getAttribute('data-ara-sekme')}"]`)?.click();
+    });
+    araTemizle.addEventListener('click', () => {
+        document.getElementById('urAraInput').value = '';
+        araSonuc.hidden = true;
+        araSonuc.innerHTML = '';
+        araTemizle.hidden = true;
     });
 
     document.getElementById('urYenile').addEventListener('click', () => { tazele(); ayarYukle(); });

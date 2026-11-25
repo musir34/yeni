@@ -435,6 +435,126 @@ def liste():
     return jsonify({"success": True, "rows": sonuc})
 
 
+ARAMA_SEKME_ADLARI = {
+    "bekleyen": "Bekleyen", "uretiliyor": "Üretiliyor", "uretilen": "Üretilen",
+    "paketlenen": "Paketlenen", "kargoda": "Kargoya Verilen", "teslim": "Teslim Edilen",
+}
+
+
+@uretim_bp.route("/api/ara", methods=["GET"])
+def ara():
+    """Sekmeden bağımsız arama: sipariş no, müşteri adı/soyadı veya kargo kodu.
+    Tüm üretim kayıtlarında (arşivlenen/kargolanan/iptal dahil) arar; her sonuç
+    hangi sekmede durduğunu (liste() ile aynı kurallar) ve pazaryeri statüsünü taşır.
+    Kargo kodu üretim kaydında tutulmaz → sipariş tablolarından (sipariş listesi
+    aramasıyla aynı kolonlar: cargo_tracking_number, arşivde shipping_barcode) bulunur."""
+    from sqlalchemy import or_
+    from time_utils import fmt_ist
+    from models import (OrderCreated, OrderHazirlaniyor, OrderPicking, OrderShipped,
+                        OrderDelivered, OrderCancelled, OrderArchived, Archive, Degisim)
+    from uretim_modu import DEGISIM_ONEK
+    aranan = (request.args.get("q") or "").strip().lstrip("#")
+    if len(aranan) < 2:
+        return jsonify({"success": False, "message": "En az 2 karakter girin."}), 400
+    desen = f"%{aranan}%"
+    # (model, pazaryeri etiketi) — sıra: ilk bulunan statü gösterilir
+    TABLOLAR = ((OrderCreated, "Yeni"), (OrderHazirlaniyor, "Hazırlanıyor"),
+                (OrderPicking, "Toplanıyor"), (OrderShipped, "Kargoda"),
+                (OrderDelivered, "Teslim Edildi"), (OrderCancelled, "İptal"),
+                (OrderArchived, "Arşiv"))
+    try:
+        kosullar = [UretimSiparis.order_number.ilike(desen),
+                    UretimSiparis.customer_name.ilike(desen)]
+        for M, _ in TABLOLAR:
+            kosullar.append(UretimSiparis.order_number.in_(
+                db.session.query(M.order_number).filter(or_(
+                    M.cargo_tracking_number.ilike(desen),
+                    M.customer_name.ilike(desen),
+                    M.customer_surname.ilike(desen),
+                    (M.customer_name + " " + M.customer_surname).ilike(desen)))))
+        kosullar.append(UretimSiparis.order_number.in_(
+            db.session.query(Archive.order_number).filter(or_(
+                Archive.shipping_barcode.ilike(desen),
+                Archive.customer_name.ilike(desen),
+                Archive.customer_surname.ilike(desen),
+                (Archive.customer_name + " " + Archive.customer_surname).ilike(desen)))))
+        # 🔁 Değişim kaydı: kargo kodu + müşteri Degisim'de (üretim no = DG-<degisim_no>)
+        kosullar.append(UretimSiparis.order_number.in_(
+            db.session.query(DEGISIM_ONEK + Degisim.degisim_no).filter(or_(
+                Degisim.kargo_kodu.ilike(desen),
+                Degisim.ad.ilike(desen),
+                Degisim.soyad.ilike(desen),
+                (Degisim.ad + " " + Degisim.soyad).ilike(desen)))))
+        rows = (UretimSiparis.query.filter(or_(*kosullar))
+                .order_by(UretimSiparis.order_date.desc().nullslast())
+                .limit(50).all())
+    except Exception:
+        db.session.rollback()
+        logger.warning("[URETIM] arama yapılamadı: %s", aranan, exc_info=True)
+        return jsonify({"success": False, "message": "Arama yapılamadı."}), 500
+    nolar = [r.order_number for r in rows]
+    pazaryeri, kargoda_set, teslim_set, iptaller = {}, set(), set(), set()
+    if nolar:
+        try:
+            for M, etiket in TABLOLAR:
+                for onum, st in (M.query.filter(M.order_number.in_(nolar))
+                                 .with_entities(M.order_number, M.status)):
+                    pazaryeri.setdefault(onum, etiket + (f" ({st})" if st else ""))
+                    if M is OrderShipped:
+                        kargoda_set.add(onum)
+                    elif M in (OrderDelivered, OrderArchived):
+                        teslim_set.add(onum)
+                    elif M is OrderCancelled:
+                        iptaller.add(onum)
+            for onum, st in (Archive.query.filter(Archive.order_number.in_(nolar))
+                             .with_entities(Archive.order_number, Archive.status)):
+                pazaryeri.setdefault(onum, "Panel arşivi" + (f" ({st})" if st else ""))
+            dg_nolar = [n[len(DEGISIM_ONEK):] for n in nolar if n.startswith(DEGISIM_ONEK)]
+            if dg_nolar:
+                for dno, durumu in (Degisim.query.filter(Degisim.degisim_no.in_(dg_nolar))
+                                    .with_entities(Degisim.degisim_no, Degisim.degisim_durumu)):
+                    pazaryeri.setdefault(DEGISIM_ONEK + dno, f"Değişim ({durumu or '-'})")
+                    if durumu == "Kargoya Verildi":
+                        kargoda_set.add(DEGISIM_ONEK + dno)
+                    elif durumu == "Teslim Edildi":
+                        teslim_set.add(DEGISIM_ONEK + dno)
+        except Exception:
+            db.session.rollback()
+            logger.warning("[URETIM] arama statüleri okunamadı", exc_info=True)
+    sonuc = []
+    for r in rows:
+        n = r.order_number
+        arsiv = getattr(r, "arsivlendi_at", None)
+        # Sekme kuralları liste() ile birebir: kargo/teslim ayrımı yalnız üretilmişlerde,
+        # iptal edilen hiçbir sekmede gösterilmez, elle arşivlenen yalnız Teslim'de.
+        if n in iptaller:
+            sekme, aciklama = None, "Pazaryerinde iptal — üretim sekmelerinde gösterilmez"
+        elif not r.uretildi:
+            if arsiv:
+                sekme, aciklama = None, "Elle arşivlendi — sekmelerde görünmez"
+            else:
+                sekme, aciklama = ("uretiliyor" if r.isleme_alindi else "bekleyen"), ""
+        elif n in teslim_set or arsiv:
+            sekme = "teslim"
+            aciklama = "Elle arşivlendi" if (arsiv and n not in teslim_set) else ""
+        elif n in kargoda_set:
+            sekme, aciklama = "kargoda", ""
+        else:
+            sekme, aciklama = ("paketlenen" if r.paketlendi else "uretilen"), ""
+        sonuc.append({
+            "id": r.id,
+            "order_number": n,
+            "customer_name": r.customer_name or "",
+            "order_date": fmt_ist(r.order_date, "%d.%m.%Y %H:%M"),
+            "product_main_id": r.product_main_id or "",
+            "sekme": sekme,
+            "sekme_adi": ARAMA_SEKME_ADLARI.get(sekme, "Sekmede yok"),
+            "aciklama": aciklama,
+            "pazaryeri_statu": pazaryeri.get(n) or ("Site siparişi" if n.startswith("SH-") else "—"),
+        })
+    return jsonify({"success": True, "rows": sonuc})
+
+
 @uretim_bp.route("/api/uretildi/<int:kayit_id>", methods=["POST"])
 def uretildi_isaretle(kayit_id: int):
     kayit = db.session.get(UretimSiparis, kayit_id)
