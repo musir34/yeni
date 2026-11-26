@@ -98,10 +98,14 @@ def _barkod_ve_stok():
     if not barcode:
         return None, (jsonify({"success": False, "message": "Barkod boş"}), 400)
     cs = db.session.get(CentralStock, barcode)
+    if cs is None:
+        # Okutulan kutu barkodu alias / yazım farkı olabilir → ana barkoda çevir
+        from barcode_alias_helper import normalize_barcode
+        cs = db.session.get(CentralStock, normalize_barcode(barcode))
     if cs is None or cs.qty != 1:
         simdi = cs.qty if cs else 0
         return None, (jsonify({"success": False,
-                               "message": f"Stok artık 1 değil (şu an {simdi}) — sayfayı yenileyin"}), 409)
+                               "message": f"Bu ürün tek adet listesinde değil (kayıtlı stok: {simdi})"}), 409)
     return cs, None
 
 
@@ -132,7 +136,8 @@ def var():
         return jsonify({"success": False, "message": "Kaydedilemedi"}), 500
     log_user_action("UPDATE: tek_adet_teyit", {"sayfa": "Tek Adet Teyit", "barkod": cs.barcode,
                                                "sonuç": "Rafta var (teyit edildi)"})
-    return jsonify({"success": True, "teyit_by": kullanici, "teyit_at": fmt_ist(teyit_at, TARIH_FMT)})
+    return jsonify({"success": True, "barcode": cs.barcode, "teyit_by": kullanici,
+                    "teyit_at": fmt_ist(teyit_at, TARIH_FMT)})
 
 
 @tek_adet_teyit_bp.route("/api/yok", methods=["POST"])
