@@ -360,6 +360,9 @@ html.gs-dark .product-images-list { border-bottom-color: #333; }
 html.gs-dark .product-thumbnail,
 html.gs-dark .archive-product-image { background: #242424; border-color: #333; }
 html.gs-dark .archive-product-item { background: #181818; border-color: #333; }
+.archive-product-item.arsiv-eksik { border: 2px solid #dc3545; background: #fff5f5; }
+html.gs-dark .archive-product-item.arsiv-eksik { border-color: #dc3545; background: #2a1517; }
+.arsiv-eksik-rozet { display: inline-block; background: #dc3545; color: #fff; font-size: .72rem; font-weight: 600; padding: .1rem .45rem; border-radius: 4px; margin-bottom: .2rem; }
 html.gs-dark .archive-product-model { color: #f1f1f1; }
 html.gs-dark .archive-product-chip { background: #2a2a2a; color: #d0d0d0; }
 html.gs-dark .archive-product-barcode { color: #aaa; }
@@ -488,7 +491,7 @@ Seç
 {% if order.products and order.products|length > 0 %}
 <div class="archive-product-list">
 {% for product in order.products[:2] %}
-<div class="archive-product-item">
+<div class="archive-product-item{% if product.eksik %} arsiv-eksik{% endif %}">
 <img src="{{ product.image_url if product.image_url else '/static/images/default.jpg' }}"
 class="archive-product-image"
 alt="{{ product.model | default('Ürün Görseli') }}"
@@ -496,6 +499,7 @@ data-bs-toggle="modal"
 data-bs-target="#imageModal"
 data-image-url="{{ product.image_url if product.image_url else '/static/images/default.jpg' }}">
 <div class="archive-product-main">
+{% if product.eksik %}<span class="arsiv-eksik-rozet"><i class="fas fa-triangle-exclamation"></i> Arşiv sebebi bu ürün</span>{% endif %}
 <strong class="archive-product-model">{{ product.model if product.model and product.model != 'Model Bilgisi Yok' else product.sku }}</strong>
 <div class="archive-product-tags">
 {% if product.color and product.color != 'Renk Bilgisi Yok' %}<span class="archive-product-chip">{{ product.color }}</span>{% endif %}
@@ -532,7 +536,7 @@ data-image-url="{{ product.image_url if product.image_url else '/static/images/d
 <div class="collapse mt-3" id="details-{{ order.order_number }}"> {# id sipariş no'ya bağlandı #}
 <div class="archive-product-list">
 {% for product in order.products %}
-<div class="archive-product-item">
+<div class="archive-product-item{% if product.eksik %} arsiv-eksik{% endif %}">
 <img src="{{ product.image_url if product.image_url else '/static/images/default.jpg' }}"
 class="archive-product-image"
 alt="{{ product.model | default('Ürün Görseli') }}"
@@ -540,6 +544,7 @@ data-bs-toggle="modal"
 data-bs-target="#imageModal"
 data-image-url="{{ product.image_url if product.image_url else '/static/images/default.jpg' }}">
 <div class="archive-product-main">
+{% if product.eksik %}<span class="arsiv-eksik-rozet"><i class="fas fa-triangle-exclamation"></i> Arşiv sebebi bu ürün</span>{% endif %}
 <strong class="archive-product-model">{{ product.model if product.model and product.model != 'Model Bilgisi Yok' else product.sku }}</strong>
 <div class="archive-product-tags">
 <span class="archive-product-chip">SKU: {{ product.sku if product.sku else '-' }}</span>

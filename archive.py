@@ -179,6 +179,14 @@ def parse_order_details(details):
         return [parsed]
     return []
 
+def mark_missing_items(details, barcodes):
+    """Arşiv sebebi olan kalemleri details JSON'ında arsiv_eksik ile işaretler (yeni JSON string döner)."""
+    items = parse_order_details(details)
+    if not barcodes or not items:
+        return details
+    marked = [{**d, 'arsiv_eksik': (d.get('barcode') in barcodes)} for d in items]
+    return json.dumps(marked, ensure_ascii=False)
+
 #############################
 # 2) Sipariş Statüsü Güncelleme
 #############################
@@ -554,9 +562,11 @@ def display_archive():
                 'color': color, # Frontend'de kullanmak için ekledik
                 'size': size,  # Frontend'de kullanmak için ekledik
                 'quantity': quantity,
-                'image_url': image_url
+                'image_url': image_url,
+                'eksik': bool(detail.get('arsiv_eksik')),
             })
-        order.products = products
+        # Arşiv sebebi olan kalem ilk 2 karta girsin
+        order.products = sorted(products, key=lambda p: not p['eksik'])
 
     return render_template(
         'archive.html',
@@ -585,6 +595,8 @@ def archive_an_order():
     other_reason = request.form.get('other_reason', '').strip()
     if archive_reason == 'Diğer' and other_reason:
         archive_reason = f"Diğer: {other_reason}"
+    # Çok ürünlü siparişte hangi kalem(ler) yüzünden arşivlendiği
+    missing_barcodes = {b.strip() for b in request.form.getlist('missing_barcodes') if b.strip()}
 
     if not order_number:
         return jsonify({'success': False, 'message': 'Sipariş numarası eksik.'}), 400
@@ -620,7 +632,7 @@ def archive_an_order():
                 order_number=order_number,
                 status=getattr(fake_order, 'status', None) or "Archived",
                 order_date=getattr(fake_order, 'order_date', None) or datetime.utcnow(),
-                details=getattr(fake_order, 'details', None),
+                details=mark_missing_items(getattr(fake_order, 'details', None), missing_barcodes),
                 shipment_package_id=None,
                 package_number=None,
                 shipping_barcode=None,
@@ -704,7 +716,7 @@ def archive_an_order():
             order_number=order_obj.order_number,
             status=order_obj.status,
             order_date=order_obj.order_date,
-            details=order_obj.details,
+            details=mark_missing_items(order_obj.details, missing_barcodes),
             shipment_package_id=getattr(order_obj, 'shipment_package_id', None),
             package_number=getattr(order_obj, 'package_number', None),
             shipping_barcode=getattr(order_obj, 'shipping_barcode', None) or getattr(order_obj, 'cargo_tracking_number', None),

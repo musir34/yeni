@@ -851,7 +851,7 @@
         <div class="order-container">
           {% for product in order.products if order %}
           <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2">
-            <div class="card product-card">
+            <div class="card product-card" data-arsiv-barkod="{{ product['barcode'] }}" data-arsiv-ad="{{ product['sku'] }} · {{ product['display_barcode'] or product['barcode'] }}">
               <img src="{{ product['image_url'] }}" alt="Ürün Görseli" class="card-img-top product-image zoomable-image" data-image-src="{{ product['image_url'] }}"/>
               <div class="card-body">
                 <h5 class="card-title">{{ product['sku'] }}</h5>
@@ -1028,6 +1028,10 @@
           <div class="modal-body">
             <input type="hidden" id="archiveOrderNumber" name="order_number"/>
             <input type="hidden" id="archiveReason" name="archive_reason" required/>
+            <div id="archiveMissingDiv" class="alert alert-warning py-2 mb-3" style="display:none;">
+              <strong>Hangi ürün bulunmuyor?</strong> <small>(birden fazla seçilebilir)</small>
+              <div id="archiveMissingList" class="mt-2"></div>
+            </div>
             <div class="archive-reason-grid">
               <button type="button" class="archive-reason-btn" data-reason="Stokta Yok/Rafta Yok">
                 <span class="ar-ico">📦</span>
@@ -1700,6 +1704,24 @@
       $('.archive-reason-btn').removeClass('active');
       $('#archiveSelectedLabel').text('Bir sebep seç — tek tıkla arşivlenir');
       $('#archiveSubmitBtn').prop('disabled', true).hide();
+      // Çok ürünlü siparişte hangi kalem yüzünden arşivlendiği sorulur
+      var seen = {}, cards = [];
+      document.querySelectorAll('#order-content .product-card[data-arsiv-barkod]').forEach(function(c){
+        var bc = c.dataset.arsivBarkod;
+        if (bc && !seen[bc]) { seen[bc] = 1; cards.push(c); }
+      });
+      var list = document.getElementById('archiveMissingList');
+      list.innerHTML = '';
+      cards.forEach(function(c, i){
+        var w = document.createElement('div'); w.className = 'form-check';
+        var inp = document.createElement('input');
+        inp.type = 'checkbox'; inp.className = 'form-check-input archive-missing-cb';
+        inp.id = 'archMiss' + i; inp.value = c.dataset.arsivBarkod;
+        var lbl = document.createElement('label');
+        lbl.className = 'form-check-label'; lbl.htmlFor = inp.id; lbl.textContent = c.dataset.arsivAd;
+        w.appendChild(inp); w.appendChild(lbl); list.appendChild(w);
+      });
+      $('#archiveMissingDiv').toggle(cards.length > 1);
       new bootstrap.Modal(document.getElementById('archiveModal')).show();
     }
 
@@ -1733,7 +1755,15 @@
         gsToast('Lütfen bir sebep belirtin.', 'warning');
         return;
       }
-      $.post('/archive_order', postData, function(res) {
+      var missing = $('.archive-missing-cb:checked').map(function(){ return this.value; }).get();
+      if ($('#archiveMissingDiv').is(':visible') && !missing.length) {
+        $('.archive-reason-btn').removeClass('active');
+        $('#archiveReason').val('');
+        gsToast('Önce hangi ürünün bulunmadığını seçin.', 'warning');
+        return;
+      }
+      postData.missing_barcodes = missing;
+      $.post('/archive_order', $.param(postData, true), function(res) {
         if (res.success) {
           var mdl = bootstrap.Modal.getInstance(document.getElementById('archiveModal'));
           if (mdl) mdl.hide();
