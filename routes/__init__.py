@@ -60,6 +60,7 @@ def register_blueprints(app):
     from whatsapp_duyuru import whatsapp_duyuru_bp  # 📣 WHATSAPP DUYURU
     from finans import finans_bp  # 💰 FİNANS KASASI (üç hesaplı yeni kasa)
     from alissa.routes import alissa_bp  # 👞 MUHAMMET ALİSSA HESABI
+    from tek_adet_teyit_routes import tek_adet_teyit_bp  # 🔎 TEK ADET RAF TEYİDİ
 
     # Register all blueprints
     for bp in [
@@ -123,5 +124,6 @@ def register_blueprints(app):
         whatsapp_duyuru_bp,  # 📣 WHATSAPP DUYURU
         finans_bp,  # 💰 FİNANS KASASI
         alissa_bp,  # 👞 MUHAMMET ALİSSA HESABI
+        tek_adet_teyit_bp,  # 🔎 TEK ADET RAF TEYİDİ
     ]:
         app.register_blueprint(bp)

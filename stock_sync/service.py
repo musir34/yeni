@@ -218,6 +218,10 @@ class StockSyncService:
         except Exception:
             logger.exception("[SYNC] enforce_shelfless_central_zero hatası (yutuldu)")
 
+        # Tek adet raf teyidi: qty == 1 barkod teyitsizse 0 gider (bkz. tek_adet_teyit)
+        from stock_sync.tek_adet_teyit import teyit_kumeleri, tek_adet_miktari
+        teyitli_set, teyit_muaf = teyit_kumeleri()
+
         stocks = CentralStock.query.all()
         items = []
 
@@ -279,6 +283,8 @@ class StockSyncService:
             reserved = reserved_map.get(stock.barcode, 0)
             effective_buffer = safety_buffer + extra_buffer_map.get(stock.barcode, 0)
             available_qty = max(0, (stock.qty or 0) - reserved - effective_buffer)
+            available_qty = tek_adet_miktari(stock.qty, reserved, available_qty,
+                                             stock.barcode in teyitli_set, stock.barcode in teyit_muaf)
 
             if stock.barcode in uretim_barcodes:
                 available_qty = URETIM_SABIT_ADET
@@ -304,6 +310,9 @@ class StockSyncService:
         """Belirli barkodlar için stokları çek.
         Bekleyen siparişlerdeki (OrderCreated) ürün miktarları rezerv olarak düşülür.
         """
+        from stock_sync.tek_adet_teyit import teyit_kumeleri, tek_adet_miktari
+        teyitli_set, teyit_muaf = teyit_kumeleri()
+
         stocks = CentralStock.query.filter(CentralStock.barcode.in_(barcodes)).all()
         items = []
 
@@ -350,6 +359,8 @@ class StockSyncService:
             reserved = reserved_map.get(barcode, 0)
             effective_buffer = safety_buffer + extra_buffer_map.get(barcode, 0)
             available_qty = max(0, stock_dict.get(barcode, 0) - reserved - effective_buffer)
+            available_qty = tek_adet_miktari(stock_dict.get(barcode, 0), reserved, available_qty,
+                                             barcode in teyitli_set, barcode in teyit_muaf)
 
             if barcode in uretim_barcodes:
                 available_qty = URETIM_SABIT_ADET

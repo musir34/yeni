@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Tek Adet Teyit - Güllü Shoes{% endblock %}
+{% block extra_css %}
+<style>
+  .tat-sayac { font-size: .95rem; padding: .5rem .9rem; }
+  .tat-table td, .tat-table th { vertical-align: middle; }
+  .tat-raf { font-size: 1.15rem; font-weight: 700; white-space: nowrap; }
+  .tat-img { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; }
+  .tat-btn { min-width: 88px; min-height: 48px; font-size: 1.05rem; font-weight: 600; }
+  .tat-filtre .btn { min-height: 44px; }
+  /* El terminali / telefon: tablo satırları kart gibi alt alta, yatay kaydırma yok */
+  @media (max-width: 576px) {
+    .tat-table thead { display: none; }
+    .tat-table tr { display: block; border-bottom: 2px solid var(--bs-border-color); padding: .5rem 0; }
+    .tat-table td { display: block; border: 0; padding: .25rem .5rem; }
+    .tat-btn { min-width: 0; flex: 1; }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center mb-3 gap-2">
+  <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-home"></i> Anasayfa</a>
+  <h3 class="mb-0">🔎 Tek Adet Teyit</h3>
+  <span class="text-muted">Stoğu 1 görünen ürünler, rafta teyit edilene kadar platformlara 0 gider</span>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <span class="badge bg-warning text-dark tat-sayac">Kontrol bekliyor: <span id="sayacBekleyen">{{ sayac.bekleyen }}</span></span>
+  <span class="badge bg-success tat-sayac">Teyitli: <span id="sayacTeyitli">{{ sayac.teyitli }}</span></span>
+</div>
+
+<form method="GET" class="d-flex flex-wrap gap-2 mb-3 tat-filtre">
+  <div class="btn-group" role="group">
+    {% for kod, ad in [('bekleyen', 'Bekleyenler'), ('teyitli', 'Teyitliler'), ('hepsi', 'Hepsi')] %}
+    <a class="btn {{ 'btn-primary' if durum == kod else 'btn-outline-primary' }}"
+       href="{{ url_for('tek_adet_teyit.sayfa', durum=kod, q=q or None) }}">{{ ad }}</a>
+    {% endfor %}
+  </div>
+  <input type="hidden" name="durum" value="{{ durum }}">
+  <input type="search" name="q" value="{{ q }}" class="form-control" style="max-width:260px"
+         placeholder="Raf kodu veya model ara">
+  <button type="submit" class="btn btn-outline-secondary"><i class="fas fa-search"></i> Ara</button>
+</form>
+
+{% if not satirlar %}
+  <div class="alert alert-info">Bu filtrede ürün yok.</div>
+{% else %}
+<table class="table tat-table">
+  <thead>
+    <tr><th>Raf</th><th>Ürün</th><th>Durum</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for s in satirlar %}
+    <tr data-barcode="{{ s.barcode }}">
+      <td class="tat-raf">{{ s.raf or '— raf yok —' }}</td>
+      <td>
+        <div class="d-flex align-items-center gap-2">
+          {% if s.image_url %}<img src="{{ s.image_url }}" class="tat-img" alt="" loading="lazy">{% endif %}
+          <div>
+            <div class="fw-bold">{{ s.model }} · {{ s.renk }} · {{ s.beden }}</div>
+            <div class="text-muted small">{{ s.barcode }}</div>
+          </div>
+        </div>
+      </td>
+      <td class="tat-durum">
+        {% if s.teyitli %}
+          <span class="badge bg-success">Teyitli</span>
+          <div class="small text-muted">{{ s.teyit_by }} · {{ s.teyit_at }}</div>
+        {% else %}
+          <span class="badge bg-warning text-dark">Kontrol bekliyor</span>
+        {% endif %}
+      </td>
+      <td>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-success tat-btn" onclick="tatVar(this)">Var</button>
+          <button type="button" class="btn btn-outline-danger tat-btn" onclick="tatYok(this)">Yok</button>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+async function tatGonder(url, barcode) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-Requested-With': 'fetch'},
+    body: JSON.stringify({barcode: barcode})
+  });
+  let veri = {};
+  try { veri = await r.json(); } catch (e) { veri = {success: false, message: 'Sunucu hatası (' + r.status + ')'}; }
+  return veri;
+}
+
+function tatSayac(id, fark) {
+  const el = document.getElementById(id);
+  el.textContent = Math.max(0, parseInt(el.textContent, 10) + fark);
+}
+
+async function tatVar(btn) {
+  const tr = btn.closest('tr');
+  btn.disabled = true;
+  const veri = await tatGonder("{{ url_for('tek_adet_teyit.var') }}", tr.dataset.barcode);
+  btn.disabled = false;
+  if (!veri.success) { alert(veri.message || 'Kaydedilemedi'); return; }
+  const td = tr.querySelector('.tat-durum');
+  if (!td.querySelector('.bg-success')) { tatSayac('sayacBekleyen', -1); tatSayac('sayacTeyitli', 1); }
+  td.innerHTML = '<span class="badge bg-success">Teyitli</span><div class="small text-muted"></div>';
+  td.querySelector('div').textContent = veri.teyit_by + ' · ' + veri.teyit_at;
+}
+
+async function tatYok(btn) {
+  const tr = btn.closest('tr');
+  if (!confirm('Rafta YOK mu? Bu barkodun raf stoğu 0\'a indirilecek.')) return;
+  btn.disabled = true;
+  const veri = await tatGonder("{{ url_for('tek_adet_teyit.yok') }}", tr.dataset.barcode);
+  if (!veri.success) { btn.disabled = false; alert(veri.message || 'Stok düşülemedi'); return; }
+  tatSayac(tr.querySelector('.tat-durum .bg-success') ? 'sayacTeyitli' : 'sayacBekleyen', -1);
+  tr.remove();
+}
+</script>
+{% endblock %}

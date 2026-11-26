@@ -94,6 +94,7 @@ SAYFALAR: tuple[Sayfa, ...] = (
     Sayfa("gorsel_yonetimi", "Görsel Yönetimi", "Ürünler & Stok", blueprints=("image_manager",)),
     Sayfa("stok_ekleme", "Stok Ekleme", "Ürünler & Stok", blueprints=("stock_management", "stock_report")),
     Sayfa("raf", "Raf Listesi", "Ürünler & Stok", blueprints=("raf",)),
+    Sayfa("tek_adet_teyit", "Tek Adet Teyit", "Ürünler & Stok", blueprints=("tek_adet_teyit",)),
     Sayfa("stok_senkron", "Stok Senkronizasyon", "Ürünler & Stok", blueprints=("stock_sync",)),
     Sayfa("iade_listesi", "Trendyol İade Listesi", "Ürünler & Stok", blueprints=("iade_islemleri", "claims_service")),
     # ── Analiz & Fiyat ──

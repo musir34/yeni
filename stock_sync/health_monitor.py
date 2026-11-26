@@ -47,6 +47,9 @@ def check_sync_staleness() -> Dict[str, Any]:
     safety_buffer = get_safety_stock_buffer()
     from stock_sync.listing_policy import get_extra_buffer_map
     extra_buffer_map = get_extra_buffer_map()
+    # Tek adet raf teyidi — push_stock ile aynı kural (bkz. stock_sync/tek_adet_teyit.py)
+    from stock_sync.tek_adet_teyit import teyit_kumeleri, tek_adet_miktari
+    teyitli_set, teyit_muaf = teyit_kumeleri()
 
     mismatches: List[Dict[str, Any]] = []
     rows = db.session.query(ShopifyMapping, CentralStock).outerjoin(
@@ -56,6 +59,8 @@ def check_sync_staleness() -> Dict[str, Any]:
         raw_panel = cs.qty if cs else 0
         reserved = reserved_map.get(m.barcode, 0)
         effective_panel = max(0, raw_panel - reserved - safety_buffer - extra_buffer_map.get(m.barcode, 0))
+        effective_panel = tek_adet_miktari(raw_panel, reserved, effective_panel,
+                                           m.barcode in teyitli_set, m.barcode in teyit_muaf)
         sent = m.last_stock_sent if m.last_stock_sent is not None else -1
         if effective_panel != sent:
             mismatches.append({

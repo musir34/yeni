@@ -198,6 +198,25 @@ class StockListingPolicy(db.Model):
         return f"<StockListingPolicy {self.barcode} +{self.extra_buffer} auto={self.auto}>"
 
 
+class StokTeyit(db.Model):
+    """Tek adet (central_stock.qty == 1) raf teyidi — /tek-adet-teyit sayfası.
+
+    Kayıtta 1 görünen ama rafta olmayan ürün satılıp "tedarik edilemedi" oluyordu.
+    qty == 1 olan barkod, biri rafa bakıp "Var" diyene kadar platformlara 0 gider.
+    Teyit geçerli ⇔ qty == 1 VE teyit_at >= central_stock.updated_at (stok değişince
+    teyit kendiliğinden düşer). Kural: stock_sync/tek_adet_teyit.py. Tablo additive:
+    scripts/create_stok_teyit_table.py.
+    """
+    __tablename__ = "stok_teyit"
+
+    barcode = db.Column(db.String, primary_key=True)
+    teyit_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)  # naive UTC
+    teyit_by = db.Column(db.String(150))  # teyit eden kullanıcı adı
+
+    def __repr__(self):
+        return f"<StokTeyit {self.barcode} {self.teyit_at}>"
+
+
 ### --- STOK HAREKET DEFTERİ (LEDGER) ---
 # Append-only fiziksel stok hareketleri. Her giriş/çıkış (mal kabul, paketleme,
 # kargo, iptal iadesi, manuel düzeltme) buraya bir satır olarak yazılır.

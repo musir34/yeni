@@ -338,6 +338,10 @@ class ShopifyStockService:
         if not mappings:
             return {"success": False, "error": "Eşleştirme bulunamadı. Önce barkod eşleştirmesi yapın."}
 
+        # Tek adet raf teyidi: qty == 1 barkod teyitsizse 0 gider (Trendyol ile aynı kural)
+        from stock_sync.tek_adet_teyit import teyit_kumeleri, tek_adet_miktari
+        teyitli_set, teyit_muaf = teyit_kumeleri()
+
         # CentralStock'tan stokları al
         mapping_barcodes = [m.barcode for m in mappings]
         stocks = {cs.barcode: cs.qty for cs in CentralStock.query.filter(CentralStock.barcode.in_(mapping_barcodes)).all()}
@@ -386,6 +390,8 @@ class ShopifyStockService:
             raw_qty = stocks.get(mapping.barcode, 0)
             reserved = reserved_map.get(mapping.barcode, 0)
             qty = max(0, raw_qty - reserved - safety_buffer - extra_buffer_map.get(mapping.barcode, 0))
+            qty = tek_adet_miktari(raw_qty, reserved, qty,
+                                   mapping.barcode in teyitli_set, mapping.barcode in teyit_muaf)
             if mapping.barcode in uretim_barcodes:
                 qty = URETIM_SABIT_ADET
             batch.append({

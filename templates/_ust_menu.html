@@ -62,6 +62,7 @@
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">Stok & Depo</div></li>
         {% if sayfa_erisebilir('stok_ekleme') %}<li><a class="dropdown-item" href="{{ url_for('stock_management.stock_addition_page') }}"><i class="fas fa-warehouse me-2"></i>Stok Ekleme</a></li>{% endif %}
         {% if sayfa_erisebilir('raf') %}<li><a class="dropdown-item" href="{{ url_for('raf.raf_form_sayfasi') }}"><i class="fas fa-archive me-2"></i>Raf Listesi</a></li>{% endif %}
+        {% if sayfa_erisebilir('tek_adet_teyit') %}<li><a class="dropdown-item" href="{{ url_for('tek_adet_teyit.sayfa') }}"><i class="fas fa-search me-2"></i>Tek Adet Teyit</a></li>{% endif %}
         {% if sayfa_erisebilir('stok_senkron') %}<li><a class="dropdown-item" href="{{ url_for('stock_sync.dashboard') }}"><i class="fas fa-sync-alt me-2"></i>Stok Senkronizasyon</a></li>{% endif %}
         <li><hr class="dropdown-divider"></li>
         <li><div class="px-3 py-2" style="font-size:.8rem;font-weight:600;color:#888;">İadeler</div></li>
