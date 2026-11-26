@@ -309,8 +309,9 @@
         {# Kaynak filtresi: hepsi/trendyol/shopify — URL'de yalnız varsayılan dışıysa taşınır #}
         {% set kaynak = kaynak|default('hepsi', true) %}
         {% set kaynak_param = kaynak if kaynak != 'hepsi' else none %}
+        {% set kargo_param = kargo if kargo else none %}
         {% macro page_url(page_no) -%}
-            {{ url_for(request.endpoint, page=page_no, search=request.args.get('search', ''), sort=sort_key, per_page=per_page, show_overdue=(1 if show_overdue else none), kaynak=kaynak_param) }}
+            {{ url_for(request.endpoint, page=page_no, search=request.args.get('search', ''), sort=sort_key, per_page=per_page, show_overdue=(1 if show_overdue else none), kaynak=kaynak_param, kargo=kargo_param) }}
         {%- endmacro %}
         <div class="page-header d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -319,7 +320,7 @@
                     <h2 class="mb-0">Sipariş Listesi</h2>
                 </div>
                 {% if overdue_orders %}
-                <a class="overdue-pill" href="{{ url_for('order_list_service.order_list_all', sort='deadline_asc', show_overdue=1, search=request.args.get('search', ''), per_page=per_page, kaynak=kaynak_param) }}" title="Geciken siparişleri teslim süresine göre göster">
+                <a class="overdue-pill" href="{{ url_for('order_list_service.order_list_all', sort='deadline_asc', show_overdue=1, search=request.args.get('search', ''), per_page=per_page, kaynak=kaynak_param, kargo=kargo_param) }}" title="Geciken siparişleri teslim süresine göre göster">
                     <i class="fas fa-exclamation-triangle"></i> Geciken: {{ overdue_orders|length }}
                 </a>
                 {% endif %}
@@ -371,6 +372,7 @@
                     <input type="hidden" name="sort" value="{{ sort_key }}">
                     <input type="hidden" name="per_page" value="{{ per_page }}">
                     {% if kaynak_param %}<input type="hidden" name="kaynak" value="{{ kaynak_param }}">{% endif %}
+                    {% if kargo_param %}<input type="hidden" name="kargo" value="{{ kargo_param }}">{% endif %}
                     {% if show_overdue %}<input type="hidden" name="show_overdue" value="1">{% endif %}
                     <div class="input-group order-search-group">
                         <input type="text" class="form-control" name="search" placeholder="Sipariş No, Müşteri Adı veya Kargo Barkodu" value="{{ request.args.get('search', '') }}">
@@ -386,7 +388,7 @@
                         <li><h6 class="dropdown-header">Sipariş durumu</h6></li>
                         {% for d in durumlar %}
                         <li><a class="dropdown-item d-flex align-items-center {% if d[0] == ns.aktif[0] %}active-filter{% endif %}"
-                               href="{{ url_for(d[2], search=request.args.get('search', ''), sort=sort_key, per_page=per_page, kaynak=kaynak_param) }}">
+                               href="{{ url_for(d[2], search=request.args.get('search', ''), sort=sort_key, per_page=per_page, kaynak=kaynak_param, kargo=kargo_param) }}">
                             <span class="durum-dot {{ d[4] }}"></span>{{ d[1] }}
                             {% if d[0] == ns.aktif[0] %}<i class="fas fa-check ms-auto"></i>{% endif %}
                         </a></li>
@@ -404,6 +406,28 @@
                         <li><button type="button" class="dropdown-item d-flex align-items-center {% if k[0] == ns2.aktif[0] %}active-filter{% endif %}" onclick="applyKaynak('{{ k[0] }}')">
                             <i class="{{ k[2] }} me-2" style="color:{{ k[3] }}; width:16px; text-align:center"></i>{{ k[1] }}
                             {% if k[0] == ns2.aktif[0] %}<i class="fas fa-check ms-auto"></i>{% endif %}
+                        </button></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                {% set kargolar = [
+                    ('',    'Hepsi',            '#6c757d'),
+                    ('tex', 'Trendyol Express', '#f27a1a'),
+                    ('dhl', 'DHL eCommerce',    '#d40511'),
+                ] %}
+                {% set ns3 = namespace(aktif=kargolar[0]) %}
+                {% for k in kargolar %}{% if k[0] == (kargo or '') %}{% set ns3.aktif = k %}{% endif %}{% endfor %}
+                <div class="dropdown filtre-dd">
+                    <button class="btn btn-sm btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Kargo firması">
+                        <i class="fas fa-truck me-1" style="color:{{ ns3.aktif[2] }}"></i>Kargo: <strong>{{ ns3.aktif[1] }}</strong>
+                    </button>
+                    <ul class="dropdown-menu shadow-sm">
+                        <li><h6 class="dropdown-header">Kargo firması</h6></li>
+                        {% for k in kargolar %}
+                        <li><button type="button" class="dropdown-item d-flex align-items-center {% if k[0] == ns3.aktif[0] %}active-filter{% endif %}" onclick="applyKargo('{{ k[0] }}')">
+                            <i class="fas fa-truck me-2" style="color:{{ k[2] }}; width:16px; text-align:center"></i>{{ k[1] }}
+                            {% if k[0] == ns3.aktif[0] %}<i class="fas fa-check ms-auto"></i>{% endif %}
                         </button></li>
                         {% endfor %}
                     </ul>
@@ -592,6 +616,7 @@
                 <input type="hidden" name="per_page" value="{{ per_page }}">
                 {% if show_overdue %}<input type="hidden" name="show_overdue" value="1">{% endif %}
                 {% if kaynak_param %}<input type="hidden" name="kaynak" value="{{ kaynak_param }}">{% endif %}
+                {% if kargo_param %}<input type="hidden" name="kargo" value="{{ kargo_param }}">{% endif %}
                 <label for="sayfaGitInput">Sayfa:</label>
                 <input type="number" id="sayfaGitInput" name="page" min="1" max="{{ total_pages }}" placeholder="{{ page }}" required>
                 <span>/ {{ total_pages }}</span>
@@ -1013,6 +1038,14 @@
         function applyKaynak(value) {
             const params = new URLSearchParams(window.location.search);
             if (value === 'hepsi') params.delete('kaynak'); else params.set('kaynak', value);
+            params.delete('page');
+            window.location.search = params.toString();
+        }
+
+        // ── Kargo firması ── TEX / DHL / hepsi; diğer filtreler korunur, ilk sayfaya dönülür
+        function applyKargo(value) {
+            const params = new URLSearchParams(window.location.search);
+            if (!value) params.delete('kargo'); else params.set('kargo', value);
             params.delete('page');
             window.location.search = params.toString();
         }

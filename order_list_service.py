@@ -210,6 +210,40 @@ def _get_per_page():
     return per_page if per_page in PER_PAGE_OPTIONS else DEFAULT_PER_PAGE
 
 
+# Kargo filtresi: kargo_rozet ile aynı kural — takip no ön eki firmayı söyler, ön ek
+# yoksa kargo adına bakılır. değer → (rozet kodu, kendi ön eki, diğerinin ön eki, ad desenleri)
+KARGO_FILTRELERI = {
+    'tex': ('TEXMP', '733', '728', ('%trendyol express%',)),
+    'dhl': ('DHLECOMMP', '728', '733', ('%dhl%', '%mng%')),
+}
+
+
+def _get_kargo():
+    """Query param'dan güvenli kargo filtresi (whitelist); boş = hepsi."""
+    kargo = request.args.get('kargo', '')
+    return kargo if kargo in KARGO_FILTRELERI else ''
+
+
+def _kargo_clause(cols, kargo):
+    """Seçili kargo firmasının siparişleri için SQL koşulu."""
+    _kod, onek, diger_onek, desenler = KARGO_FILTRELERI[kargo]
+    takip = func.coalesce(cols.cargo_tracking_number, '')
+    return or_(
+        takip.like(f'{onek}%'),
+        ~takip.like(f'{diger_onek}%') & or_(*[cols.cargo_provider_name.ilike(d) for d in desenler]),
+    )
+
+
+def _kargo_kartlari_suz(kartlar, kargo):
+    """Shopify kartları DB'de değil → aynı tespiti Python'da uygula."""
+    if not kargo:
+        return kartlar
+    from kargo_degistir import kargo_firma_tespit
+    kod = KARGO_FILTRELERI[kargo][0]
+    return [k for k in kartlar
+            if (kargo_firma_tespit(k.cargo_tracking_number, k.cargo_provider_name) or {}).get('kod') == kod]
+
+
 def _sort_clause(sort_key, order_date_col, agreed_col, estimated_col):
     """Sıralama anahtarına göre SQLAlchemy order_by ifadesi üretir.
 
@@ -379,6 +413,9 @@ def get_order_list():
             q = q.filter(AllOrders.c.status_name == 'Archived', AllOrders.c.order_number.like('SH-%'))
         elif kaynak == 'trendyol':
             q = q.filter(~AllOrders.c.order_number.like('SH-%'))
+        kargo = _get_kargo()
+        if kargo:
+            q = q.filter(_kargo_clause(AllOrders.c, kargo))
 
         # Geciken = SADECE Yeni/Hazırlanıyor/İşleme Alındı statülerinde teslim
         # süresi geçmiş sipariş. (Teslim Edildi/Kargoda/İptal asla geciken sayılmaz.)
@@ -447,7 +484,7 @@ def get_order_list():
         # katılır ve aynı sıralama kuralıyla Trendyol kartlarına karışır. Teslim tarihi
         # olmadığı için "geciken" görünümüne girmez.
         if page == 1 and not show_overdue and kaynak != 'trendyol':
-            shopify_orders = shopify_kartlari(aranan=search_query)
+            shopify_orders = _kargo_kartlari_suz(shopify_kartlari(aranan=search_query), kargo)
             orders = kartlari_sirala(orders + shopify_orders, sort_key)
             total_orders_count += len(shopify_orders)
 
@@ -459,7 +496,7 @@ def get_order_list():
             total_orders_count=total_orders_count, search_query=search_query,
             sort_key=sort_key, overdue_orders=overdue_orders, kaynak=kaynak,
             active_list='all', per_page=per_page, per_page_options=PER_PAGE_OPTIONS,
-            show_overdue=show_overdue,
+            show_overdue=show_overdue, kargo=kargo,
             order_pull_enabled=_get_order_pull_enabled()
         )
     except Exception as e:
@@ -571,6 +608,9 @@ def get_filtered_orders(status):
                 orders_query = orders_query.filter(false())   # yalnız site kartları
         elif kaynak == 'trendyol':
             orders_query = orders_query.filter(~order_columns.order_number.like('SH-%'))
+        kargo = _get_kargo()
+        if kargo:
+            orders_query = orders_query.filter(_kargo_clause(order_columns, kargo))
         # Arama varken geciken gizleme UYGULANMAZ → aranan geciken sipariş no'su bulunur.
         hide_overdue_in_status = sort_key != 'deadline_asc' and not search_query
         if hide_overdue_in_status and overdue_numbers and model_cls in (OrderCreated, OrderHazirlaniyor, OrderPicking):
@@ -624,7 +664,7 @@ def get_filtered_orders(status):
 
         # 🛍️ Shopify siparişleri: etiketi bu sekmenin durumuna denk gelenler ilk sayfaya katılır
         if page == 1 and kaynak != 'trendyol':
-            shopify_orders = shopify_kartlari(durum=status_code, aranan=search_query)
+            shopify_orders = _kargo_kartlari_suz(shopify_kartlari(durum=status_code, aranan=search_query), kargo)
             orders = kartlari_sirala(orders + shopify_orders, sort_key)
             total_orders_count += len(shopify_orders)
 
@@ -636,7 +676,7 @@ def get_filtered_orders(status):
             total_orders_count=total_orders_count, search_query=search_query,
             sort_key=sort_key, overdue_orders=overdue_orders, kaynak=kaynak,
             active_list=active_map.get(model_cls), per_page=per_page,
-            per_page_options=PER_PAGE_OPTIONS, show_overdue=False,
+            per_page_options=PER_PAGE_OPTIONS, show_overdue=False, kargo=kargo,
             order_pull_enabled=_get_order_pull_enabled()
         )
     except Exception as e:
@@ -660,6 +700,9 @@ def get_archived_order_list():
             q = q.filter(AllOrders.c.order_number.like('SH-%'))
         elif kaynak == 'trendyol':
             q = q.filter(~AllOrders.c.order_number.like('SH-%'))
+        kargo = _get_kargo()
+        if kargo:
+            q = q.filter(_kargo_clause(AllOrders.c, kargo))
 
         if search_query:
             search_query = search_query.strip()
@@ -713,7 +756,7 @@ def get_archived_order_list():
             total_orders_count=total_orders_count, search_query=search_query,
             sort_key=sort_key, overdue_orders=overdue_orders, kaynak=kaynak,
             active_list='archived', per_page=per_page, per_page_options=PER_PAGE_OPTIONS,
-            show_overdue=False,
+            show_overdue=False, kargo=kargo,
             order_pull_enabled=_get_order_pull_enabled()
         )
     except Exception as e:
