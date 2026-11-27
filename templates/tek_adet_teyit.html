@@ -8,20 +8,36 @@
   .tat-img { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; }
   .tat-btn { min-width: 88px; min-height: 48px; font-size: 1.05rem; font-weight: 600; }
   .tat-filtre .btn { min-height: 44px; }
-  /* El terminali / telefon: tablo satırları kart gibi alt alta, yatay kaydırma yok */
-  @media (max-width: 576px) {
+  .tat-urun { min-width: 0; overflow-wrap: anywhere; }
+  /* Telefon / el terminali (iPhone, Zebra TC21): satırlar kart, yatay kaydırma yok.
+     767px: mobile.css'in telefonda tüm .table'lara nowrap verdiği kırılım — burada geri alınır. */
+  @media (max-width: 767px) {
+    .tat-baslik h3 { flex: 1; min-width: 0; }
+    .tat-filtre .btn-group { width: 100%; }
+    .tat-filtre .btn-group .btn { flex: 1; padding-left: .25rem; padding-right: .25rem; }
+    .tat-filtre input[type=search] { flex: 1; min-width: 0; max-width: none !important; font-size: 16px; }
+    /* Okutma kutusu kaydırırken de görünür kalsın */
+    .tat-okut { position: sticky; top: 0; z-index: 20; background: var(--bs-body-bg);
+                padding: .5rem 0; margin-bottom: .5rem !important; }
+    .tat-okut input { font-size: 18px; min-height: 52px; }
+    .tat-table { --bs-table-bg: transparent; display: block; white-space: normal; margin-bottom: env(safe-area-inset-bottom); }
     .tat-table thead { display: none; }
-    .tat-table tr { display: block; border-bottom: 2px solid var(--bs-border-color); padding: .5rem 0; }
-    .tat-table td { display: block; border: 0; padding: .25rem .5rem; }
-    .tat-btn { min-width: 0; flex: 1; }
+    .tat-table tbody { display: block; }
+    .tat-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .35rem .5rem;
+                    align-items: center; border-bottom: 2px solid var(--bs-border-color); padding: .6rem 0; }
+    .tat-table td { display: block; border: 0; padding: 0; min-width: 0; }
+    .tat-table td.tat-raf { white-space: normal; font-size: 1.25rem; }
+    .tat-table td.tat-urun-td, .tat-table td.tat-durum { grid-column: 1 / -1; }
+    .tat-table td.tat-islem { grid-column: 2; grid-row: 1; }
+    .tat-btn { min-width: 84px; }
   }
 </style>
 {% endblock %}
 {% block content %}
-<div class="d-flex flex-wrap align-items-center mb-3 gap-2">
+<div class="d-flex flex-wrap align-items-center mb-3 gap-2 tat-baslik">
   <a href="{{ url_for('home.home') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-home"></i> Anasayfa</a>
   <h3 class="mb-0">🔎 Tek Adet Teyit</h3>
-  <button type="button" class="btn btn-outline-warning btn-sm fw-bold" data-bs-toggle="collapse"
+  <button type="button" class="btn btn-warning btn-sm fw-bold px-3" data-bs-toggle="collapse"
           data-bs-target="#sayfaYardim" aria-expanded="false" aria-controls="sayfaYardim"
           title="Bu sayfa ne işe yarar?">!</button>
 </div>
@@ -57,7 +73,7 @@
   <button type="submit" class="btn btn-outline-secondary"><i class="fas fa-search"></i> Ara</button>
 </form>
 
-<div class="mb-3">
+<div class="mb-3 tat-okut">
   <input type="text" id="tatOkut" class="form-control form-control-lg" autocomplete="off" autofocus
          placeholder="Kutunun barkodunu okutun">
   <div id="tatMesaj" class="alert mt-2 mb-0 d-none" role="status"></div>
@@ -74,10 +90,10 @@
     {% for s in satirlar %}
     <tr data-barcode="{{ s.barcode }}">
       <td class="tat-raf">{{ s.raf or '— raf yok —' }}</td>
-      <td>
+      <td class="tat-urun-td">
         <div class="d-flex align-items-center gap-2">
           {% if s.image_url %}<img src="{{ s.image_url }}" class="tat-img" alt="" loading="lazy">{% endif %}
-          <div>
+          <div class="tat-urun">
             <div class="fw-bold">{{ s.model }} · {{ s.renk }} · {{ s.beden }}</div>
             <div class="text-muted small">{{ s.barcode }}</div>
           </div>
@@ -91,9 +107,9 @@
           <span class="badge bg-warning text-dark">Kontrol bekliyor</span>
         {% endif %}
       </td>
-      <td>
+      <td class="tat-islem">
         <div class="d-flex gap-2">
-          <button type="button" class="btn btn-outline-danger tat-btn" onclick="tatYok(this)">Yok</button>
+          <button type="button" class="btn btn-danger tat-btn" onclick="tatYok(this)">Yok</button>
         </div>
       </td>
     </tr>
