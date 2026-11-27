@@ -650,3 +650,90 @@ def test_shopify_baska_takip_numarasiyla_karsilanan_siparisin_mng_kaydi_iptal(ct
     assert baska_kargoyla_karsilananlari_tara() == 1
     assert k1.durum == "iptal" and "251613035913" in k1.hata and "SH1580" in ctx.iptaller
     assert k2.durum == "hazirlandi" and k3.durum == "siparis_acildi"
+
+
+class SahteShopifySiparis:
+    """get_order → güncel sipariş (kalem çıkarılmış toplam)."""
+    def __init__(self, siparisler):
+        self.siparisler = siparisler        # {id: order dict}
+
+    def get_order(self, order_id):
+        return {"success": True, "order": self.siparisler.get(str(order_id))}
+
+
+def _cod_siparis(tutar, adet, **ek):
+    return {"paymentGatewayNames": ["Cash on Delivery (COD)"], "displayFinancialStatus": "PENDING",
+            "currentTotalPriceSet": {"shopMoney": {"amount": str(tutar)}},
+            "line_items": [{"quantity": 4, "currentQuantity": adet}], **ek}
+
+
+def test_shopify_kalem_cikarilinca_kapida_odeme_tutari_guncellenir(ctx, monkeypatch):
+    """4 ürün 2000 TL açıldı, 2 ürün Shopify'da çıkarıldı → MNG'de 1000 TL ile yeniden açılır (barkodlu ve barkodsuz);
+    kurye aldıysa, tutar aynıysa ya da sipariş iptalse dokunulmaz."""
+    from mng_kargo.shopify_tarama import tutarlari_tara
+    k1 = servis.gonderi_ac("shopify", "77090", "#1590", "SH1590", _alici(), kapida_odeme_tutari=2000, adet=4)   # barkodsuz
+    k2 = _ac_ve_barkodla("shopify", "77091", "#1591", "SH1591", kapida_odeme_tutari=2000, adet=4)                # etiket basılmış
+    k3 = _ac_ve_barkodla("shopify", "77092", "#1592", "SH1592", kapida_odeme_tutari=2000, adet=4)
+    k3.durum = "kargoda"; db.session.commit()                                                                    # kurye aldı
+    k4 = servis.gonderi_ac("shopify", "77093", "#1593", "SH1593", _alici(), kapida_odeme_tutari=2000, adet=4)   # değişmedi
+    k5 = servis.gonderi_ac("shopify", "77094", "#1594", "SH1594", _alici(), kapida_odeme_tutari=2000, adet=4)   # iptal
+    _shopify_yama(monkeypatch, SahteShopifySiparis({
+        "77090": _cod_siparis(1000, 2), "77091": _cod_siparis(1000, 2), "77092": _cod_siparis(1000, 2),
+        "77093": _cod_siparis("2000.00", 4), "77094": _cod_siparis(1000, 2, cancelledAt="2026-11-27T10:00:00Z")}))
+    acilan = len(ctx.siparisler)
+    assert tutarlari_tara() == 2
+    assert len(ctx.siparisler) == acilan + 2 and all(s.kapida_odeme_tutari == 1000 for s in ctx.siparisler[-2:])
+    assert float(k1.kapida_odeme_tutari) == 1000 and k1.parca_adet == 2 and k1.durum == "siparis_acildi" and "SH1590" in ctx.iptaller
+    assert ctx.iptal_gonderiler == [("SH1591", "195991365254")] and "SH1591" in ctx.iptaller
+    assert k2.durum == "siparis_acildi" and k2.shipment_id is None and k2.zpl is None and k2.barkod_istendi
+    servis.takip_isi()                                                    # yeni barkod yeni tutarla
+    assert k2.durum == "hazirlandi" and ctx.barkodlar[-1].kapida_odeme_tutari == 1000
+    assert float(k3.kapida_odeme_tutari) == 2000 and float(k4.kapida_odeme_tutari) == 2000 and float(k5.kapida_odeme_tutari) == 2000
+    assert tutarlari_tara() == 0                                          # ikinci turda yeniden açılmaz
+
+
+def test_tutar_guncelle_mng_iptali_reddederse_eski_tutar_kalir(ctx):
+    k = _ac_ve_barkodla("shopify", "77095", "#1595", "SH1595", kapida_odeme_tutari=2000)
+    ctx.iptal_gonderi = lambda *a: (_ for _ in ()).throw(MngHata("şube kabul etti", kod="20001", http=500))
+    assert servis.tutar_guncelle(k, 1000) is False
+    assert float(k.kapida_odeme_tutari) == 2000 and k.durum == "hazirlandi" and k.shipment_id and "iptal edilemedi" in k.hata
+
+
+# ---------------------------------------------------------------- Shopify sipariş webhook'u (anlık tetikleme)
+def _webhook_post(payload, sir="gizli"):
+    import base64, hashlib, hmac, json
+    from mng_kargo.shopify_webhook import WEBHOOK_YOLU, shopify_webhook_bp
+    if "shopify_webhook" not in app.blueprints:
+        app.register_blueprint(shopify_webhook_bp)
+    govde = json.dumps(payload).encode()
+    imza = base64.b64encode(hmac.new(sir.encode(), govde, hashlib.sha256).digest()).decode()
+    return app.test_client().post(WEBHOOK_YOLU, data=govde,
+                                  headers={"Content-Type": "application/json", "X-Shopify-Hmac-Sha256": imza})
+
+
+def test_shopify_webhook_imza_ve_siparis_id(ctx, monkeypatch):
+    from mng_kargo import shopify_webhook as wh
+    monkeypatch.setenv("SHOPIFY_CLIENT_SECRET", "gizli")
+    gelen = []
+    monkeypatch.setattr(wh, "_arka_planda", lambda uygulama, oid: gelen.append(oid))
+    assert _webhook_post({"id": 77100}, sir="yanlis").status_code == 401
+    assert _webhook_post({"id": 77100}).status_code == 200
+    assert _webhook_post({"order_edit": {"order_id": 77101}}).status_code == 200
+    assert _webhook_post({"baska": 1}).status_code == 200                 # sipariş id yok → sessizce kabul
+    import time; time.sleep(0.2)
+    assert sorted(gelen) == ["77100", "77101"]
+    monkeypatch.delenv("SHOPIFY_CLIENT_SECRET")
+    assert _webhook_post({"id": 77100}).status_code == 401                # sır yoksa hiçbir istek kabul edilmez
+
+
+def test_shopify_webhook_etiketi_basilmis_gonderide_yeni_barkodu_hemen_alir(ctx, monkeypatch):
+    from mng_kargo.shopify_webhook import siparis_degisti
+    k = _ac_ve_barkodla("shopify", "77102", "#1602", "SH1602", kapida_odeme_tutari=2000, adet=4)
+    odenmis = _ac_ve_barkodla("shopify", "77103", "#1603", "SH1603")      # kapıda ödeme değil → dokunulmaz
+    _shopify_yama(monkeypatch, SahteShopifySiparis({"77102": _cod_siparis(1000, 2), "77103": _cod_siparis(1000, 2)}))
+    assert siparis_degisti("77102", barkod_bekleme=0) is True
+    assert k.durum == "hazirlandi" and float(k.kapida_odeme_tutari) == 1000 and k.zpl
+    assert ctx.iptal_gonderiler == [("SH1602", "195991365254")] and ctx.barkodlar[-1].kapida_odeme_tutari == 1000
+    assert siparis_degisti("77102", barkod_bekleme=0) is False            # aynı olay ikinci kez (edited + updated)
+    assert siparis_degisti("77103", barkod_bekleme=0) is False and odenmis.durum == "hazirlandi"
+    assert siparis_degisti("99999", barkod_bekleme=0) is False            # gönderisi olmayan sipariş

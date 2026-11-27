@@ -65,7 +65,8 @@ def test_kart_alanlari_listenin_bekledigi_bicimde():
     assert (kart.customer_name, kart.customer_surname) == ("Ayşe", "Yılmaz")
     assert kart.customer_address.startswith("Gül Sk. 3 İstanbul")
     assert (kart.cargo_provider_name, kart.cargo_tracking_number) == ("DHL", "123456789")
-    assert kart.agreed_delivery_date is None and kart.estimated_delivery_end is None
+    assert kart.agreed_delivery_date == datetime(2026, 10, 11, 21, 15)           # sipariş anı + 72 saat geri sayım
+    assert kart.estimated_delivery_end is None
     detay = json.loads(kart.details)
     assert detay == [{"barcode": "079950000001", "sku": "0121-38 Kırmızı", "product_name": "Topuklu Sandalet", "quantity": 2}]
 

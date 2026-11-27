@@ -233,13 +233,15 @@ def _shopify_order_to_hazirla_format(shopify_order):
 
     # Sahte OrderCreated benzeri obje (SimpleNamespace ile)
     from types import SimpleNamespace
+    from shopify_siparis_listesi import kargo_son_tarihi
+    siparis_tarihi = datetime.fromisoformat(shopify_order["createdAt"].replace("Z", "+00:00")) if shopify_order.get("createdAt") else None
     fake_order = SimpleNamespace(
         order_number=f"SH-{order_id}",
         shopify_gid=shopify_order.get("id"),
         shopify_order_name=shopify_order.get("name", f"#{order_id}"),
         status="Created",
         source="SHOPIFY",
-        order_date=datetime.fromisoformat(shopify_order["createdAt"].replace("Z", "+00:00")) if shopify_order.get("createdAt") else datetime.utcnow(),
+        order_date=siparis_tarihi or datetime.utcnow(),
         customer_name=(customer.get("firstName") or shipping.get("name", "").split(" ")[0] if shipping.get("name") else "Misafir"),
         customer_surname=(customer.get("lastName") or (" ".join(shipping.get("name", "").split(" ")[1:]) if shipping.get("name") else "")),
         customer_address=f"{shipping.get('address1', '')} {shipping.get('address2', '')} {shipping.get('city', '')} {shipping.get('province', '')} {shipping.get('country', '')}".strip(),
@@ -247,7 +249,7 @@ def _shopify_order_to_hazirla_format(shopify_order):
         shipping_barcode="",
         cargo_provider_name="",
         cargo_tracking_number="",
-        agreed_delivery_date=None,
+        agreed_delivery_date=kargo_son_tarihi(siparis_tarihi),   # site siparişi: sipariş anı + 72 saat
         amount=total_amount,
         details=json.dumps(details_list),
         atanan_raf=None,

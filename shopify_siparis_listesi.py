@@ -20,7 +20,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 logger = logging.getLogger(__name__)
@@ -128,6 +128,15 @@ def _detaylar(order: dict) -> str:
     return json.dumps(kalemler)
 
 
+# Site siparişinde pazaryeri gibi kargo son tarihi gelmez; unutulmasın diye sipariş anından itibaren 72 saat
+# geri sayım (Trendyol kartındaki 'Kalan Süre' / Acil / Süresi Doldu rozetleriyle aynı alan).
+SHOPIFY_KARGO_SURESI = timedelta(hours=72)
+
+
+def kargo_son_tarihi(siparis_tarihi: datetime | None) -> datetime | None:
+    return siparis_tarihi + SHOPIFY_KARGO_SURESI if siparis_tarihi else None
+
+
 def karta_cevir(order: dict) -> SimpleNamespace:
     """Tek Shopify siparişi → order_list.html kartının beklediği alanlar."""
     ad, soyad = _musteri(order)
@@ -147,7 +156,7 @@ def karta_cevir(order: dict) -> SimpleNamespace:
         customer_name=ad,
         customer_surname=soyad,
         customer_address=_adres(order),
-        agreed_delivery_date=None,
+        agreed_delivery_date=kargo_son_tarihi(_naive_utc(order.get("createdAt"))),
         estimated_delivery_end=None,
         siparis_notu="",
         uretim_durumu="", uretim_etiketi="", uretim_aciklamasi="",

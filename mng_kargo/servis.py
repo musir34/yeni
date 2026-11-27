@@ -364,6 +364,43 @@ def yeniden_ac(kayit: KargoGonderi, il: str = "", ilce: str = "", adres: str = "
     return _api_ile_ac(kayit)
 
 
+def tutar_guncelle(kayit: KargoGonderi, kapida_odeme_tutari, adet: int | None = None, commit: bool = True) -> bool:
+    """Kaynakta kapıda ödeme tutarı değişti (Shopify'da kalem çıkarıldı): kurye almadıysa MNG'deki kayıt iptal
+    edilip aynı referansla yeni tutarla yeniden açılır (MNG'de tutar güncelleme servisi yok). Barkod kesilmişse
+    gönderi de iptal edilir → ESKİ ETİKET GEÇERSİZ; yeni barkodu takip işi alır, etiket yeniden basılır.
+    MNG iptali reddederse (şube kabul etmiş) kayıt eski tutarla kalır, neden 'hata'ya yazılır."""
+    if kayit.durum not in (DURUM_BEKLIYOR, DURUM_HATA, SIPARIS_ACILDI, HAZIRLANDI):
+        return False
+    eski = kayit.kapida_odeme_tutari
+    barkodlu = bool(kayit.shipment_id or kayit.barkod)
+    if kayit.durum != DURUM_BEKLIYOR:
+        try:
+            if kayit.shipment_id:
+                client().iptal_gonderi(kayit.referans, kayit.shipment_id)
+            client().iptal(kayit.referans)
+        except MngHata as exc:
+            if barkodlu:
+                kayit.hata = f"Kapıda ödeme {eski} → {kapida_odeme_tutari} TL olmalı ama MNG gönderisi iptal edilemedi: {exc}"[:2000]
+                logger.warning("[MNG] %s: tutar güncellemesi için iptal başarısız: %s", kayit.referans, exc)
+                if commit:
+                    db.session.commit()
+                return False
+            logger.info("[MNG] %s: iptal edilecek açık sipariş yok (%s)", kayit.referans, str(exc)[:120])
+    kayit.kapida_odeme_tutari = Decimal(str(kapida_odeme_tutari))
+    if adet:
+        kayit.parca_adet = max(1, int(adet))
+    if barkodlu:
+        kayit.shipment_id = kayit.fatura_id = kayit.barkod = kayit.zpl = kayit.takip_url = None
+        kayit.barkod_istendi = True
+    kayit.deneme = 0
+    acildi = _api_ile_ac(kayit)
+    logger.info("[MNG] %s: kapıda ödeme %s → %s TL (%s)", kayit.referans, eski, kayit.kapida_odeme_tutari,
+                "yeniden açıldı" + (", eski etiket geçersiz" if barkodlu else "") if acildi else "yeniden açılamadı, takip işi deneyecek")
+    if commit:
+        db.session.commit()
+    return True
+
+
 def barkod_iste(kaynak: str, kaynak_ref: str, commit: bool = True, bekle: bool = False) -> bool:
     """Kaynak işleme alındı → barkod bayrağını koy ve hemen dene. Sipariş MNG'de henüz açılmadıysa
     (bekliyor) bayrak kalır, takip işi açtıktan sonra barkodu alır. Hata yutulur, çağıran akış bozulmaz."""

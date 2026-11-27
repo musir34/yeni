@@ -173,10 +173,56 @@ def baska_kargoyla_karsilananlari_tara() -> int:
     return sayi
 
 
+def tutarlari_tara() -> int:
+    """Gönderi açıldıktan sonra Shopify'da kalemi çıkarılan (tedarik edilemedi / bölündü) kapıda ödemeli
+    sipariş: tahsilat tutarı siparişin güncel toplamına çekilir (kurye almadıysa). Açılışta yazılan tutar
+    kendiliğinden güncellenmez; kurye eski (tam) tutarı tahsil ediyordu."""
+    from models import KargoGonderi
+    from .durum import HAZIRLANDI, SIPARIS_ACILDI
+    from .servis import DURUM_BEKLIYOR, DURUM_HATA
+    acik = (KargoGonderi.query
+            .filter(KargoGonderi.kaynak == KAYNAK_SHOPIFY, KargoGonderi.kapida_odeme_tutari.isnot(None),
+                    KargoGonderi.durum.in_((DURUM_BEKLIYOR, DURUM_HATA, SIPARIS_ACILDI, HAZIRLANDI)))
+            .all())
+    return sum(1 for kayit in acik if tutari_esitle(kayit))
+
+
+def tutari_esitle(kayit) -> bool:
+    """Tek gönderinin tahsilat tutarını Shopify'daki güncel toplamla eşitle; değiştiyse True.
+    Tarama (5 dk) ve webhook (anlık) aynı kayda eşzamanlı gelebilir: fark görülünce satır kilitlenir,
+    tutar yeniden okunur (diğeri güncellediyse MNG'de ikinci iptal/açma yapılmaz)."""
+    from shopify_site.shopify_service import shopify_service
+    from .servis import tutar_guncelle
+
+    def farkli(yeni):
+        return bool(kayit.kapida_odeme_tutari) and abs(yeni - float(kayit.kapida_odeme_tutari)) >= 0.01
+
+    sonuc = shopify_service.get_order(kayit.kaynak_ref)
+    order = sonuc.get("order") if sonuc.get("success") else None
+    if not order or order.get("cancelledAt"):        # iptal: iptalleri_tara'nın işi
+        return False
+    yeni = kapida_odeme_tutari(order)                # ödenmişe dönmüş / 0 → dokunulmaz
+    if not yeni or not farkli(yeni):
+        return False
+    try:
+        db.session.refresh(kayit, with_for_update=True)
+    except Exception:
+        logger.debug("[MNG] satır kilidi alınamadı (%s), devam", kayit.referans, exc_info=True)
+    if not farkli(yeni):
+        db.session.commit()                          # kilidi bırak
+        return False
+    return tutar_guncelle(kayit, yeni, urun_adedi(order))
+
+
 def yeni_siparisleri_tara() -> int:
     """Zamanlayıcı girişi; hata yutulur, açılan gönderi sayısı döner."""
     if not otomatik_acik():
         return 0
+    try:
+        tutarlari_tara()
+    except Exception:
+        db.session.rollback()
+        logger.exception("[MNG] Shopify tutar taraması hatası (yutuldu)")
     try:
         iptalleri_tara()
     except Exception:

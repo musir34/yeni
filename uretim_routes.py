@@ -244,9 +244,16 @@ def liste():
             db.session.rollback()
             logger.warning("[URETIM] kargo/sipariş içeriği okunamadı", exc_info=True)
     # Aktif kuyruklarda sıra: kargoya kalan süresi EN AZ olan üstte (sipariş hazırla
-    # ile aynı ölçüt, agreed_delivery_date). Cut-off'u olmayanlar (site/değişim)
-    # sona düşer, kendi aralarında sipariş tarihine göre (FIFO) kalır.
+    # ile aynı ölçüt, agreed_delivery_date). Site siparişinde cut-off gelmez:
+    # sipariş anı + 72 saat sayılır (sipariş listesi kartıyla aynı kural).
+    # Cut-off'u olmayanlar (değişim) sona düşer, kendi aralarında sipariş
+    # tarihine göre (FIFO) kalır.
     if durum not in ("kargoda", "teslim", "tamamlanan"):
+        from shopify_siparis_listesi import kargo_son_tarihi
+        for r in rows:
+            tarih = r.order_date or r.created_at
+            if r.order_number.startswith("SH-") and r.order_number not in kargo_son_map and tarih:
+                kargo_son_map[r.order_number] = kargo_son_tarihi(tarih.replace(tzinfo=None))
         rows = sorted(rows, key=lambda r: (r.order_number not in kargo_son_map,
                                            kargo_son_map.get(r.order_number) or datetime.max))
     # 🛍️ Site siparişleri panel tablolarına inmez — tam içerik + etiket bilgisi
